@@ -1,0 +1,42 @@
+{
+"name":"spluspropertys",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "sumit chaudhary",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.3.2",
+    "express-validator": "^7.3.2",
+    "express-xss-sanitizer": "^2.0.2",
+    "google-auth-library": "^10.6.2",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.3",
+    "lodash": "^4.18.1",
+    "mongo-sanitize": "^1.1.0",
+    "mongoose": "^9.4.1",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "node": "^25.9.0",
+    "nodemailer": "^8.0.5",
+    "razorpay": "^2.9.6",
+    "socket.io": "^4.8.3",
+    "winston": "^3.19.0"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
