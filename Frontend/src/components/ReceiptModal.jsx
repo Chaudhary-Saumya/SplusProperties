@@ -1,326 +1,302 @@
 import React from 'react';
 import { toast } from 'react-toastify';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { X, CheckCircle, Printer, Download } from 'lucide-react';
+import { X, CheckCircle2, Printer, Download, Shield, FileText } from 'lucide-react';
 
 const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
     if (!isOpen || !receiptData) return null;
 
     const fallbackReceipt = receiptData._id?.slice(-8) || receiptData.gatewayOrderId?.slice(-8) || 'UNAVAILABLE';
-    const receiptNumber = (receiptData.receiptNumber || fallbackReceipt).toUpperCase();
-    const transactionId = receiptData.razorpayPaymentId || receiptData.gatewayPaymentId || receiptData.paymentDetails?.razorpay_payment_id || 'TXN_VERIFIED_770';
-    const orderId = receiptData.razorpayOrderId || receiptData.gatewayOrderId || receiptData.paymentDetails?.razorpay_order_id || 'N/A';
-    const propertyTitle = receiptData.listingTitle || receiptData.listingId?.title || 'Verified Property Reservation';
-    const propertyLocation = receiptData.listingId?.location || receiptData.location || 'LandSelling Verified Listing';
-    const sellerName = receiptData.sellerName || receiptData.sellerId?.name || 'Authorized Seller';
-    const buyerName = receiptData.buyerName || receiptData.buyerId?.name || 'Authorized Buyer';
-    const sellerPhone = receiptData.sellerPhone || receiptData.sellerId?.phone || '-';
-    const buyerPhone = receiptData.buyerPhone || receiptData.buyerId?.phone || '-';
-    const sellerEmail = receiptData.sellerEmail || receiptData.sellerId?.email || '-';
-    const buyerEmail = receiptData.buyerEmail || receiptData.buyerId?.email || '-';
-    const createdAtText = receiptData.date || (receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' }) : '-');
-    const amountText = `₹${Number(receiptData.amount || 0).toLocaleString('en-IN')}`;
-    const agreementDate = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleDateString('en-IN') : '-';
-    const agreementTime = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-';
+    const receiptNumber    = (receiptData.receiptNumber || fallbackReceipt).toUpperCase();
+    const transactionId    = receiptData.razorpayPaymentId || receiptData.gatewayPaymentId || receiptData.paymentDetails?.razorpay_payment_id || 'TXN_VERIFIED_770';
+    const orderId          = receiptData.razorpayOrderId   || receiptData.gatewayOrderId   || receiptData.paymentDetails?.razorpay_order_id   || 'N/A';
+    const propertyTitle    = receiptData.listingTitle  || receiptData.listingId?.title    || 'Verified Property Reservation';
+    const propertyLocation = receiptData.listingId?.location || receiptData.location      || 'LandSelling Verified Listing';
+    const sellerName       = receiptData.sellerName    || receiptData.sellerId?.name      || 'Authorized Seller';
+    const buyerName        = receiptData.buyerName     || receiptData.buyerId?.name       || 'Authorized Buyer';
+    const sellerPhone      = receiptData.sellerPhone   || receiptData.sellerId?.phone     || '-';
+    const buyerPhone       = receiptData.buyerPhone    || receiptData.buyerId?.phone      || '-';
+    const sellerEmail      = receiptData.sellerEmail   || receiptData.sellerId?.email     || '-';
+    const buyerEmail       = receiptData.buyerEmail    || receiptData.buyerId?.email      || '-';
+    const createdAtText    = receiptData.date || (receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' }) : '-');
+    const amountText       = `₹${Number(receiptData.amount || 0).toLocaleString('en-IN')}`;
+    const agreementDate    = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleDateString('en-IN') : '-';
+    const agreementTime    = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-';
 
-    const escapeHtml = (value) => String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    const escapeHtml = (v) => String(v ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-        const getAgreementDocument = () => `<!doctype html>
-        <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Agreement to Sell - ${escapeHtml(receiptNumber)}</title>
-        
-          <style>
-            body {and html {
-              font-family: "Times New Roman", serif;
-              margin: 40px;
-              color: #000;
-              line-height: 1.6;
-              font-size: 14px;
-            }
-        
-            h1 {
-              text-align: center;
-              font-size: 18px;
-              font-weight: bold;
-              text-decoration: underline;
-              margin-bottom: 25px;
-            }
-        
-            .section-title {
-              font-weight: bold;
-              margin-top: 20px;
-              text-transform: uppercase;
-            }
-        
-            .content {
-              margin-top: 10px;
-              text-align: justify;
-            }
-        
-            .signature {
-              margin-top: 60px;
-              display: flex;
-              justify-content: space-between;
-            }
-        
-            .sign-box {
-              width: 40%;
-              text-align: center;
-            }
-        
-            .line {
-              margin-top: 50px;
-              border-top: 1px solid black;
-            }
-        
-            .witness {
-              margin-top: 40px;
-            }
-          </style>
-        </head>
-        
-        <body>
-        
-          <h1>AGREEMENT TO SELL (TOKEN AGREEMENT)</h1>
-        
-          <p>
-            This Agreement to Sell is made and executed at <b>${escapeHtml(propertyLocation)}</b> 
-            on this <b>${escapeHtml(agreementDate)}</b>.
-          </p>
-        
-          <p class="section-title">BETWEEN</p>
-        
-          <p>
-            <b>${escapeHtml(sellerName)}</b> (hereinafter referred to as the “SELLER”)
-          </p>
-        
-          <p style="text-align:center;"><b>AND</b></p>
-        
-          <p>
-            <b>${escapeHtml(buyerName)}</b> (hereinafter referred to as the “BUYER”)
-          </p>
-        
-          <p class="section-title">WHEREAS</p>
-        
-          <p class="content">
-            1. The Seller is the lawful and absolute owner of the property situated at 
-            <b>${escapeHtml(propertyLocation)}</b>.
-          </p>
-        
-          <p class="content">
-            2. The Seller has agreed to sell and the Buyer has agreed to purchase the said property.
-          </p>
-        
-          <p class="section-title">TOTAL SALE CONSIDERATION</p>
-        
-          <p class="content">
-            ₹ ${escapeHtml(receiptData.amount)} (Rupees only)
-          </p>
-        
-          <p class="section-title">TOKEN PAYMENT (CONFIRMATION)</p>
-        
-          <p class="content">
-            On this day, the Buyer has paid a token amount of 
-            <b>${escapeHtml(amountText)}</b> to the Seller as confirmation of this deal.
-            The Seller hereby acknowledges receipt of the same.
-          </p>
-        
-          <p class="section-title">BALANCE PAYMENT</p>
-        
-          <p class="content">
-            The remaining amount shall be paid by the Buyer at the time of final registration.
-          </p>
-        
-          <p class="section-title">NOTE</p>
-        
-          <p class="content">
-            This agreement confirms that the Buyer has given token money to the Seller for the above property.
-          </p>
-        
-          <div class="signature">
-            <div class="sign-box">
-              <div class="line"></div>
-              Seller Signature
-            </div>
-        
-            <div class="sign-box">
-              <div class="line"></div>
-              Buyer Signature
-            </div>
-          </div>
-        
-          <div class="witness">
-            <p><b>WITNESSES</b></p>
-            <p>1. __________________________</p>
-            <p>2. __________________________</p>
-          </div>
-        
-        </body>
-        </html>`;
+    /* ─────────────────────────────────────────────────────────────────────
+       Agreement to Sell HTML — this is the legal document that gets
+       opened in a new tab so the user can Save as PDF via the browser
+    ───────────────────────────────────────────────────────────────────── */
+    const getAgreementDocument = () => `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Agreement to Sell - ${escapeHtml(receiptNumber)}</title>
+  <style>
+    body { font-family: "Times New Roman", serif; margin: 40px; color: #000; line-height: 1.6; font-size: 14px; }
+    h1 { text-align: center; font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 25px; }
+    .section-title { font-weight: bold; margin-top: 20px; text-transform: uppercase; }
+    .content { margin-top: 10px; text-align: justify; }
+    .signature { margin-top: 60px; display: flex; justify-content: space-between; }
+    .sign-box { width: 40%; text-align: center; }
+    .line { margin-top: 50px; border-top: 1px solid black; }
+    .witness { margin-top: 40px; }
+  </style>
+</head>
+<body>
 
-    const handlePrintReceipt = () => {
-        window.print();
+  <h1>AGREEMENT TO SELL (TOKEN AGREEMENT)</h1>
+
+  <p>This Agreement to Sell is made and executed at <b>${escapeHtml(propertyLocation)}</b> on this <b>${escapeHtml(agreementDate)}</b>.</p>
+
+  <p class="section-title">BETWEEN</p>
+  <p><b>${escapeHtml(sellerName)}</b> (hereinafter referred to as the "SELLER")</p>
+  <p style="text-align:center;"><b>AND</b></p>
+  <p><b>${escapeHtml(buyerName)}</b> (hereinafter referred to as the "BUYER")</p>
+
+  <p class="section-title">WHEREAS</p>
+  <p class="content">1. The Seller is the lawful and absolute owner of the property situated at <b>${escapeHtml(propertyLocation)}</b>.</p>
+  <p class="content">2. The Seller has agreed to sell and the Buyer has agreed to purchase the said property.</p>
+
+  <p class="section-title">TOTAL SALE CONSIDERATION</p>
+  <p class="content">&#8377; ${escapeHtml(String(receiptData.amount))} (Rupees only)</p>
+
+  <p class="section-title">TOKEN PAYMENT (CONFIRMATION)</p>
+  <p class="content">On this day, the Buyer has paid a token amount of <b>${escapeHtml(amountText)}</b> to the Seller as confirmation of this deal. The Seller hereby acknowledges receipt of the same.</p>
+
+  <p class="section-title">BALANCE PAYMENT</p>
+  <p class="content">The remaining amount shall be paid by the Buyer at the time of final registration.</p>
+
+  <p class="section-title">NOTE</p>
+  <p class="content">This agreement confirms that the Buyer has given token money to the Seller for the above property.</p>
+
+  <div class="signature">
+    <div class="sign-box"><div class="line"></div>Seller Signature</div>
+    <div class="sign-box"><div class="line"></div>Buyer Signature</div>
+  </div>
+
+  <div class="witness">
+    <p><b>WITNESSES</b></p>
+    <p>1. __________________________</p>
+    <p>2. __________________________</p>
+  </div>
+
+</body>
+</html>`;
+
+    /* ── Print the receipt modal ── */
+    const handlePrintReceipt = () => window.print();
+
+    /* ── Open Agreement in new tab + auto trigger print (Save as PDF) ── */
+    const handleDownloadAgreement = () => {
+        try {
+            const html = getAgreementDocument();
+            const newWin = window.open('', '_blank');
+            if (!newWin) {
+                toast.error('Popup blocked — please allow popups and try again.');
+                return;
+            }
+            newWin.document.open();
+            newWin.document.write(html);
+            newWin.document.close();
+            newWin.focus();
+            // Small delay to let the page render before print dialog
+            setTimeout(() => {
+                newWin.print();
+            }, 800);
+            toast.info('Use "Save as PDF" in the print dialog to download the agreement.');
+        } catch (err) {
+            console.error('Agreement open error:', err);
+            toast.error('Could not open agreement. Try the Download button instead.');
+        }
     };
 
-    const handleDownloadPDF = () => {
-        const element = document.getElementById('payment-receipt');
-        html2canvas(element, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            backgroundColor: '#ffffff'
-        }).then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210;
-            const pageHeight = 295;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 10;
-
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight + 10;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
-            pdf.save(`receipt_${receiptNumber}.pdf`);
-        }).catch((err) => {
-            console.error('PDF generation error:', err);
-            toast.error('PDF download failed, please print instead.');
-        });
+    /* ── Fallback: download raw HTML file (user opens in browser → print as PDF) ── */
+    const handleDownloadHTML = () => {
+        try {
+            const html = getAgreementDocument();
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Agreement_to_Sell_${receiptNumber}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('Downloaded! Open the file in Chrome and print as PDF.');
+        } catch (err) {
+            console.error(err);
+            toast.error('Download failed.');
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden relative border border-white/20 flex flex-col md:flex-row">
-                {/* Brand Side (Visible on Desktop) */}
-                <div className="hidden md:flex md:w-1/3 bg-blue-600 p-10 flex-col justify-between text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-2xl"></div>
-                    
-                    <div>
-                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md">
-                            <CheckCircle size={28} className="text-white" />
-                        </div>
-                        <h2 className="text-3xl font-extrabold font-['Outfit'] leading-tight">Verification Successful</h2>
-                        <div className="w-12 h-1.5 bg-blue-400 rounded-full mt-4"></div>
-                    </div>
+        <>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
+                @media print {
+                    body > *:not(#receipt-print-wrapper) { display: none !important; }
+                    #receipt-print-wrapper { display: block !important; }
+                    .print-hidden { display: none !important; }
+                }
+            `}</style>
 
-                    <div className="space-y-4">
-                        <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
-                            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Transaction Node</p>
-                            <p className="text-xs font-mono break-all">{transactionId}</p>
-                        </div>
-                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest leading-relaxed">
-                            Secured by LandSelling <br /> P2P Protocol v2.0
-                        </p>
-                    </div>
-                </div>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a2340]/70 backdrop-blur-sm">
+                <div
+                    id="receipt-print-wrapper"
+                    className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden relative flex flex-col"
+                    style={{ fontFamily: "'Nunito Sans', sans-serif", maxHeight: '90vh' }}
+                >
+                    {/* Gold top accent */}
+                    <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c] flex-shrink-0" />
 
-                {/* Content Side */}
-                <div className="flex-1 p-8 md:p-12 bg-white relative">
-                    <button onClick={onClose} className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl transition-all hover:rotate-90 print:hidden">
-                        <X size={20} />
-                    </button>
-
-                    <div id="payment-receipt" className="print-container">
-                        <div className="flex justify-between items-start mb-10">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0] flex-shrink-0 bg-[#1a2340]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#c9a84c]/20 border border-[#c9a84c]/40 flex items-center justify-center">
+                                <CheckCircle2 size={16} className="text-[#c9a84c]" />
+                            </div>
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 font-['Outfit'] mb-1">Transaction Receipt</h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Officially Tokened</p>
-                                </div>
-                                <p className="text-xs font-semibold text-blue-700 mt-2">Property Token Agreement</p>
+                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Transaction Receipt</h3>
+                                <p className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider">Payment Verified ✓</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="print-hidden text-white/60 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-all"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Scrollable Body */}
+                    <div className="overflow-y-auto flex-1 p-6">
+
+                        {/* Receipt ID + Date */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-0.5">Receipt No.</div>
+                                <div className="text-sm font-mono font-black text-[#1a2340]">#{receiptNumber}</div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>
-                                <p className="text-sm font-mono font-bold text-slate-900">#{receiptNumber}</p>
+                                <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-0.5">Date & Time</div>
+                                <div className="text-xs font-bold text-[#1a2340]">{createdAtText}</div>
                             </div>
                         </div>
 
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-2 gap-8">
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Timestamp</p>
-                                    <p className="text-sm font-bold text-slate-900">{createdAtText}</p>
+                        {/* Amount Banner */}
+                        <div className="bg-[#1a2340] rounded-xl px-5 py-4 flex items-center justify-between mb-4">
+                            <div>
+                                <div className="text-[9px] font-bold text-[#c9a84c]/70 uppercase tracking-widest mb-0.5">Amount Paid</div>
+                                <div className="text-2xl font-black text-white" style={{ fontFamily: "'Playfair Display', serif" }}>{amountText}</div>
+                            </div>
+                            <span className="text-[9px] font-bold bg-[#c9a84c]/20 border border-[#c9a84c]/40 text-[#f0d080] px-3 py-1.5 rounded-full uppercase tracking-widest">
+                                Token Paid
+                            </span>
+                        </div>
+
+                        {/* Property */}
+                        <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4 mb-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1">Secured Property</div>
+                                    <div className="text-sm font-bold text-[#1a2340] leading-tight mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                        {propertyTitle}
+                                    </div>
+                                    <div className="text-xs text-[#6b7280] font-600">{propertyLocation}</div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Amount Paid</p>
-                                    <p className="text-xl font-black text-blue-600">{amountText}</p>
+                                <span className="text-[9px] font-bold bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap flex-shrink-0">
+                                    Active ✓
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Seller / Buyer */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            {[
+                                { label: 'Seller', name: sellerName, phone: sellerPhone, email: sellerEmail },
+                                { label: 'Buyer',  name: buyerName,  phone: buyerPhone,  email: buyerEmail },
+                            ].map(({ label, name, phone, email }) => (
+                                <div key={label} className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-3">
+                                    <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1">{label}</div>
+                                    <div className="text-sm font-black text-[#1a2340] mb-0.5">{name}</div>
+                                    <div className="text-[10px] text-[#6b7280] font-600">{phone}</div>
+                                    <div className="text-[10px] text-[#6b7280] font-600 truncate">{email}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Payment Details */}
+                        <div className="bg-[#fffbf0] border border-[#e2d9c5] rounded-xl p-4 mb-4">
+                            <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Payment Gateway Details</div>
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-[#6b7280] font-600">Gateway</span>
+                                    <span className="font-bold text-[#1a2340]">Razorpay P2P (Verified)</span>
+                                </div>
+                                <div className="flex justify-between text-xs gap-4">
+                                    <span className="text-[#6b7280] font-600 flex-shrink-0">Order ID</span>
+                                    <span className="font-mono text-[10px] font-bold text-[#1a2340] truncate">{orderId}</span>
+                                </div>
+                                <div className="flex justify-between text-xs gap-4">
+                                    <span className="text-[#6b7280] font-600 flex-shrink-0">Txn ID</span>
+                                    <span className="font-mono text-[10px] font-bold text-[#1a2340] truncate">{transactionId}</span>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="bg-slate-50 p-6 rounded-4xl border border-slate-100 relative group">
-                                <div className="absolute top-4 right-6 bg-white px-3 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-blue-600 shadow-sm transition-transform group-hover:scale-110">ACTIVE RESERVATION</div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Secured Property</p>
-                                <h4 className="text-lg font-extrabold text-slate-900 mb-1">{propertyTitle}</h4>
-                                <p className="text-xs text-slate-500 font-medium leading-relaxed italic wrap-break-word">
-                                    {propertyLocation}
+                        {/* Agreement Notice */}
+                        <div className="bg-[#fffbf0] border border-[#c9a84c]/50 rounded-xl p-3 mb-5 flex items-start gap-2">
+                            <FileText size={14} className="text-[#c9a84c] flex-shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-[#b8933a] font-600 leading-relaxed">
+                                <strong className="font-black">Agreement to Sell</strong> — Click <em>"Agreement PDF"</em> to open the legal token agreement document. In the browser print dialog, choose <strong>"Save as PDF"</strong> to download it.
+                            </p>
+                        </div>
+
+                        {/* Verified footer */}
+                        <div className="text-center py-2.5 bg-[#f8f5ee] border border-[#e2d9c5] rounded-lg mb-5">
+                            <div className="flex items-center justify-center gap-1.5 text-[#9ca3af]">
+                                <Shield size={11} />
+                                <p className="text-[9px] font-bold uppercase tracking-widest">
+                                    SplusPropertys Authenticated · Verified at {agreementTime}
                                 </p>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-6 pt-4 border-t border-slate-100">
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Registrar (Seller)</p>
-                                    <p className="text-sm font-bold text-slate-800">{sellerName}</p>
-                                    <p className="text-xs text-slate-600 mt-1">{sellerPhone}</p>
-                                    <p className="text-xs text-slate-600 break-all">{sellerEmail}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Buyer Entity</p>
-                                    <p className="text-sm font-bold text-slate-800">{buyerName}</p>
-                                    <p className="text-xs text-slate-600 mt-1">{buyerPhone}</p>
-                                    <p className="text-xs text-slate-600 break-all">{buyerEmail}</p>
-                                </div>
-                                <div className="col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 space-y-1">
-                                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Payment Method</p>
-                                    <p className="text-xs font-bold text-blue-800">Razorpay P2P Gateway (Verified)</p>
-                                    <p className="text-xs text-blue-900"><span className="font-semibold">Order ID:</span> {orderId}</p>
-                                    <p className="text-xs text-blue-900"><span className="font-semibold">Transaction ID:</span> {transactionId}</p>
-                                </div>
-                            </div>
                         </div>
 
-                        <div className="mt-10 flex gap-4 print:hidden">
-                            <button 
+                        {/* ── 3 Action Buttons ── */}
+                        <div className="flex gap-2 print-hidden">
+                            {/* Print Receipt */}
+                            <button
                                 onClick={handlePrintReceipt}
-                                className="flex-1 bg-white text-slate-900 border-2 border-slate-200 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                                className="flex-1 py-3 bg-white border-2 border-[#e2d9c5] hover:border-[#1a2340] text-[#1a2340] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all uppercase tracking-widest"
                             >
-                                <Printer size={18} /> Print Record
+                                <Printer size={13} /> Print Receipt
                             </button>
-                            <button 
-                                onClick={handleDownloadPDF}
-                                className="flex-1 bg-linear-to-r from-[#c9a84c] to-[#b8933a] text-[#1a1200] py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:from-[#b8933a] hover:to-[#a67c00] transition-all shadow-lg active:scale-95"
+
+                            {/* Open Agreement → Save as PDF */}
+                            <button
+                                onClick={handleDownloadAgreement}
+                                className="flex-1 py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all uppercase tracking-widest shadow-md"
                             >
-                                <Download size={18} /> Download PDF
+                                <FileText size={13} /> Agreement PDF
                             </button>
-                        </div>
-                        
-                        <div className="mt-8 text-center bg-slate-50 p-3 rounded-xl border border-dotted border-slate-200">
-                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
-                                LandSelling Authenticated Digital Record <br />
-                                Direct Transfer verified at {agreementTime}
-                            </p>
+
+                            {/* Download HTML fallback */}
+                            <button
+                                onClick={handleDownloadHTML}
+                                className="flex-1 py-3 bg-[#c9a84c] hover:bg-[#b8933a] text-[#1a1200] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all uppercase tracking-widest shadow-md"
+                            >
+                                <Download size={13} /> Download
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

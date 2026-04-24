@@ -320,10 +320,7 @@ const Search = () => {
 
                                             {/* Badges */}
                                             <div className="absolute top-2 left-2 flex flex-col gap-1.5">
-                                                {listing.listingType === 'Verified' && (
-                                                    <span className="flex items-center gap-1 bg-[#0f4c35] text-white text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider">✓ Verified</span>
-                                                )}
-                                                <span className="bg-[#1a2340] text-white text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider">Zero Brokerage</span>
+                                               
                                                 {listing.status === 'Reserved' && (
                                                     <span className="bg-[#dc2626] text-white text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider">Reserved</span>
                                                 )}
@@ -391,11 +388,7 @@ const Search = () => {
                                                     <span className="flex items-center gap-1 text-[10px] font-bold text-[#1d4ed8] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">
                                                         <Eye size={9} /> {listing.views || 0} Views
                                                     </span>
-                                                    {listing.listingType === 'Verified' && (
-                                                        <span className="text-[10px] font-bold text-[#15803d] bg-[#f0fdf4] border border-[#bbf7d0] px-2 py-1 rounded">
-                                                            ✓ Document Verified
-                                                        </span>
-                                                    )}
+                                                   
                                                 </div>
 
                                                 {/* Description */}

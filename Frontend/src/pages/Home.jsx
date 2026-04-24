@@ -545,10 +545,6 @@ const Home = () => {
 
           {/* Top Badges */}
           <div className="prop-top-badges">
-            {listing.listingType === 'Verified' && (
-              <span className="badge badge-verified">✓ Verified</span>
-            )}
-            <span className="badge badge-zero">Zero Brokerage</span>
             {listing.status === 'Reserved' && (
               <span className="badge badge-reserved">Reserved</span>
             )}
@@ -608,9 +604,6 @@ const Home = () => {
               <span className="prop-stat prop-stat-blue">
                 <Eye size={10} /> {listing.views || 0} Interest Hits
               </span>
-              {listing.listingType === 'Verified' && (
-                <span className="prop-stat prop-stat-green">✓ Document Verified</span>
-              )}
             </div>
 
             {/* Description */}
