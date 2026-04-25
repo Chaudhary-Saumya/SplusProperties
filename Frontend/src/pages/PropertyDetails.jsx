@@ -6,7 +6,7 @@ import {
     Heart, Share2, MapPin, Calendar, CheckCircle2, Phone, ChevronRight,
     ArrowLeft, Maximize2, Eye, LandPlot, UserCheck, FileText, Users,
     ShieldCheck, Download, MessageSquare, ExternalLink, Image, Clock,
-    Check, X, Zap, Award, Star, StarHalf, StarOff, UserRound, MessageCircle
+    Check, X, Zap, ZapOff, Award, Star, StarHalf, StarOff, UserRound, MessageCircle
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
@@ -50,6 +50,14 @@ const { data: listing, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['listing', id],
         queryFn: async () => {
             const res = await axios.get(`/api/listings/${id}`);
+            return res.data.data;
+        }
+    });
+
+    const { data: systemSettings } = useQuery({
+        queryKey: ['systemSettings'],
+        queryFn: async () => {
+            const res = await axios.get('/api/settings');
             return res.data.data;
         }
     });
@@ -494,17 +502,21 @@ const renderStars = () => {
                             <div className={`rounded-2xl p-4 border-2 ${
                                 listing.isTokened
                                     ? 'bg-[#f0fdf4] border-[#bbf7d0]'
-                                    : 'bg-white border-[#c9a84c]'
+                                    : systemSettings?.isInstantBookingEnabled === false
+                                        ? 'bg-slate-50 border-slate-200 opacity-80'
+                                        : 'bg-white border-[#c9a84c]'
                             }`}>
                                 <h3 className="text-xs font-bold text-[#1a2340] uppercase tracking-widest mb-3 flex items-center gap-2">
                                     {listing.isTokened ? (
                                         <><CheckCircle2 size={14} className="text-[#15803d]" /> Reserved</>
+                                    ) : systemSettings?.isInstantBookingEnabled === false ? (
+                                        <><ZapOff size={14} className="text-slate-400" /> Booking Disabled</>
                                     ) : (
                                         <><Zap size={14} className="text-[#c9a84c]" /> Instant Booking</>
                                     )}
                                 </h3>
 
-                                {!listing.isTokened && (
+                                {!listing.isTokened && systemSettings?.isInstantBookingEnabled !== false && (
                                     <>
                                         <div className="mb-4">
                                             <div className="text-xs text-[#9ca3af] font-bold uppercase tracking-widest mb-1">Token Amount</div>
@@ -518,6 +530,14 @@ const renderStars = () => {
                                             {submitting ? 'Processing...' : 'Reserve Now'}
                                         </button>
                                     </>
+                                )}
+
+                                {!listing.isTokened && systemSettings?.isInstantBookingEnabled === false && (
+                                    <div className="py-2">
+                                        <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                                            Instant Token Booking is currently disabled by the administrator. Please contact the seller directly for inquiries.
+                                        </p>
+                                    </div>
                                 )}
 
                                 {listing.isTokened && (

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Setting = require('../models/Setting');
 
 const autoSeed = async () => {
     try {
@@ -39,6 +40,18 @@ const autoSeed = async () => {
 
             await User.create(users);
             console.log('Successfully created admin, seller, broker, and buyer accounts! Check server output.');
+        }
+
+        // Check for settings
+        const settingsCount = await Setting.countDocuments();
+        if (settingsCount === 0) {
+            console.log('No settings found! Seeding defaults...');
+            await Setting.create({
+                key: 'isInstantBookingEnabled',
+                value: true,
+                description: 'Enable or disable global Instant Token Booking functionality.'
+            });
+            console.log('Default settings seeded.');
         }
     } catch (err) {
         console.error('Error auto-seeding database:', err);

@@ -176,7 +176,7 @@ const EditListing = () => {
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em] mb-3">
                         <Building2 size={14} />
-                        <span>SplusPropertys</span>
+                        <span>Splus Properties</span>
                         <ChevronRight size={12} />
                         <span>Edit Listing</span>
                     </div>

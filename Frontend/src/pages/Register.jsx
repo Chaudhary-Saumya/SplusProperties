@@ -340,7 +340,7 @@ const Register = () => {
 
 
                     <h1 className="reg-title">Create Account</h1>
-                    <p className="reg-subtitle">Join SplusPropertys — it's free & takes 2 minutes</p>
+                    <p className="reg-subtitle">Join Splus Properties — it's free & takes 2 minutes</p>
 
                     {error && <div className="reg-error">⚠ {error}</div>}
 

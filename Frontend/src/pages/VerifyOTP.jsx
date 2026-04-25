@@ -85,7 +85,7 @@ const VerifyOTP = () => {
                 <div className="max-w-lg mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em]">
                         <Building2 size={13} />
-                        <span>SplusPropertys</span>
+                        <span>Splus Properties</span>
                         <ChevronRight size={11} />
                         <span>Verify Email</span>
                     </div>

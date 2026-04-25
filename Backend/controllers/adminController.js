@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Payment = require('../models/Payment');
 const Inquiry = require('../models/Inquiry');
 const PageHit = require('../models/PageHit');
+const Setting = require('../models/Setting');
 const asyncHandler = require('../middlewares/async');
 
 // @desc    Get Dashboard Analytics
@@ -73,5 +74,40 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
             allListings,
             pageHits
         }
+    });
+});
+
+// @desc    Get all system settings
+// @route   GET /api/admin/settings
+// @access  Private (Admin)
+exports.getSystemSettings = asyncHandler(async (req, res, next) => {
+    const settings = await Setting.find();
+    res.status(200).json({
+        success: true,
+        data: settings
+    });
+});
+
+// @desc    Update a system setting
+// @route   PATCH /api/admin/settings/:key
+// @access  Private (Admin)
+exports.updateSystemSetting = asyncHandler(async (req, res, next) => {
+    let setting = await Setting.findOne({ key: req.params.key });
+
+    if (!setting) {
+        setting = await Setting.create({
+            key: req.params.key,
+            value: req.body.value,
+            description: req.body.description || ''
+        });
+    } else {
+        setting.value = req.body.value;
+        if (req.body.description) setting.description = req.body.description;
+        await setting.save();
+    }
+
+    res.status(200).json({
+        success: true,
+        data: setting
     });
 });

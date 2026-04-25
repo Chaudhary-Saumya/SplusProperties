@@ -262,7 +262,7 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                             <div className="flex items-center justify-center gap-1.5 text-[#9ca3af]">
                                 <Shield size={11} />
                                 <p className="text-[9px] font-bold uppercase tracking-widest">
-                                    SplusPropertys Authenticated · Verified at {agreementTime}
+                                    Splus Properties Authenticated · Verified at {agreementTime}
                                 </p>
                             </div>
                         </div>

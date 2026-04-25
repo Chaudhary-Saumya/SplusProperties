@@ -116,6 +116,7 @@ app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/settings', require('./routes/settings'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/recommendations', require('./routes/recommendations'));
 

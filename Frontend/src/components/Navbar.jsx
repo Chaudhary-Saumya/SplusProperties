@@ -22,7 +22,7 @@ const Navbar = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
         .navbar-root {
           position: sticky;
@@ -45,16 +45,52 @@ const Navbar = () => {
 
         /* ── Logo ── */
         .logo {
-          font-family: 'Playfair Display', serif;
-          font-size: 26px;
-          font-weight: 700;
-          color: #1a2340;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           text-decoration: none;
-          letter-spacing: 0.5px;
-          white-space: nowrap;
+          line-height: 1;
+          padding: 8px 0;
+          transition: transform 0.2s;
         }
-        .logo span {
+        .logo:hover {
+          transform: scale(1.03);
+        }
+        .logo-main {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .logo-s {
+          font-family: 'Playfair Display', serif;
+          font-size: 55px;
+          font-weight: 700;
           color: #c9a84c;
+          margin: 0;
+          padding: 0;
+        }
+        .logo-plus {
+          font-family: 'Great Vibes', cursive;
+          font-size: 25px;
+          color: #1a2340;
+          position: absolute;
+          bottom: 5px;
+          left: 50%;
+          transform: translateX(-50%);
+          white-space: nowrap;
+          z-index: 2;
+          pointer-events: none;
+        }
+        .logo-text {
+          font-family: 'Nunito Sans', sans-serif;
+          font-size: 10px;
+          font-weight: 800;
+          color: #1a2340;
+          letter-spacing: 5px;
+          text-transform: uppercase;
+          margin-top: -1px;
+          padding-left: 5px; /* balancing the letter-spacing */
         }
 
         /* ── Desktop nav ── */
@@ -313,7 +349,11 @@ const Navbar = () => {
         <div className="navbar-inner">
           {/* Logo */}
           <Link to="/" className="logo" onClick={() => setIsOpen(false)}>
-            Splus<span>Propertys</span>
+            <div className="logo-main">
+              <span className="logo-s">S</span>
+              <span className="logo-plus">Plus</span>
+            </div>
+            <div className="logo-text">PROPERTIES</div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -330,14 +370,14 @@ const Navbar = () => {
               </button>
               {activeDropdown === 'search' && (
                 <div className="dropdown-menu">
-                  <Link to="/search" className="dropdown-item" onClick={() => setActiveDropdown(null)}>All Properties</Link>
-                  <Link to="/brokers" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Contact Brokers</Link>
-                  <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Buy</Link>
+                  {/* <Link to="/search" className="dropdown-item" onClick={() => setActiveDropdown(null)}>All Properties</Link> */}
+                   <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Buy</Link>
                   {isAuthenticated ? (
                     <Link to="/create-listing" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Sell</Link>
                   ) : (
                     <Link to="/login" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Sell</Link>
                   )}
+                  <Link to="/brokers" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Contact Brokers</Link>
                 </div>
               )}
             </div>
@@ -418,14 +458,15 @@ const Navbar = () => {
           <Link to="/" className="mob-link" onClick={() => setIsOpen(false)}>Home</Link>
 
           <div className="mob-section-label">Properties</div>
-          <Link to="/search" className="mob-sub-link" onClick={() => setIsOpen(false)}>All Properties</Link>
-          <Link to="/brokers" className="mob-sub-link" onClick={() => setIsOpen(false)}>Contact Brokers</Link>
+          {/* <Link to="/search" className="mob-sub-link" onClick={() => setIsOpen(false)}>All Properties</Link> */}
           <Link to="/search?type=buy" className="mob-sub-link" onClick={() => setIsOpen(false)}>Buy</Link>
           {isAuthenticated ? (
             <Link to="/create-listing" className="mob-sub-link" onClick={() => setIsOpen(false)}>Sell</Link>
           ) : (
             <Link to="/login" className="mob-sub-link" onClick={() => setIsOpen(false)}>Sell</Link>
           )}
+          <Link to="/brokers" className="mob-sub-link" onClick={() => setIsOpen(false)}>Contact Brokers</Link>
+
 
           <div className="mob-section-label">Tools</div>
           <Link to="/area-converter" className="mob-sub-link" onClick={() => setIsOpen(false)}>Area Converter</Link>

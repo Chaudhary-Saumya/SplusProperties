@@ -37,6 +37,7 @@ import {
   ToggleLeft,
   ToggleRight,
   ArrowUpRight,
+  ZapOff
 } from "lucide-react";
 import ReceiptModal from "../components/ReceiptModal";
 import socket from "../utils/socket";
@@ -158,6 +159,14 @@ const Dashboard = () => {
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+  });
+
+  const { data: systemSettings } = useQuery({
+    queryKey: ["systemSettings"],
+    queryFn: async () => {
+      const res = await axios.get("/api/settings");
+      return res.data.data;
+    },
   });
 
   const listings = listingsData || [];
@@ -807,13 +816,85 @@ const Dashboard = () => {
                       <ListingSkeleton key={i} variant="list" />
                     ))}
                   </div>
-                ) : listings.length === 0 ? (
-                  <EmptyState
-                    actionText="Create Your First Listing"
-                    actionLink="/create-listing"
-                    title="No Properties Yet"
-                    message="You haven't listed any properties. Start now to reach buyers."
-                  />
+                ) : user.role === "Buyer" ? (
+                  <div className="space-y-6">
+                    {systemSettings?.isInstantBookingEnabled === false && listings.length === 0 && (
+                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                <ZapOff size={28} className="text-slate-400" />
+                            </div>
+                            <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">Booking System Disabled</h3>
+                            <p className="text-slate-500 font-medium max-w-sm mx-auto mb-6">
+                                The Instant Token Booking system is currently disabled by the administrator. Any future plots you reserve will appear here once the system is back online.
+                            </p>
+                            <button onClick={() => navigate('/search')} className="bg-[#1a2340] text-[#c9a84c] px-6 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all">
+                                Explore Properties
+                            </button>
+                        </div>
+                    )}
+
+                    {(systemSettings?.isInstantBookingEnabled !== false || listings.length > 0) && listings.length === 0 ? (
+                        <EmptyState
+                            title="No Reserved Plots"
+                            desc="You haven't reserved any properties yet. Start exploring to find your dream plot."
+                            action={
+                                <Link
+                                    to="/search"
+                                    className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
+                                >
+                                    Explore Properties
+                                </Link>
+                            }
+                        />
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {listings.map((l) => (
+                                <div
+                                    key={l._id}
+                                    className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl overflow-hidden shadow-sm group hover:border-[#c9a84c] transition-all hover:shadow-md"
+                                >
+                                    <div className="h-40 bg-[#e5e7eb] relative">
+                                        {l.images?.[0] ? (
+                                            <img
+                                                src={getImageUrl(l.images[0])}
+                                                alt=""
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center text-[#9ca3af]">
+                                                No image
+                                            </div>
+                                        )}
+                                        <div className="absolute top-3 left-3 bg-[#1a2340]/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                            <span className="text-[10px] font-black text-[#c9a84c] uppercase tracking-widest whitespace-nowrap">
+                                                Reserved
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-bold text-[#1a2340] line-clamp-1 group-hover:text-[#c9a84c] transition-colors">
+                                            {l.title}
+                                        </h3>
+                                        <p className="text-xs text-[#9ca3af] font-600 flex items-center gap-1 mt-1">
+                                            <MapPin size={10} /> {l.location}
+                                        </p>
+                                        <div className="flex items-center justify-between mt-4">
+                                            <div className="text-base font-black text-[#1a2340]">
+                                                ₹{l.price?.toLocaleString("en-IN")}
+                                            </div>
+                                            <Link
+                                                to={`/listings/${l._id}`}
+                                                className="text-[10px] font-black bg-[#1a2340] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all uppercase tracking-widest"
+                                            >
+                                                Details
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -821,7 +902,7 @@ const Dashboard = () => {
                         <tr className="border-b border-[#f0ebe0]">
                           {[
                             "Property",
-                            user.role === "Buyer" ? "Location" : "Status",
+                            "Status",
                             "Price",
                             "Actions",
                           ].map((h) => (
@@ -862,21 +943,6 @@ const Dashboard = () => {
                               </div>
                             </td>
                             <td className="py-4 pr-4">
-                              {user.role === "Buyer" ? (
-                                <div className="flex items-center gap-1 text-sm text-[#6b7280] font-600">
-                                  <MapPin
-                                    size={12}
-                                    className="text-[#c9a84c]"
-                                  />
-                                  <span className="truncate max-w-30">
-                                    {l.location}
-                                  </span>
-                                </div>
-                              ) : l.isTokened || l.status === "Reserved" ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-[#fff0f0] text-[#dc2626] border border-[#fecaca] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                  Reserved
-                                </span>
-                              ) : (
                                 <div className="flex items-center gap-2">
                                   <Toggle
                                     checked={l.status === "Active"}
@@ -895,7 +961,6 @@ const Dashboard = () => {
                                     {l.status}
                                   </span>
                                 </div>
-                              )}
                             </td>
                             <td className="py-4 pr-4">
                               <span className="text-sm font-black text-[#1a2340]">
@@ -911,37 +976,22 @@ const Dashboard = () => {
                                 >
                                   <Eye size={15} />
                                 </button>
-                                {user.role === "Buyer" &&
-                                  l.createdBy?.phone && (
-                                    <a
-                                      href={`tel:${l.createdBy.phone}`}
-                                      className="p-2 text-[#15803d] hover:bg-[#f0fdf4] rounded-lg transition-all"
-                                      title="Call Seller"
-                                    >
-                                      <Phone size={15} />
-                                    </a>
-                                  )}
-                                {(user.role === "Seller" ||
-                                  user.role === "Broker") && (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        navigate(`/edit-listing/${l._id}`)
-                                      }
-                                      className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all"
-                                      title="Edit"
-                                    >
-                                      <Edit size={15} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDelete(l._id)}
-                                      className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all"
-                                      title="Delete"
-                                    >
-                                      <Trash2 size={15} />
-                                    </button>
-                                  </>
-                                )}
+                                <button
+                                  onClick={() =>
+                                    navigate(`/edit-listing/${l._id}`)
+                                  }
+                                  className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all"
+                                  title="Edit"
+                                >
+                                  <Edit size={15} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(l._id)}
+                                  className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -970,117 +1020,99 @@ const Dashboard = () => {
                       />
                     ))}
                   </div>
-                ) : transactions.length === 0 ? (
-                  <EmptyState
-                    actionText="Explore Properties"
-                    actionLink="/search"
-                    title="No Transactions Yet"
-                    message="You haven't made or received any token payments."
-                  />
                 ) : (
-                  <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-                    {transactions.map((trans) => {
-                      const isSeller =
-                        (trans.sellerId?._id || trans.sellerId) ===
-                        (user?.id || user?._id);
-                      const otherParty = isSeller
-                        ? trans.buyerId
-                        : trans.sellerId;
-
-                      return (
-                        <div
-                          key={trans._id}
-                          className="bg-[#fdfaf5] border border-[#e2d9c5] hover:border-[#c9a84c] rounded-xl p-5 transition-all shadow-sm"
-                        >
-                          <div className="flex items-start gap-4 mb-4">
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0 border border-[#e2d9c5]">
-                              {trans.listingId?.images?.[0] ? (
-                                <img
-                                  src={getImageUrl(trans.listingId.images[0])}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#9ca3af]">
-                                  <History size={20} />
-                                </div>
-                              )}
+                  <div className="space-y-6">
+                    {systemSettings?.isInstantBookingEnabled === false && transactions.length === 0 && (
+                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                <History size={28} className="text-slate-400" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <Link
-                                to={
-                                  trans.listingId
-                                    ? `/listings/${trans.listingId._id || trans.listingId}`
-                                    : "#"
-                                }
-                                className="text-base font-bold text-[#1a2340] hover:text-[#c9a84c] transition-colors line-clamp-1 block"
-                                style={{
-                                  fontFamily: "'Playfair Display', serif",
-                                }}
-                              >
-                                {trans.listingId?.title || "Unknown Property"}
-                              </Link>
-                              <div className="text-[10px] text-[#9ca3af] font-bold uppercase tracking-widest mt-1">
-                                {new Date(trans.createdAt).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <div className="text-xl font-black text-[#15803d]">
-                                ₹{trans.amount?.toLocaleString("en-IN")}
-                              </div>
-                              <span className="text-[9px] font-bold bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] px-2 py-0.5 rounded-full uppercase">
-                                Verified
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between py-3 border-t border-b border-[#f0ebe0] mb-3">
-                            <div>
-                              <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">
-                                {isSeller ? "Paid By" : "Paid To"}
-                              </div>
-                              <div className="text-sm font-bold text-[#1a2340]">
-                                {otherParty?.name || "Processing..."}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">
-                                Receipt ID
-                              </div>
-                              <div className="text-xs font-mono text-[#6b7280]">
-                                {trans.razorpayOrderId?.split("_")[1] ||
-                                  trans._id?.slice(-8)}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            {otherParty?.phone && (
-                              <a
-                                href={`tel:${otherParty.phone}`}
-                                className="flex-1 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all uppercase tracking-wider"
-                              >
-                                <Phone size={13} /> Call{" "}
-                                {isSeller ? "Buyer" : "Seller"}
-                              </a>
-                            )}
-                            <button
-                              onClick={() => setSelectedTransaction(trans)}
-                              className="flex-1 py-2.5 bg-white border border-[#e2d9c5] hover:border-[#c9a84c] text-[#1a2340] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all uppercase tracking-wider"
-                            >
-                              <Download size={13} /> Receipt
-                            </button>
-                          </div>
+                            <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">History Unavailable</h3>
+                            <p className="text-slate-500 font-medium max-w-sm mx-auto">
+                                The Token Booking system is disabled. No new records can be created, and you have no previous transaction history.
+                            </p>
                         </div>
-                      );
-                    })}
+                    )}
+
+                    {(systemSettings?.isInstantBookingEnabled !== false || transactions.length > 0) && transactions.length === 0 ? (
+                        <EmptyState
+                            title="No Transactions"
+                            desc="Your payment history and receipts will appear here after your first reservation."
+                            action={
+                                <Link
+                                    to="/search"
+                                    className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
+                                >
+                                    Start Reservation
+                                </Link>
+                            }
+                        />
+                    ) : (
+                        <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-[#fdfaf5] border-b border-[#e2d9c5]">
+                                        <tr>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
+                                                Property
+                                            </th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
+                                                Amount
+                                            </th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
+                                                Status
+                                            </th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest text-right">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#f0ebe0]">
+                                        {transactions.map((t) => (
+                                            <tr key={t._id} className="hover:bg-[#fdfaf5]/50">
+                                                <td className="p-4 min-w-[200px]">
+                                                    <p className="text-sm font-bold text-[#1a2340]">
+                                                        {t.listingId?.title}
+                                                    </p>
+                                                    <p className="text-[10px] text-[#9ca3af] font-600 mt-0.5">
+                                                        Ref: {t.razorpayOrderId}
+                                                    </p>
+                                                </td>
+                                                <td className="p-4 whitespace-nowrap">
+                                                    <p className="text-sm font-black text-[#1a2340]">
+                                                        ₹{t.amount?.toLocaleString("en-IN")}
+                                                    </p>
+                                                    <p className="text-[10px] text-[#9ca3af] font-600">
+                                                        {new Date(t.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span
+                                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                            t.status === "Success"
+                                                                ? "bg-[#f0fdf4] text-[#15803d]"
+                                                                : "bg-[#fff0f0] text-[#dc2626]"
+                                                        }`}
+                                                    >
+                                                        {t.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <button
+                                                        onClick={() => setSelectedTransaction(t)}
+                                                        className="p-2 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all"
+                                                        title="Receipt"
+                                                    >
+                                                        <Receipt size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                   </div>
                 )}
               </div>

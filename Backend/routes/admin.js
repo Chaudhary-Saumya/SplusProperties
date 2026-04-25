@@ -8,5 +8,7 @@ router.use(protect);
 router.use(authorize('Admin'));
 
 router.get('/dashboard', getDashboardStats);
+router.get('/settings', require('../controllers/adminController').getSystemSettings);
+router.patch('/settings/:key', require('../controllers/adminController').updateSystemSetting);
 
 module.exports = router;

@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall } from 'lucide-react';
+import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall, Settings, Zap, ZapOff } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const Admin = () => {
     const { user, loading: authLoading } = useContext(AuthContext);
     const [data, setData] = useState(null);
     const [inquiries, setInquiries] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Users', 'Listings', 'Inquiries', 'Analytics'
+    const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Users', 'Listings', 'Inquiries', 'Analytics', 'Settings'
+    const [settings, setSettings] = useState([]);
+    const [updatingSetting, setUpdatingSetting] = useState(null);
     
 
 
@@ -28,6 +31,9 @@ const Admin = () => {
 
                 const inqRes = await axios.get('/api/inquiries');
                 setInquiries(inqRes.data.data || []);
+
+                const setRes = await axios.get('/api/admin/settings');
+                setSettings(setRes.data.data || []);
             } catch (err) {
                 console.error('Error fetching admin data', err);
             } finally {
@@ -39,6 +45,21 @@ const Admin = () => {
     }, [user]);
 
 
+
+    const handleUpdateSetting = async (key, value) => {
+        setUpdatingSetting(key);
+        try {
+            const res = await axios.patch(`/api/admin/settings/${key}`, { value });
+            if (res.data.success) {
+                setSettings(settings.map(s => s.key === key ? res.data.data : s));
+                toast.success('Setting updated successfully');
+            }
+        } catch (err) {
+            toast.error('Failed to update setting');
+        } finally {
+            setUpdatingSetting(null);
+        }
+    };
 
     if (authLoading || loading) return (
         <div className="flex justify-center items-center min-h-[60vh]">
@@ -59,7 +80,8 @@ const Admin = () => {
         { id: 'Users', icon: <UsersIcon size={18} /> },
         { id: 'Listings', icon: <Home size={18} /> },
         { id: 'Inquiries', icon: <PhoneCall size={18} /> },
-        { id: 'Analytics', icon: <Activity size={18} /> }
+        { id: 'Analytics', icon: <Activity size={18} /> },
+        { id: 'Settings', icon: <Settings size={18} /> }
     ];
 
     return (
@@ -323,6 +345,83 @@ const Admin = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* SETTINGS TAB */}
+                {activeTab === 'Settings' && (
+                    <div className="animate-fade-in max-w-4xl mx-auto">
+                        <h1 className="text-3xl font-bold text-slate-900 mb-6 font-['Outfit']">System Settings</h1>
+                        
+                        <div className="grid grid-cols-1 gap-6">
+                            {settings.map(setting => (
+                                <div key={setting._id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-6 hover:border-blue-200 transition-all group">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">
+                                                {setting.key.replace(/([A-Z])/g, ' $1').trim()}
+                                            </h3>
+                                            {setting.value === true ? (
+                                                <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-emerald-100">Enabled</span>
+                                            ) : setting.value === false ? (
+                                                <span className="bg-slate-50 text-slate-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-slate-100">Disabled</span>
+                                            ) : null}
+                                        </div>
+                                        <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-lg">
+                                            {setting.description}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="shrink-0">
+                                        {typeof setting.value === 'boolean' ? (
+                                            <button
+                                                disabled={updatingSetting === setting.key}
+                                                onClick={() => handleUpdateSetting(setting.key, !setting.value)}
+                                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none ${
+                                                    setting.value 
+                                                        ? 'bg-blue-600 shadow-md shadow-blue-200' 
+                                                        : 'bg-slate-200'
+                                                } ${updatingSetting === setting.key ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                                            >
+                                                <span className="sr-only">Toggle {setting.key}</span>
+                                                <span
+                                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-all shadow-sm ${
+                                                        setting.value ? 'translate-x-7' : 'translate-x-1'
+                                                    } flex items-center justify-center`}
+                                                >
+                                                    {setting.value ? <Zap size={12} className="text-blue-600" /> : <ZapOff size={12} className="text-slate-400" />}
+                                                </span>
+                                            </button>
+                                        ) : (
+                                            <input 
+                                                type="text" 
+                                                defaultValue={setting.value}
+                                                onBlur={(e) => handleUpdateSetting(setting.key, e.target.value)}
+                                                className="px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-semibold"
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            
+                            {settings.length === 0 && (
+                                <div className="bg-slate-100 rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">
+                                    <p className="text-slate-500 font-bold">No system settings found in database.</p>
+                                </div>
+                            )}
+
+                            <div className="mt-8 bg-blue-50 border border-blue-100 rounded-3xl p-6 text-blue-800">
+                                <div className="flex gap-4">
+                                    <Shield className="shrink-0 mt-1" size={24} />
+                                    <div>
+                                        <h4 className="font-extrabold text-lg mb-1">Production Readiness Notice</h4>
+                                        <p className="text-sm font-medium leading-relaxed opacity-80">
+                                            Turning off <strong>Instant Token Booking</strong> will immediately hide the payment options across the platform. Use this when maintenance is required or when transitioning between test and production merchant accounts.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

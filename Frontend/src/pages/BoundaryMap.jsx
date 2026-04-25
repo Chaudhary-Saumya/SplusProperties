@@ -175,7 +175,7 @@ const BoundaryMap = () => {
     const coords = [...polyPoints, polyPoints[0]].map(p => `${p.lng},${p.lat},0`).join(' ');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
-<Document><name>Land Plot — SplusPropertys</name><Placemark><name>Measured Plot</name><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></Document>
+<Document><name>Land Plot — Splus Properties</name><Placemark><name>Measured Plot</name><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></Document>
 </kml>`;
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const url  = URL.createObjectURL(blob);
@@ -195,7 +195,7 @@ const BoundaryMap = () => {
     doc.setTextColor(201, 168, 76);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('SplusPropertys', 105, 18, { align: 'center' });
+    doc.text('Splus Properties', 105, 18, { align: 'center' });
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
     doc.text('Land Plot Measurement Report', 105, 30, { align: 'center' });
@@ -227,7 +227,7 @@ const BoundaryMap = () => {
 
     doc.setFontSize(9);
     doc.setTextColor(150);
-    doc.text(`Generated on ${date} · SplusPropertys Boundary Map Tool`, 105, 285, { align: 'center' });
+    doc.text(`Generated on ${date} · Splus Properties Boundary Map Tool`, 105, 285, { align: 'center' });
 
     doc.save('splus-land-plot.pdf');
   };
@@ -366,7 +366,7 @@ const BoundaryMap = () => {
       <div className="absolute top-0 left-0 z-[998] pointer-events-none">
         <div className="bg-[#1a2340]/90 backdrop-blur-sm px-5 py-3 flex items-center gap-2 rounded-br-2xl">
           <Building2 size={14} className="text-[#c9a84c]" />
-          <span className="text-white text-xs font-black uppercase tracking-[0.2em]">SplusPropertys</span>
+          <span className="text-white text-xs font-black uppercase tracking-[0.2em]">Splus Properties</span>
           <ChevronRight size={10} className="text-white/30" />
           <span className="text-[#c9a84c] text-xs font-bold">Boundary Map</span>
         </div>

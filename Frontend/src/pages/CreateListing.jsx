@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2, IndianRupee, Layers, FileText, CreditCard, ChevronRight } from 'lucide-react';
+import { UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2, IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { useQuery } from '@tanstack/react-query';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -113,6 +114,14 @@ const CreateListing = () => {
     const [areaValue, setAreaValue] = useState('');
     const [areaUnit, setAreaUnit] = useState('Sq Ft');
     const [images, setImages] = useState(null);
+
+    const { data: systemSettings } = useQuery({
+        queryKey: ['systemSettings'],
+        queryFn: async () => {
+            const res = await axios.get('/api/settings');
+            return res.data.data;
+        }
+    });
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -223,7 +232,7 @@ const CreateListing = () => {
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em] mb-3">
                         <Building2 size={14} />
-                        <span>SplusPropertys</span>
+                        <span>Splus Properties</span>
                         <ChevronRight size={12} />
                         <span>New Listing</span>
                     </div>
@@ -513,84 +522,98 @@ const CreateListing = () => {
                     </SectionCard>
 
                     {/* ── SECTION 4: Token Booking ── */}
-                    <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable online reservations for this property">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-bold text-[#1a2340]">Accept Token Bookings</p>
-                                <p className="text-xs text-[#1a2340]/40 font-medium mt-0.5">Allow buyers to reserve this listing with a token amount</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
-                                className={`relative inline-flex h-7 items-center rounded-full transition-colors focus:outline-none w-12 ${formData.isBookingEnabled ? 'bg-[#c9a84c]' : 'bg-[#1a2340]/20'}`}
-                            >
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${formData.isBookingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-
-                        {formData.isBookingEnabled && (
-                            <div className="mt-6 pt-6 border-t border-[#f8f5ee] space-y-5">
+                    {systemSettings?.isInstantBookingEnabled !== false ? (
+                        <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable online reservations for this property">
+                            <div className="flex items-center justify-between">
                                 <div>
-                                    <label className={labelCls}>
-                                        Token Amount — Capped at 2%
-                                        {formData.price && (
-                                            <span className="ml-1 normal-case font-semibold text-[#c9a84c]">
-                                                (max ₹{((formData.price || 0) * 0.02).toLocaleString('en-IN')})
-                                            </span>
-                                        )}
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-lg">₹</span>
-                                        <input
-                                            type="number"
-                                            value={formData.tokenAmount}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                const max = (formData.price || 0) * 0.02;
-                                                setFormData({ ...formData, tokenAmount: val <= max ? val : max });
-                                            }}
-                                            className={inputCls + ' pl-10'}
-                                            placeholder="Enter token amount..."
-                                        />
-                                        {formData.tokenAmount > 0 && formData.price > 0 && (
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-[#1a2340] bg-[#c9a84c]/20 px-3 py-1 rounded-lg">
-                                                {((formData.tokenAmount / formData.price) * 100).toFixed(1)}% of price
+                                    <p className="text-sm font-bold text-[#1a2340]">Accept Token Bookings</p>
+                                    <p className="text-xs text-[#1a2340]/40 font-medium mt-0.5">Allow buyers to reserve this listing with a token amount</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
+                                    className={`relative inline-flex h-7 items-center rounded-full transition-colors focus:outline-none w-12 ${formData.isBookingEnabled ? 'bg-[#c9a84c]' : 'bg-[#1a2340]/20'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${formData.isBookingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+
+                            {formData.isBookingEnabled && (
+                                <div className="mt-6 pt-6 border-t border-[#f8f5ee] space-y-5">
+                                    <div>
+                                        <label className={labelCls}>
+                                            Token Amount — Capped at 2%
+                                            {formData.price && (
+                                                <span className="ml-1 normal-case font-semibold text-[#c9a84c]">
+                                                    (max ₹{((formData.price || 0) * 0.02).toLocaleString('en-IN')})
+                                                </span>
+                                            )}
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-lg">₹</span>
+                                            <input
+                                                type="number"
+                                                value={formData.tokenAmount}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const max = (formData.price || 0) * 0.02;
+                                                    setFormData({ ...formData, tokenAmount: val <= max ? val : max });
+                                                }}
+                                                className={inputCls + ' pl-10'}
+                                                placeholder="Enter token amount..."
+                                            />
+                                            {formData.tokenAmount > 0 && formData.price > 0 && (
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-[#1a2340] bg-[#c9a84c]/20 px-3 py-1 rounded-lg">
+                                                    {((formData.tokenAmount / formData.price) * 100).toFixed(1)}% of price
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={labelCls}>Select Payout Account</label>
+                                        {payoutAccounts.length > 0 ? (
+                                            <select
+                                                value={formData.payoutAccountId}
+                                                onChange={(e) => setFormData({ ...formData, payoutAccountId: e.target.value })}
+                                                className={inputCls + ' cursor-pointer'}
+                                            >
+                                                {payoutAccounts.map(acc => (
+                                                    <option key={acc._id} value={acc._id}>
+                                                        {acc.accountType} — {acc.bankName || acc.upiId} ({acc.holderName})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700 text-sm font-medium">
+                                                No payout accounts found. Please add one in your{' '}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate('/dashboard')}
+                                                    className="underline font-black"
+                                                >
+                                                    Dashboard
+                                                </button>{' '}
+                                                first.
                                             </div>
                                         )}
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className={labelCls}>Select Payout Account</label>
-                                    {payoutAccounts.length > 0 ? (
-                                        <select
-                                            value={formData.payoutAccountId}
-                                            onChange={(e) => setFormData({ ...formData, payoutAccountId: e.target.value })}
-                                            className={inputCls + ' cursor-pointer'}
-                                        >
-                                            {payoutAccounts.map(acc => (
-                                                <option key={acc._id} value={acc._id}>
-                                                    {acc.accountType} — {acc.bankName || acc.upiId} ({acc.holderName})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700 text-sm font-medium">
-                                            No payout accounts found. Please add one in your{' '}
-                                            <button
-                                                type="button"
-                                                onClick={() => navigate('/dashboard')}
-                                                className="underline font-black"
-                                            >
-                                                Dashboard
-                                            </button>{' '}
-                                            first.
-                                        </div>
-                                    )}
-                                </div>
+                            )}
+                        </SectionCard>
+                    ) : (
+                        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-6 flex items-start gap-4 grayscale opacity-70">
+                            <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
+                                <ZapOff size={18} className="text-slate-500" />
                             </div>
-                        )}
-                    </SectionCard>
+                            <div>
+                                <h3 className="font-extrabold text-slate-500 text-sm uppercase tracking-widest">Token Booking Disabled</h3>
+                                <p className="text-slate-400 text-xs font-medium mt-1">
+                                    The Instant Token Booking feature has been temporarily disabled by the system administrator. You can still list your property, and buyers can contact you via inquiries.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Submit bar ── */}
                     <div className="bg-[#1a2340] rounded-2xl px-7 py-5 flex flex-col sm:flex-row justify-between items-center gap-4">
