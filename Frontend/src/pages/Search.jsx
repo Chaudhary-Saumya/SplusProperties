@@ -173,14 +173,14 @@ const Search = () => {
             {/* ── Sticky Search Bar ── */}
             <div className="sticky top-[68px] z-30 bg-white border-b border-[#e2d9c5] shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-                    <div className="flex items-center gap-2">
-                        {/* Search Input */}
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                        {/* Search Input Group */}
                         <div className="flex flex-1 items-center bg-[#fdfaf5] border-2 border-[#e2d9c5] focus-within:border-[#c9a84c] focus-within:ring-2 focus-within:ring-[#c9a84c]/20 rounded-lg px-3 py-2 transition-all gap-2 relative">
                             <SearchIcon size={18} className="text-[#c9a84c] flex-shrink-0" />
                             <input
                                 type="text"
-                                placeholder={isGeoMode ? '📍 Searching Near You...' : 'Search by Location, City or Property Name...'}
-                                className="flex-1 bg-transparent border-none outline-none text-[#1a2340] font-bold text-sm placeholder-[#b0a898]"
+                                placeholder={isGeoMode ? '📍 Searching Near You...' : 'Search Location, City or Property...'}
+                                className="flex-1 bg-transparent border-none outline-none text-[#1a2340] font-bold text-sm placeholder-[#b0a898] w-full"
                                 value={searchInput}
                                 onChange={e => setSearchInput(e.target.value)}
                                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
@@ -215,30 +215,33 @@ const Search = () => {
                             )}
                         </div>
 
-                        {/* Near Me */}
-                        <button
-                            onClick={triggerGeoSearch}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm border transition-all whitespace-nowrap ${isGeoMode ? 'bg-[#c9a84c] text-[#1a1200] border-[#c9a84c]' : 'bg-white text-[#1a2340] border-[#e2d9c5] hover:border-[#1a2340]'}`}
-                        >
-                            <Navigation size={15} className={geoLoading ? 'animate-spin' : ''} />
-                            <span className="hidden sm:inline">{isGeoMode ? 'Near Me ✓' : 'Near Me'}</span>
-                        </button>
+                        {/* Actions Group */}
+                        <div className="flex items-center gap-2">
+                            {/* Near Me */}
+                            <button
+                                onClick={triggerGeoSearch}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm border transition-all whitespace-nowrap ${isGeoMode ? 'bg-[#c9a84c] text-[#1a1200] border-[#c9a84c]' : 'bg-white text-[#1a2340] border-[#e2d9c5] hover:border-[#1a2340]'}`}
+                            >
+                                <Navigation size={15} className={geoLoading ? 'animate-spin' : ''} />
+                                <span>{isGeoMode ? 'Near Me ✓' : 'Near Me'}</span>
+                            </button>
 
-                        {/* Search Button */}
-                        <button
-                            onClick={() => setSearchTerm(searchInput)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white rounded-lg font-bold text-sm transition-all whitespace-nowrap"
-                        >
-                            <SearchIcon size={15} /> Search
-                        </button>
+                            {/* Search Button */}
+                            <button
+                                onClick={() => setSearchTerm(searchInput)}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white rounded-lg font-bold text-sm transition-all whitespace-nowrap"
+                            >
+                                <SearchIcon size={15} /> Search
+                            </button>
 
-                        {/* Mobile Filter Toggle */}
-                        <button
-                            onClick={() => setShowMobileFilters(!showMobileFilters)}
-                            className="lg:hidden flex items-center gap-1.5 px-3 py-2.5 bg-white border border-[#e2d9c5] rounded-lg font-bold text-sm text-[#1a2340]"
-                        >
-                            <Filter size={15} />
-                        </button>
+                            {/* Mobile Filter Toggle */}
+                            <button
+                                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                                className="lg:hidden flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white border border-[#e2d9c5] rounded-lg font-bold text-sm text-[#1a2340] hover:border-[#1a2340]"
+                            >
+                                <Filter size={15} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -303,11 +306,11 @@ const Search = () => {
                                         key={listing._id}
                                         ref={idx === listings.length - 1 ? lastElementRef : null}
                                         onClick={() => navigate(`/listings/${listing._id}`)}
-                                        className="bg-white border border-[#e2d9c5] hover:border-[#c9a84c] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-lg group"
-                                        style={{ display: 'flex', minHeight: 200 }}
+                                        className="bg-white border border-[#e2d9c5] hover:border-[#c9a84c] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-lg group flex flex-col sm:flex-row"
+                                        style={{ minHeight: 180 }}
                                     >
                                         {/* Image */}
-                                        <div className="relative flex-shrink-0 overflow-hidden bg-[#e5e7eb]" style={{ width: 260 }}>
+                                        <div className="relative flex-shrink-0 overflow-hidden bg-[#e5e7eb] w-full sm:w-[260px] h-[200px] sm:h-auto">
                                             {listing.images?.length > 0 ? (
                                                 <img
                                                     src={getImageUrl(listing.images[0])}

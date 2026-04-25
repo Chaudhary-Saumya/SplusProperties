@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 
 const Register = () => {
@@ -16,6 +17,7 @@ const Register = () => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -394,14 +396,33 @@ const Register = () => {
                             </div>
                         </div>
 
-                        {/* Password */}
                         <div className="reg-field">
                             <label className="reg-label">Password</label>
-                            <input
-                                type="password" name="password" className="reg-input"
-                                value={formData.password} onChange={handleChange}
-                                placeholder="Min. 6 characters" required minLength="6"
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    className="reg-input"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Min. 6 characters"
+                                    required
+                                    minLength="6"
+                                    style={{ paddingRight: '45px' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: '12px', top: '50%',
+                                        transform: 'translateY(-50%)', background: 'none',
+                                        border: 'none', cursor: 'pointer', color: '#9ca3af',
+                                        display: 'flex', alignItems: 'center'
+                                    }}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <button type="submit" className="reg-btn" disabled={loading}>

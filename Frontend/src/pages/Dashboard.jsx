@@ -847,7 +847,7 @@ const Dashboard = () => {
                             }
                         />
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {listings.map((l) => (
                                 <div
                                     key={l._id}
@@ -900,101 +900,86 @@ const Dashboard = () => {
                     <table className="w-full text-left">
                       <thead>
                         <tr className="border-b border-[#f0ebe0]">
-                          {[
-                            "Property",
-                            "Status",
-                            "Price",
-                            "Actions",
-                          ].map((h) => (
-                            <th
-                              key={h}
-                              className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 last:text-right"
-                            >
-                              {h}
-                            </th>
-                          ))}
+                          <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Property</th>
+                          <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Status</th>
+                          <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Price</th>
+                          <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest hidden md:table-cell text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#f8f5ee]">
                         {listings.map((l) => (
-                          <tr
-                            key={l._id}
-                            className="hover:bg-[#fdfaf5] transition-colors"
-                          >
-                            <td className="py-4 pr-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0">
-                                  {l.images?.[0] ? (
-                                    <img
-                                      src={getImageUrl(l.images[0])}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-[#f0ebe0]" />
-                                  )}
+                          <React.Fragment key={l._id}>
+                            <tr className="hidden md:table-row hover:bg-[#fdfaf5] transition-colors">
+                              <td className="py-4 pr-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0">
+                                    {l.images?.[0] ? (
+                                      <img src={getImageUrl(l.images[0])} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full bg-[#f0ebe0]" />
+                                    )}
+                                  </div>
+                                  <Link to={`/listings/${l._id}`} className="text-sm font-bold text-[#1a2340] hover:text-[#c9a84c] transition-colors line-clamp-2 max-w-45">
+                                    {l.title}
+                                  </Link>
                                 </div>
-                                <Link
-                                  to={`/listings/${l._id}`}
-                                  className="text-sm font-bold text-[#1a2340] hover:text-[#c9a84c] transition-colors line-clamp-2 max-w-45"
-                                >
-                                  {l.title}
-                                </Link>
-                              </div>
-                            </td>
-                            <td className="py-4 pr-4">
+                              </td>
+                              <td className="py-4 pr-4">
                                 <div className="flex items-center gap-2">
                                   <Toggle
                                     checked={l.status === "Active"}
-                                    onChange={() =>
-                                      toggleStatus(
-                                        l._id,
-                                        l.status === "Active"
-                                          ? "Inactive"
-                                          : "Active",
-                                      )
-                                    }
+                                    onChange={() => toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
                                   />
-                                  <span
-                                    className={`text-xs font-bold ${l.status === "Active" ? "text-[#15803d]" : "text-[#9ca3af]"}`}
-                                  >
+                                  <span className={`text-xs font-bold ${l.status === "Active" ? "text-[#15803d]" : "text-[#9ca3af]"}`}>
                                     {l.status}
                                   </span>
                                 </div>
-                            </td>
-                            <td className="py-4 pr-4">
-                              <span className="text-sm font-black text-[#1a2340]">
-                                ₹{l.price?.toLocaleString("en-IN")}
-                              </span>
-                            </td>
-                            <td className="py-4 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  onClick={() => navigate(`/listings/${l._id}`)}
-                                  className="p-2 text-[#6b7280] hover:bg-[#f0ebe0] rounded-lg transition-all"
-                                  title="View"
-                                >
-                                  <Eye size={15} />
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    navigate(`/edit-listing/${l._id}`)
-                                  }
-                                  className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all"
-                                  title="Edit"
-                                >
-                                  <Edit size={15} />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(l._id)}
-                                  className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                              </td>
+                              <td className="py-4 pr-4">
+                                <span className="text-sm font-black text-[#1a2340]">₹{l.price?.toLocaleString("en-IN")}</span>
+                              </td>
+                              <td className="py-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 text-[#6b7280] hover:bg-[#f0ebe0] rounded-lg transition-all" title="View"><Eye size={15} /></button>
+                                  <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all" title="Edit"><Edit size={15} /></button>
+                                  <button onClick={() => handleDelete(l._id)} className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all" title="Delete"><Trash2 size={15} /></button>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr className="md:hidden">
+                              <td colSpan="4" className="py-2">
+                                <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
+                                  <div className="flex items-start gap-3 mb-4">
+                                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0">
+                                      {l.images?.[0] ? (
+                                        <img src={getImageUrl(l.images[0])} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-[#f0ebe0]" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <Link to={`/listings/${l._id}`} className="text-sm font-bold text-[#1a2340] line-clamp-2 leading-tight">{l.title}</Link>
+                                      <p className="text-sm font-black text-[#c9a84c] mt-1">₹{l.price?.toLocaleString("en-IN")}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-3 border-t border-[#e2d9c5]/50">
+                                    <div className="flex items-center gap-2">
+                                      <Toggle
+                                        checked={l.status === "Active"}
+                                        onChange={() => toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
+                                      />
+                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${l.status === "Active" ? "text-[#15803d]" : "text-[#9ca3af]"}`}>{l.status}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg"><Eye size={14} /></button>
+                                      <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 bg-white border border-[#e2d9c5] text-[#2563eb] rounded-lg"><Edit size={14} /></button>
+                                      <button onClick={() => handleDelete(l._id)} className="p-2 bg-white border border-[#e2d9c5] text-[#dc2626] rounded-lg"><Trash2 size={14} /></button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -1006,19 +991,11 @@ const Dashboard = () => {
             {/* Transactions Section */}
             {activeSection === "transactions" && (
               <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
-                <SectionHeader
-                  icon={History}
-                  title="Token Transaction History"
-                />
+                <SectionHeader icon={History} title="Token Transaction History" />
 
                 {transactionsLoading ? (
                   <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-                    {[1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="h-40 bg-[#f8f5ee] rounded-xl animate-pulse"
-                      />
-                    ))}
+                    {[1, 2].map((i) => <div key={i} className="h-40 bg-[#f8f5ee] rounded-xl animate-pulse" />)}
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -1038,14 +1015,7 @@ const Dashboard = () => {
                         <EmptyState
                             title="No Transactions"
                             desc="Your payment history and receipts will appear here after your first reservation."
-                            action={
-                                <Link
-                                    to="/search"
-                                    className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
-                                >
-                                    Start Reservation
-                                </Link>
-                            }
+                            action={<Link to="/search" className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider">Start Reservation</Link>}
                         />
                     ) : (
                         <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
@@ -1053,60 +1023,59 @@ const Dashboard = () => {
                                 <table className="w-full text-left">
                                     <thead className="bg-[#fdfaf5] border-b border-[#e2d9c5]">
                                         <tr>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
-                                                Property
-                                            </th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
-                                                Amount
-                                            </th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest">
-                                                Status
-                                            </th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest text-right">
-                                                Actions
-                                            </th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Property</th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Amount</th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Status</th>
+                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#f0ebe0]">
                                         {transactions.map((t) => (
-                                            <tr key={t._id} className="hover:bg-[#fdfaf5]/50">
+                                          <React.Fragment key={t._id}>
+                                            <tr className="hidden md:table-row hover:bg-[#fdfaf5]/50">
                                                 <td className="p-4 min-w-[200px]">
-                                                    <p className="text-sm font-bold text-[#1a2340]">
-                                                        {t.listingId?.title}
-                                                    </p>
-                                                    <p className="text-[10px] text-[#9ca3af] font-600 mt-0.5">
-                                                        Ref: {t.razorpayOrderId}
-                                                    </p>
+                                                    <p className="text-sm font-bold text-[#1a2340]">{t.listingId?.title}</p>
+                                                    <p className="text-[10px] text-[#9ca3af] font-600 mt-0.5">Ref: {t.razorpayOrderId}</p>
                                                 </td>
                                                 <td className="p-4 whitespace-nowrap">
-                                                    <p className="text-sm font-black text-[#1a2340]">
-                                                        ₹{t.amount?.toLocaleString("en-IN")}
-                                                    </p>
-                                                    <p className="text-[10px] text-[#9ca3af] font-600">
-                                                        {new Date(t.createdAt).toLocaleDateString()}
-                                                    </p>
+                                                    <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
+                                                    <p className="text-[10px] text-[#9ca3af] font-600">{new Date(t.createdAt).toLocaleDateString()}</p>
                                                 </td>
                                                 <td className="p-4">
-                                                    <span
-                                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                                            t.status === "Success"
-                                                                ? "bg-[#f0fdf4] text-[#15803d]"
-                                                                : "bg-[#fff0f0] text-[#dc2626]"
-                                                        }`}
-                                                    >
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>
                                                         {t.status}
                                                     </span>
                                                 </td>
                                                 <td className="p-4 text-right">
-                                                    <button
-                                                        onClick={() => setSelectedTransaction(t)}
-                                                        className="p-2 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all"
-                                                        title="Receipt"
-                                                    >
-                                                        <Receipt size={16} />
+                                                    <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg text-xs font-bold hover:bg-[#1a2340] hover:text-white transition-all ml-auto">
+                                                        <Receipt size={14} /> Receipt
                                                     </button>
                                                 </td>
                                             </tr>
+                                            {/* Mobile card */}
+                                            <tr className="md:hidden">
+                                                <td colSpan="4" className="p-2">
+                                                    <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <p className="text-xs font-bold text-[#1a2340] line-clamp-1">{t.listingId?.title}</p>
+                                                                <p className="text-[9px] text-[#9ca3af] font-bold mt-0.5 uppercase tracking-wider">Ref: {t.razorpayOrderId}</p>
+                                                            </div>
+                                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>{t.status}</span>
+                                                        </div>
+                                                        <div className="flex items-end justify-between">
+                                                            <div>
+                                                                <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
+                                                                <p className="text-[10px] text-[#9ca3af] font-semibold">{new Date(t.createdAt).toLocaleDateString()}</p>
+                                                            </div>
+                                                            <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1 px-3 py-1.5 bg-[#1a2340] text-[#c9a84c] rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                                                <Receipt size={12} /> Receipt
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                          </React.Fragment>
                                         ))}
                                     </tbody>
                                 </table>
@@ -1126,118 +1095,72 @@ const Dashboard = () => {
 
                   {inquiriesLoading ? (
                     <div className="space-y-3">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="h-16 bg-[#f8f5ee] rounded-lg animate-pulse"
-                        />
-                      ))}
+                      {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-[#f8f5ee] rounded-lg animate-pulse" />)}
                     </div>
                   ) : receivedInquiries.length === 0 ? (
-                    <EmptyState
-                      title="No Inquiries Yet"
-                      message="Buyers haven't inquired about your listings yet."
-                    />
+                    <EmptyState title="No Inquiries Yet" message="Buyers haven't inquired about your listings yet." />
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="border-b border-[#f0ebe0]">
-                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4">
-                              Buyer
-                            </th>
-                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4">
-                              Property
-                            </th>
-                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4">
-                              Date
-                            </th>
-                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4">
-                              Status
-                            </th>
-                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest text-right">
-                              Actions
-                            </th>
+                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Buyer</th>
+                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Property</th>
+                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#f8f5ee]">
                           {receivedInquiries.map((inq) => (
-                            <tr
-                              key={inq._id}
-                              className="hover:bg-[#fdfaf5] transition-colors"
-                            >
-                              <td className="py-4 pr-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-[#1a2340] rounded-full flex items-center justify-center text-[#c9a84c] font-bold text-sm shrink-0">
-                                    {inq.userId?.name?.[0]?.toUpperCase() ||
-                                      "B"}
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-bold text-[#1a2340]">
-                                      {inq.userId?.name}
+                            <React.Fragment key={inq._id}>
+                              <tr className="hidden md:table-row hover:bg-[#fdfaf5] transition-colors">
+                                <td className="py-4 pr-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-[#1a2340] rounded-full flex items-center justify-center text-[#c9a84c] font-bold text-sm shrink-0">
+                                      {inq.userId?.name?.[0]?.toUpperCase() || "B"}
                                     </div>
-                                    <div className="text-xs text-[#6b7280]">
-                                      {inq.userId?.phone}
+                                    <div>
+                                      <div className="text-sm font-bold text-[#1a2340]">{inq.userId?.name}</div>
+                                      <div className="text-xs text-[#6b7280]">{inq.userId?.phone}</div>
                                     </div>
                                   </div>
-                                </div>
-                              </td>
-                              <td className="py-4 pr-4">
-                                <Link
-                                  to={`/listings/${inq.listingId?._id}`}
-                                  className="text-sm font-bold text-[#1a2340] hover:text-[#c9a84c]"
-                                >
-                                  {inq.listingId?.title}
-                                </Link>
-                              </td>
-                              <td className="py-4 pr-4">
-                                <div className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">
-                                  {new Date(inq.createdAt).toLocaleDateString(
-                                    "en-IN",
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-4 pr-4">
-                                <span
-                                  className={`px-2 py-1 text-xs font-bold rounded-full ${
-                                    inq.status === "Contacted"
-                                      ? "bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0]"
-                                      : inq.status === "Pending"
-                                        ? "bg-[#fffbeb] text-[#d97706] border border-[#fcd34d]"
-                                        : "bg-[#f3f4f6] text-[#6b7280]"
-                                  }`}
-                                >
-                                  {inq.status}
-                                </span>
-                              </td>
-                              <td className="py-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
-                                    onClick={() =>
-                                      updateInquiryStatus(
-                                        inq._id,
-                                        inq.status === "Pending"
-                                          ? "Contacted"
-                                          : "Pending",
-                                      )
-                                    }
-                                    className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all"
-                                    title="Toggle Status"
-                                  >
-                                    <CheckCircle2 size={15} />
-                                  </button>
-                                  {inq.userId?.phone && (
-                                    <a
-                                      href={`tel:${inq.userId.phone}`}
-                                      className="p-2 text-[#15803d] hover:bg-[#f0fdf4] rounded-lg transition-all"
-                                      title="Call"
-                                    >
-                                      <Phone size={15} />
-                                    </a>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <Link to={`/listings/${inq.listingId?._id}`} className="text-sm font-bold text-[#1a2340] hover:text-[#c9a84c]">
+                                    {inq.listingId?.title}
+                                  </Link>
+                                </td>
+                                <td className="py-4 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")} className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all" title="Toggle Status"><CheckCircle2 size={15} /></button>
+                                    {inq.userId?.phone && (
+                                      <a href={`tel:${inq.userId.phone}`} className="p-2 text-[#15803d] hover:bg-[#f0fdf4] rounded-lg transition-all" title="Call"><Phone size={15} /></a>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                              {/* Mobile card */}
+                              <tr className="md:hidden">
+                                <td colSpan="3" className="py-2">
+                                  <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <div className="w-10 h-10 bg-[#1a2340] rounded-full flex items-center justify-center text-[#c9a84c] font-black text-sm">{inq.userId?.name?.[0]?.toUpperCase()}</div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-[#1a2340]">{inq.userId?.name}</p>
+                                        <p className="text-xs text-[#6b7280]">{inq.userId?.phone}</p>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs font-bold text-[#9ca3af] mb-3 line-clamp-1">Property: {inq.listingId?.title}</p>
+                                    <div className="flex items-center justify-between pt-3 border-t border-[#e2d9c5]/50">
+                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inq.status === "Contacted" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fffbeb] text-[#d97706]"}`}>{inq.status}</span>
+                                      <div className="flex gap-2">
+                                        <button onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")} className="p-2 bg-white border border-[#e2d9c5] text-[#2563eb] rounded-lg"><CheckCircle2 size={14} /></button>
+                                        {inq.userId?.phone && <a href={`tel:${inq.userId.phone}`} className="p-2 bg-white border border-[#e2d9c5] text-[#15803d] rounded-lg"><Phone size={14} /></a>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
@@ -1271,15 +1194,12 @@ const Dashboard = () => {
                         <div className="flex items-start justify-between mb-4">
                           <div className="w-10 h-10 bg-[#1a2340] rounded-lg flex items-center justify-center">
                             {acc.accountType === "UPI" ? (
-                              <CreditCard
-                                size={16}
-                                className="text-[#c9a84c]"
-                              />
+                              <CreditCard size={16} className="text-[#c9a84c]" />
                             ) : (
                               <Landmark size={16} className="text-[#c9a84c]" />
                             )}
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => handleEditAccount(acc)}
                               className="p-1.5 text-[#6b7280] hover:text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all"
@@ -1297,13 +1217,9 @@ const Dashboard = () => {
                         <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1">
                           {acc.accountType} Account
                         </div>
-                        <div className="text-sm font-bold text-[#1a2340] mb-1">
-                          {acc.holderName}
-                        </div>
+                        <div className="text-sm font-bold text-[#1a2340] mb-1">{acc.holderName}</div>
                         <div className="text-xs text-[#6b7280] font-600">
-                          {acc.accountType === "UPI"
-                            ? acc.upiId
-                            : acc.accountNumber}
+                          {acc.accountType === "UPI" ? acc.upiId : acc.accountNumber}
                         </div>
                         {acc.bankName && (
                           <div className="text-[10px] text-[#9ca3af] font-600 mt-1">
@@ -1313,8 +1229,7 @@ const Dashboard = () => {
                       </div>
                     ))}
 
-                    {(!user.paymentAccounts ||
-                      user.paymentAccounts.length < 3) && (
+                    {(!user.paymentAccounts || user.paymentAccounts.length < 3) && (
                       <button
                         onClick={() => setShowAddAccountModal(true)}
                         className="border-2 border-dashed border-[#e2d9c5] hover:border-[#c9a84c] hover:bg-[#fffbf0] rounded-xl p-5 flex flex-col items-center justify-center gap-3 text-[#9ca3af] hover:text-[#c9a84c] transition-all min-h-35"
@@ -1322,16 +1237,13 @@ const Dashboard = () => {
                         <div className="w-10 h-10 border-2 border-dashed border-current rounded-lg flex items-center justify-center">
                           <Plus size={18} />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider">
-                          Add Account
-                        </span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Add Account</span>
                       </button>
                     )}
                   </div>
 
                   <div className="bg-[#fffbf0] border border-[#e2d9c5] rounded-lg p-4 text-sm text-[#b8933a] font-600">
-                    💡 Token money from buyers will be transferred directly to
-                    your chosen account. We don't hold any funds.
+                    💡 Token money from buyers will be transferred directly to your chosen account. We don't hold any funds.
                   </div>
                 </div>
               )}
@@ -1345,136 +1257,71 @@ const Dashboard = () => {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div className="h-1 w-full bg-linear-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0]">
-              <h3
-                className="text-lg font-bold text-[#1a2340]"
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
+              <h3 className="text-lg font-bold text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
                 {editingAccountId ? "Edit Account" : "Add Payout Account"}
               </h3>
               <button
-                onClick={() => {
-                  setShowAddAccountModal(false);
-                  setEditingAccountId(null);
-                }}
+                onClick={() => { setShowAddAccountModal(false); setEditingAccountId(null); }}
                 className="text-[#9ca3af] hover:text-[#1a2340] p-1.5 hover:bg-[#f8f5ee] rounded-lg transition-all"
               >
                 <X size={18} />
               </button>
             </div>
-
             <form onSubmit={handleAddAccount} className="p-6 space-y-4">
               <div className="flex gap-2 bg-[#f8f5ee] p-1 rounded-lg">
                 {["Bank", "UPI"].map((type) => (
                   <button
-                    key={type}
-                    type="button"
-                    onClick={() =>
-                      setNewAccount({ ...newAccount, accountType: type })
-                    }
+                    key={type} type="button"
+                    onClick={() => setNewAccount({ ...newAccount, accountType: type })}
                     className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${newAccount.accountType === type ? "bg-[#1a2340] text-[#c9a84c] shadow-sm" : "text-[#9ca3af] hover:text-[#1a2340]"}`}
                   >
                     {type}
                   </button>
                 ))}
               </div>
-
               <div>
-                <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                  Account Holder Name
-                </label>
+                <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Account Holder Name</label>
                 <input
-                  type="text"
-                  required
-                  className={inp}
-                  placeholder="Name as per bank"
-                  value={newAccount.holderName}
-                  onChange={(e) =>
-                    setNewAccount({ ...newAccount, holderName: e.target.value })
-                  }
+                  type="text" required className={inp} placeholder="Name as per bank"
+                  value={newAccount.holderName} onChange={(e) => setNewAccount({ ...newAccount, holderName: e.target.value })}
                 />
               </div>
-
               {newAccount.accountType === "Bank" ? (
                 <>
                   <div>
-                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                      Bank Name
-                    </label>
+                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Bank Name</label>
                     <input
-                      type="text"
-                      required
-                      className={inp}
-                      placeholder="e.g. HDFC Bank"
-                      value={newAccount.bankName}
-                      onChange={(e) =>
-                        setNewAccount({
-                          ...newAccount,
-                          bankName: e.target.value,
-                        })
-                      }
+                      type="text" required className={inp} placeholder="e.g. HDFC Bank"
+                      value={newAccount.bankName} onChange={(e) => setNewAccount({ ...newAccount, bankName: e.target.value })}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                        Account Number
-                      </label>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Account Number</label>
                       <input
-                        type="text"
-                        required
-                        className={inp}
-                        placeholder="1234..."
-                        value={newAccount.accountNumber}
-                        onChange={(e) =>
-                          setNewAccount({
-                            ...newAccount,
-                            accountNumber: e.target.value,
-                          })
-                        }
+                        type="text" required className={inp} placeholder="1234..."
+                        value={newAccount.accountNumber} onChange={(e) => setNewAccount({ ...newAccount, accountNumber: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                        IFSC Code
-                      </label>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">IFSC Code</label>
                       <input
-                        type="text"
-                        required
-                        className={inp}
-                        placeholder="HDFC0..."
-                        value={newAccount.ifscCode}
-                        onChange={(e) =>
-                          setNewAccount({
-                            ...newAccount,
-                            ifscCode: e.target.value,
-                          })
-                        }
+                        type="text" required className={inp} placeholder="HDFC0..."
+                        value={newAccount.ifscCode} onChange={(e) => setNewAccount({ ...newAccount, ifscCode: e.target.value })}
                       />
                     </div>
                   </div>
                 </>
               ) : (
                 <div>
-                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                    UPI ID
-                  </label>
+                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">UPI ID</label>
                   <input
-                    type="text"
-                    required
-                    className={inp}
-                    placeholder="username@bank"
-                    value={newAccount.upiId}
-                    onChange={(e) =>
-                      setNewAccount({ ...newAccount, upiId: e.target.value })
-                    }
+                    type="text" required className={inp} placeholder="username@bank"
+                    value={newAccount.upiId} onChange={(e) => setNewAccount({ ...newAccount, upiId: e.target.value })}
                   />
                 </div>
               )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2"
-              >
+              <button type="submit" className="w-full py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2">
                 {editingAccountId ? <Edit size={16} /> : <Plus size={16} />}
                 {editingAccountId ? "Update Account" : "Save Account"}
               </button>

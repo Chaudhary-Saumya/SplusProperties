@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, Home } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
@@ -258,6 +258,27 @@ const Navbar = () => {
           .hamburger { display: flex; }
         }
 
+        .mobile-actions {
+          display: none;
+          align-items: center;
+          gap: 16px;
+        }
+
+        @media (max-width: 900px) {
+          .mobile-actions { display: flex; }
+        }
+
+        .mob-quick-link {
+          color: #1a2340;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.2s;
+        }
+        .mob-quick-link:hover {
+          color: #c9a84c;
+        }
+
         /* mobile menu */
         .mobile-menu {
           display: none;
@@ -447,10 +468,22 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Hamburger */}
-          <button className="hamburger" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
-            {isOpen ? <X size={26} /> : <Menu size={26} />}
-          </button>
+          {/* Mobile Quick Actions & Hamburger */}
+          <div className="mobile-actions">
+            {isAuthenticated && (
+              <Link 
+                to={user?.role === 'Admin' ? '/admin' : '/dashboard'} 
+                className="mob-quick-link"
+                onClick={() => setIsOpen(false)}
+                title="Dashboard"
+              >
+                <Home size={24} />
+              </Link>
+            )}
+            <button className="hamburger" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
+              {isOpen ? <X size={26} /> : <Menu size={26} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

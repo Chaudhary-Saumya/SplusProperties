@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 
 const Login = () => {
@@ -10,6 +11,7 @@ const Login = () => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -327,15 +329,30 @@ const Login = () => {
 
                         <div className="login-field">
                             <label className="login-label">Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                className="login-input"
-                                value={credentials.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                required
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    className="login-input"
+                                    value={credentials.password}
+                                    onChange={handleChange}
+                                    placeholder="••••••••"
+                                    required
+                                    style={{ paddingRight: '45px' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: '12px', top: '50%',
+                                        transform: 'translateY(-50%)', background: 'none',
+                                        border: 'none', cursor: 'pointer', color: '#9ca3af',
+                                        display: 'flex', alignItems: 'center'
+                                    }}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <a href="/forgot-password" className="login-forgot">Forgot password?</a>

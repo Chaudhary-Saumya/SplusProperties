@@ -39,7 +39,8 @@ const slides = [
 const HeroCarousel = () => {
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
- 
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   const go = useCallback((idx) => {
     if (animating) return;
@@ -55,10 +56,43 @@ const HeroCarousel = () => {
     return () => clearInterval(t);
   }, [current, go]);
 
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    if (isLeftSwipe) go(current + 1);
+    if (isRightSwipe) go(current - 1);
+  };
+
   const slide = slides[current];
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '92vh', minHeight: 520, overflow: 'hidden', background: '#0a0f1e' }}>
+    <div 
+      style={{ position: 'relative', width: '100%', height: '92vh', minHeight: 520, overflow: 'hidden', background: '#0a0f1e' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <style>{`
+        .carousel-arrow { 
+          display: flex !important; 
+        }
+        @media (max-width: 768px) {
+          .carousel-arrow { 
+            display: none !important; 
+          }
+        }
+      `}</style>
       {/* BG Image */}
       <img
         key={current}
@@ -152,12 +186,12 @@ const HeroCarousel = () => {
         { dir: -1, icon: <ChevronLeft size={26} />, side: { left: 20 } },
         { dir: 1, icon: <ChevronRight size={26} />, side: { right: 20 } },
       ].map(({ dir, icon, side }) => (
-        <button key={dir} onClick={() => go(current + dir)} style={{
+        <button key={dir} onClick={() => go(current + dir)} className="carousel-arrow" style={{
           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
           ...side, zIndex: 6,
           background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.3)',
           color: '#fff', width: 48, height: 48, borderRadius: '50%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', backdropFilter: 'blur(8px)',
           transition: 'background 0.2s',
         }}>
@@ -242,7 +276,7 @@ const Home = () => {
           </div>
           <button type="submit" style={{
             background: '#1a2340', color: '#fff', border: 'none', cursor: 'pointer',
-            padding: '12px 28px', borderRadius: 8,
+            padding: '10px 12px', borderRadius: 8,
             fontSize: 14, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase',
             fontFamily: "'Nunito Sans', sans-serif",
             flexShrink: 0,

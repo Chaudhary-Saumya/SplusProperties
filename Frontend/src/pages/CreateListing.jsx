@@ -56,7 +56,7 @@ function MapRecenter({ position, bounds }) {
 
 // Step indicator pill
 const StepPill = ({ number, label, active, done }) => (
-    <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all border ${
+    <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all border ${
         done ? 'bg-[#c9a84c] text-[#1a2340] border-[#c9a84c]'
         : active ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
         : 'bg-transparent text-[#1a2340]/40 border-[#1a2340]/20'
@@ -73,16 +73,16 @@ const StepPill = ({ number, label, active, done }) => (
 // Section card wrapper
 const SectionCard = ({ icon, title, subtitle, children, accent }) => (
     <div className="relative bg-white rounded-2xl border border-[#1a2340]/10 shadow-sm overflow-hidden">
-        <div className="flex items-start gap-4 px-7 pt-6 pb-5 border-b border-[#f8f5ee]">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${accent ? 'bg-[#c9a84c]' : 'bg-[#1a2340]'}`}>
-                {React.cloneElement(icon, { size: 18, className: accent ? 'text-[#1a2340]' : 'text-[#c9a84c]' })}
+        <div className="flex items-start gap-3 sm:gap-4 px-4 sm:px-7 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#f8f5ee]">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${accent ? 'bg-[#c9a84c]' : 'bg-[#1a2340]'}`}>
+                {React.cloneElement(icon, { size: 16, className: accent ? 'text-[#1a2340]' : 'text-[#c9a84c]' })}
             </div>
             <div>
-                <h3 className="font-extrabold text-[#1a2340] text-base uppercase tracking-widest">{title}</h3>
-                {subtitle && <p className="text-[#1a2340]/50 text-xs font-medium mt-0.5">{subtitle}</p>}
+                <h3 className="font-extrabold text-[#1a2340] text-sm sm:text-base uppercase tracking-widest leading-tight">{title}</h3>
+                {subtitle && <p className="text-[#1a2340]/50 text-[10px] sm:text-xs font-medium mt-0.5">{subtitle}</p>}
             </div>
         </div>
-        <div className="px-7 py-6">{children}</div>
+        <div className="px-4 sm:px-7 py-5 sm:py-6">{children}</div>
     </div>
 );
 
@@ -257,10 +257,10 @@ const CreateListing = () => {
                     </div> */}
 
                     {/* Steps */}
-                    <div className="mt-6 flex flex-wrap gap-2">
-                        <StepPill number="1" label="Property Details" done active />
+                    <div className="mt-6 flex overflow-x-auto pb-2 gap-2 no-scrollbar">
+                        <StepPill number="1" label="Details" done active />
                         <StepPill number="2" label="Location" active />
-                        <StepPill number="3" label="Media & Booking" active={false} />
+                        <StepPill number="3" label="Media" active={false} />
                     </div>
                 </div>
             </div>
@@ -341,17 +341,17 @@ const CreateListing = () => {
                     <SectionCard icon={<MapPin />} title="Property Location" subtitle="Set location via search, map pin, or GPS">
 
                         {/* Mode switcher */}
-                        <div className="flex bg-[#f8f5ee] p-1.5 rounded-xl border border-[#1a2340]/10 w-fit mb-6 gap-1">
+                        <div className="flex bg-[#f8f5ee] p-1.5 rounded-xl border border-[#1a2340]/10 w-full md:w-fit mb-6 gap-1 overflow-x-auto no-scrollbar">
                             {[
-                                { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
-                                { id: 'map', label: 'Pin on Map', icon: <Target size={14} /> },
-                                { id: 'gps', label: 'Use My GPS', icon: <Navigation size={14} /> }
+                                { id: 'address', label: 'Search', icon: <MapPin size={14} /> },
+                                { id: 'map', label: 'Map', icon: <Target size={14} /> },
+                                { id: 'gps', label: 'GPS', icon: <Navigation size={14} /> }
                             ].map((method) => (
                                 <button
                                     key={method.id}
                                     type="button"
                                     onClick={() => setLocationMethod(method.id)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                                    className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                                         locationMethod === method.id
                                         ? 'bg-[#1a2340] text-[#c9a84c] shadow'
                                         : 'text-[#1a2340]/50 hover:text-[#1a2340] hover:bg-white'
