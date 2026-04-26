@@ -109,6 +109,12 @@ io.on('connection', (socket) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const { getSitemap, getRobots } = require('./controllers/seoController');
+
+// SEO Routes
+app.get('/sitemap.xml', getSitemap);
+app.get('/robots.txt', getRobots);
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/listings', require('./routes/listings'));

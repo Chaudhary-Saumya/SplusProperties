@@ -34,7 +34,7 @@ const Navbar = () => {
         }
 
         .navbar-inner {
-          max-width: 1280px;
+          max-width: 1400px;
           margin: 0 auto;
           padding: 0 24px;
           display: flex;
@@ -380,6 +380,8 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="nav-desktop">
             <Link to="/" className="nav-link">Home</Link>
+            <Link to="/about" className="nav-link">About</Link>
+
 
             {/* Search / Buy dropdown */}
             <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
@@ -489,6 +491,8 @@ const Navbar = () => {
         {/* Mobile Menu */}
         <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
           <Link to="/" className="mob-link" onClick={() => setIsOpen(false)}>Home</Link>
+          <Link to="/about" className="mob-link" onClick={() => setIsOpen(false)}>About</Link>
+
 
           <div className="mob-section-label">Properties</div>
           {/* <Link to="/search" className="mob-sub-link" onClick={() => setIsOpen(false)}>All Properties</Link> */}

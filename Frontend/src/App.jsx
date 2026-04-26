@@ -43,6 +43,8 @@ import Brokers from './pages/Brokers';
 import AreaConverter from './pages/AreaConverter';
 import BoundaryMap from './pages/BoundaryMap';
 import VerifyOTP from './pages/VerifyOTP';
+import About from './pages/About';
+
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
 import socket from './utils/socket';
@@ -111,6 +113,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/verify-otp" element={<VerifyOTP />} />
             <Route path="/listings/:id" element={<PropertyDetails />} />
+            <Route path="/land/:location/:id" element={<PropertyDetails />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/my-visits" element={<MyVisits />} />
@@ -121,6 +124,8 @@ function App() {
 <Route path="/seller/:id" element={<SellerProfile />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
+            <Route path="/about" element={<About />} />
+
           </Routes>
         </main>
       </div>

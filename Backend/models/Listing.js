@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const slugify = require('slugify');
 
 const listingSchema = new mongoose.Schema({
     title: {
@@ -6,6 +7,10 @@ const listingSchema = new mongoose.Schema({
         required: [true, 'Please add a title'],
         trim: true,
         maxlength: [100, 'Title cannot be more than 100 characters']
+    },
+    slug: {
+        type: String,
+        unique: true
     },
     description: {
         type: String,
@@ -132,6 +137,18 @@ listingSchema.index({ createdAt: -1 }); // Optimized for recency sorting
 listingSchema.index({ isVerified: 1 });
 listingSchema.index({ isTokened: 1 });
 listingSchema.index({ reviews: 1 });
+
+// Generate slug from title before saving
+listingSchema.pre('save', async function() {
+    if (!this.isModified('title')) {
+        return;
+    }
+    
+    const baseSlug = slugify(this.title, { lower: true, strict: true });
+    // Append a short random string to ensure uniqueness while keeping it friendly
+    const uniqueId = Math.random().toString(36).substring(2, 6);
+    this.slug = `${baseSlug}-${uniqueId}`;
+});
 
 module.exports = mongoose.model('Listing', listingSchema);
 

@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import DetailSkeleton from '../components/DetailSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
+import SEO from '../components/SEO';
 
 const PropertyDetails = () => {
     const { id } = useParams();
@@ -268,6 +269,31 @@ const renderStars = () => {
 
     return (
         <div style={{ fontFamily: "'Nunito Sans', sans-serif" }} className="bg-[#f8f5ee]">
+            <SEO 
+                title={`${listing.title} in ${listing.location}`}
+                description={`${listing.description?.substring(0, 160)}...`}
+                image={listing.images?.[0] ? getImageUrl(listing.images[0]) : null}
+                type="article"
+            />
+            
+            {/* Structured Data (JSON-LD) for SEO */}
+            <script type="application/ld+json">
+                {JSON.stringify({
+                    "@context": "https://schema.org/",
+                    "@type": "RealEstateListing",
+                    "name": listing.title,
+                    "description": listing.description,
+                    "price": listing.price,
+                    "priceCurrency": "INR",
+                    "address": {
+                        "@type": "PostalAddress",
+                        "addressLocality": listing.location,
+                        "addressCountry": "IN"
+                    },
+                    "image": listing.images?.map(img => getImageUrl(img)) || []
+                })}
+            </script>
+
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
             {/* Gold bar */}

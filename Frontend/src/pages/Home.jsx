@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart } from 'lucide-react';
+import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
 import { useQuery } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
@@ -19,11 +20,11 @@ const slides = [
   },
   {
     image: 'https://images.unsplash.com/photo-1659572863867-70ae4445ad4e?q=80&w=3056&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
-    tag: 'Scenic Hilltop Estates',
-    heading: 'Empowering Real\nEstate Digitally',
-    sub: 'Explore geospatial-verified land parcels with smart boundary mapping tools.',
-    cta: 'Explore Now',
-    ctaLink: '/search',
+    tag: 'Digital Mapping Tech',
+    heading: 'Interactive Smart\nLand Visualization',
+    sub: 'Visualize property boundaries and verify land parcels with our advanced mapping tools.',
+    cta: 'See Land Map',
+    ctaLink: '/boundary-map',
   },
   {
     image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
@@ -167,17 +168,6 @@ const HeroCarousel = () => {
           }}>
             {slide.cta}
           </Link>
-          <Link to="/search" style={{
-            background: 'rgba(255,255,255,0.12)', color: '#fff',
-            fontFamily: "'Nunito Sans', sans-serif",
-            fontWeight: 700, fontSize: 14, letterSpacing: '1.5px',
-            textTransform: 'uppercase', textDecoration: 'none',
-            padding: '14px 32px', borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.35)',
-            backdropFilter: 'blur(8px)',
-          }}>
-            View All Listings
-          </Link>
         </div>
       </div>
 
@@ -244,6 +234,10 @@ const Home = () => {
 
   return (
     <div style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+      <SEO 
+        title="Verified Land Plots & Farmhouse Land in India"
+        description="Find verified land parcels, agricultural plots, and commercial land directly from sellers. Intelligent mapping and secure booking for your next land investment."
+      />
 
 
       {/* ── Hero Carousel ── */}
@@ -294,10 +288,10 @@ const Home = () => {
           flexWrap: 'wrap', gap: 24,
         }}>
           {[
-            { num: '2,400+', label: 'Verified Listings' },
-            { num: '180+', label: 'Cities Covered' },
-            { num: '12,000+', label: 'Happy Buyers' },
-            { num: '₹500Cr+', label: 'Deals Closed' },
+            { num: '100%', label: 'Verified Listings' },
+            { num: 'Smart', label: 'Digitized Mapping' },
+            { num: 'Direct', label: 'Seller Connection' },
+            { num: 'Zero', label: 'Hidden Charges' },
           ].map(({ num, label }) => (
             <div key={label} style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, color: '#c9a84c', fontWeight: 700 }}>{num}</div>

@@ -266,10 +266,15 @@ exports.getNearbyListings = asyncHandler(async (req, res, next) => {
 // @route   GET /api/listings/:id
 // @access  Public
 exports.getListing = asyncHandler(async (req, res, next) => {
-    const listing = await Listing.findById(req.params.id).populate({
-        path: 'createdBy',
-        select: 'name email phone role'
-    });
+    const isId = req.params.id.match(/^[0-9a-fA-F]{24}$/);
+    
+    const listing = await (isId 
+        ? Listing.findById(req.params.id) 
+        : Listing.findOne({ slug: req.params.id }))
+        .populate({
+            path: 'createdBy',
+            select: 'name email phone role'
+        });
 
     if (!listing) {
         return res.status(404).json({ success: false, error: 'Listing not found' });
