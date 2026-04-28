@@ -25,349 +25,166 @@ const Navbar = () => {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
         .navbar-root {
-          position: sticky;
-          top: 0;
-          z-index: 50;
+          position: sticky; top: 0; z-index: 50;
           background: #ffffff;
           border-bottom: 2px solid #1a2340;
           font-family: 'Nunito Sans', sans-serif;
         }
-
         .navbar-inner {
-          max-width: 1400px;
-          margin: 0 auto;
+          max-width: 1400px; margin: 0 auto;
           padding: 0 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          display: flex; align-items: center; justify-content: space-between;
           height: 80px;
         }
 
-        /* ── Logo ── */
-        .logo {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-decoration: none;
-          line-height: 1;
-          padding: 8px 0;
-          transition: transform 0.2s;
-        }
-        .logo:hover {
-          transform: scale(1.03);
-        }
-        .logo-main {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .logo-s {
-          font-family: 'Playfair Display', serif;
-          font-size: 55px;
-          font-weight: 700;
-          color: #c9a84c;
-          margin: 0;
-          padding: 0;
-        }
-        .logo-plus {
-          font-family: 'Great Vibes', cursive;
-          font-size: 25px;
-          color: #1a2340;
-          position: absolute;
-          bottom: 5px;
-          left: 50%;
-          transform: translateX(-50%);
-          white-space: nowrap;
-          z-index: 2;
-          pointer-events: none;
-        }
-        .logo-text {
-          font-family: 'Nunito Sans', sans-serif;
-          font-size: 10px;
-          font-weight: 800;
-          color: #1a2340;
-          letter-spacing: 5px;
-          text-transform: uppercase;
-          margin-top: -1px;
-          padding-left: 5px; /* balancing the letter-spacing */
-        }
+        /* Logo */
+        .logo { display: flex; flex-direction: column; align-items: center; text-decoration: none; line-height: 1; padding: 8px 0; transition: transform 0.2s; }
+        .logo:hover { transform: scale(1.03); }
+        .logo-main { position: relative; display: flex; align-items: center; justify-content: center; }
+        .logo-s { font-family: 'Playfair Display', serif; font-size: 55px; font-weight: 700; color: #c9a84c; margin: 0; padding: 0; }
+        .logo-plus { font-family: 'Great Vibes', cursive; font-size: 25px; color: #1a2340; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 2; pointer-events: none; }
+        .logo-text { font-family: 'Nunito Sans', sans-serif; font-size: 10px; font-weight: 800; color: #1a2340; letter-spacing: 5px; text-transform: uppercase; margin-top: -1px; padding-left: 5px; }
 
-        /* ── Desktop nav ── */
-        .nav-desktop {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        /* plain nav link */
-        .nav-link {
-          font-size: 15px;
-          font-weight: 700;
-          color: #1a2340;
-          text-decoration: none;
-          padding: 10px 16px;
-          border-radius: 8px;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          transition: background 0.15s, color 0.15s;
-          white-space: nowrap;
-        }
-        .nav-link:hover {
-          background: #f0f4ff;
-          color: #c9a84c;
-        }
-
-        /* dropdown trigger */
-        .nav-dropdown {
-          position: relative;
-        }
-        .nav-dropdown-btn {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1a2340;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 10px 16px;
-          border-radius: 8px;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          transition: background 0.15s, color 0.15s;
-          white-space: nowrap;
-        }
-        .nav-dropdown-btn:hover,
-        .nav-dropdown-btn.active {
-          background: #f0f4ff;
-          color: #c9a84c;
-        }
-        .chevron {
-          transition: transform 0.2s;
-        }
-        .chevron.open {
-          transform: rotate(180deg);
-        }
-        .dropdown-menu {
-          position: absolute;
-          top: calc(100% + 1px);
-          left: 0;
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          border-top: 3px solid #c9a84c;
-          border-radius: 8px;
-          min-width: 180px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-          padding: 6px 0;
-          z-index: 100;
-        }
-        .dropdown-item {
-          display: block;
-          padding: 10px 18px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #1a2340;
-          text-decoration: none;
-          transition: background 0.12s;
-        }
-        .dropdown-item:hover {
-          background: #f8f5ee;
-          color: #c9a84c;
-        }
-
-        /* divider */
-        .nav-divider {
-          width: 1px;
-          height: 24px;
-          background: #d1d5db;
-          margin: 0 6px;
-        }
-
-        /* auth buttons */
-        .btn-login {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1a2340;
-          text-decoration: none;
-          padding: 8px 16px;
-          border-radius: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: background 0.15s;
-        }
+        /* Desktop nav */
+        .nav-desktop { display: flex; align-items: center; gap: 4px; }
+        .nav-link { font-size: 15px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 10px 16px; border-radius: 8px; letter-spacing: 0.5px; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+        .nav-link:hover { background: #f0f4ff; color: #c9a84c; }
+        .nav-dropdown { position: relative; }
+        .nav-dropdown-btn { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: #1a2340; background: none; border: none; cursor: pointer; padding: 10px 16px; border-radius: 8px; letter-spacing: 0.5px; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+        .nav-dropdown-btn:hover, .nav-dropdown-btn.active { background: #f0f4ff; color: #c9a84c; }
+        .chevron { transition: transform 0.2s; }
+        .chevron.open { transform: rotate(180deg); }
+        .dropdown-menu { position: absolute; top: calc(100% + 1px); left: 0; background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #c9a84c; border-radius: 8px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); padding: 6px 0; z-index: 100; }
+        .dropdown-item { display: block; padding: 10px 18px; font-size: 13px; font-weight: 600; color: #1a2340; text-decoration: none; transition: background 0.12s; }
+        .dropdown-item:hover { background: #f8f5ee; color: #c9a84c; }
+        .nav-divider { width: 1px; height: 24px; background: #d1d5db; margin: 0 6px; }
+        .btn-login { font-size: 14px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 8px 16px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s; }
         .btn-login:hover { background: #f0f4ff; }
-
-        .btn-signup {
-          font-size: 13px;
-          font-weight: 700;
-          color: #fff;
-          background: #1a2340;
-          text-decoration: none;
-          padding: 9px 20px;
-          border-radius: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: background 0.15s;
-          border: 2px solid #1a2340;
-        }
+        .btn-signup { font-size: 13px; font-weight: 700; color: #fff; background: #1a2340; text-decoration: none; padding: 9px 20px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s; border: 2px solid #1a2340; }
         .btn-signup:hover { background: #c9a84c; border-color: #c9a84c; }
-
-        .btn-dashboard {
-          font-size: 13px;
-          font-weight: 700;
-          color: #1a2340;
-          text-decoration: none;
-          padding: 9px 18px;
-          border-radius: 6px;
-          border: 2px solid #1a2340;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: all 0.15s;
-        }
+        .btn-dashboard { font-size: 13px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 9px 18px; border-radius: 6px; border: 2px solid #1a2340; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
         .btn-dashboard:hover { background: #1a2340; color: #fff; }
-
-        .btn-logout {
-          font-size: 13px;
-          font-weight: 700;
-          color: #fff;
-          background: #c9a84c;
-          border: 2px solid #c9a84c;
-          padding: 9px 18px;
-          border-radius: 6px;
-          cursor: pointer;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: all 0.15s;
-        }
+        .btn-logout { font-size: 13px; font-weight: 700; color: #fff; background: #c9a84c; border: 2px solid #c9a84c; padding: 9px 18px; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
         .btn-logout:hover { background: #b8933a; border-color: #b8933a; }
 
-        /* ── Mobile ── */
-        .hamburger {
-          display: none;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #1a2340;
-          padding: 4px;
-        }
+        /* Mobile toggle */
+        .hamburger { display: none; background: none; border: none; cursor: pointer; color: #1a2340; padding: 4px; }
+        @media (max-width: 900px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
+        .mobile-actions { display: none; align-items: center; gap: 16px; }
+        @media (max-width: 900px) { .mobile-actions { display: flex; } }
+        .mob-quick-link { color: #1a2340; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+        .mob-quick-link:hover { color: #c9a84c; }
 
-        @media (max-width: 900px) {
-          .nav-desktop { display: none; }
-          .hamburger { display: flex; }
-        }
-
-        .mobile-actions {
-          display: none;
-          align-items: center;
-          gap: 16px;
-        }
-
-        @media (max-width: 900px) {
-          .mobile-actions { display: flex; }
-        }
-
-        .mob-quick-link {
-          color: #1a2340;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: color 0.2s;
-        }
-        .mob-quick-link:hover {
-          color: #c9a84c;
-        }
-
-        /* mobile menu */
-        .mobile-menu {
-          display: none;
-          background: #fff;
-          border-top: 2px solid #1a2340;
-          padding: 12px 24px 20px;
-        }
+        /* ── Mobile Menu ── */
+        .mobile-menu { display: none; background: #fff; border-top: 2px solid #1a2340; }
         .mobile-menu.open { display: block; }
 
-        .mob-link {
+        /* Section category label */
+        .mob-category {
+          font-size: 9px;
+          font-weight: 800;
+          color: #c9a84c;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          padding: 10px 18px 3px;
+          background: #f8f5ee;
+          border-top: 1px solid #e2d9c5;
           display: block;
-          padding: 12px 8px;
-          font-size: 15px;
+        }
+
+        /* Every single menu item — identical style */
+        .mob-item {
+          display: flex;
+          align-items: center;
+          padding: 11px 18px;
+          font-size: 12px;
           font-weight: 700;
           color: #1a2340;
           text-decoration: none;
-          border-bottom: 1px solid #f1f5f9;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          border-bottom: 1px solid #f0ebe0;
+          background: #fff;
+          transition: color 0.15s, background 0.15s;
+          gap: 8px;
         }
-        .mob-link:hover { color: #c9a84c; }
+        .mob-item:hover { color: #c9a84c; background: #fdfaf5; }
 
-        .mob-section-label {
-          font-size: 11px;
-          font-weight: 700;
-          color: #9ca3af;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          padding: 16px 8px 4px;
-        }
-
-        .mob-sub-link {
-          display: block;
-          padding: 10px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #374151;
-          text-decoration: none;
-          border-bottom: 1px solid #f8fafc;
-        }
-        .mob-sub-link:hover { color: #c9a84c; background: #fdf8ef; }
-
-        .mob-auth {
+        /* Sub-items — same size, just indented with a left accent */
+        .mob-sub-item {
           display: flex;
-          gap: 12px;
-          margin-top: 16px;
+          align-items: center;
+          padding: 11px 18px 11px 28px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #1a2340;
+          text-decoration: none;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          border-bottom: 1px solid #f0ebe0;
+          background: #fff;
+          transition: color 0.15s, background 0.15s;
+          gap: 8px;
+          border-left: 3px solid transparent;
+        }
+        .mob-sub-item:hover { color: #c9a84c; background: #fdfaf5; border-left-color: #c9a84c; }
+
+        /* Auth bottom strip */
+        .mob-auth-strip {
+          padding: 12px 18px;
+          display: flex;
+          gap: 10px;
+          border-top: 2px solid #1a2340;
+          background: #f8f5ee;
         }
         .mob-btn-login {
-          flex: 1;
-          text-align: center;
-          padding: 12px;
-          font-size: 14px;
-          font-weight: 700;
+          flex: 1; text-align: center;
+          padding: 11px 8px;
+          font-size: 11px; font-weight: 800;
           color: #1a2340;
           border: 2px solid #1a2340;
           border-radius: 8px;
           text-decoration: none;
           text-transform: uppercase;
+          letter-spacing: 0.8px;
+          transition: all 0.15s;
         }
+        .mob-btn-login:hover { background: #1a2340; color: #fff; }
+
         .mob-btn-signup {
-          flex: 1;
-          text-align: center;
-          padding: 12px;
-          font-size: 14px;
-          font-weight: 700;
+          flex: 1; text-align: center;
+          padding: 11px 8px;
+          font-size: 11px; font-weight: 800;
           color: #fff;
           background: #1a2340;
           border: 2px solid #1a2340;
           border-radius: 8px;
           text-decoration: none;
           text-transform: uppercase;
+          letter-spacing: 0.8px;
+          transition: all 0.15s;
         }
+        .mob-btn-signup:hover { background: #c9a84c; border-color: #c9a84c; }
+
         .mob-btn-logout {
-          width: 100%;
-          margin-top: 12px;
-          padding: 12px;
-          font-size: 14px;
-          font-weight: 700;
-          color: #fff;
+          flex: 1; text-align: center;
+          padding: 11px 8px;
+          font-size: 11px; font-weight: 800;
+          color: #1a1200;
           background: #c9a84c;
-          border: none;
+          border: 2px solid #c9a84c;
           border-radius: 8px;
           cursor: pointer;
           text-transform: uppercase;
+          letter-spacing: 0.8px;
+          transition: all 0.15s;
         }
+        .mob-btn-logout:hover { background: #b8933a; border-color: #b8933a; }
       `}</style>
 
       <nav className="navbar-root">
         <div className="navbar-inner">
+
           {/* Logo */}
           <Link to="/" className="logo" onClick={() => setIsOpen(false)}>
             <div className="logo-main">
@@ -382,8 +199,7 @@ const Navbar = () => {
             <Link to="/" className="nav-link">Home</Link>
             <Link to="/about" className="nav-link">About</Link>
 
-
-            {/* Search / Buy dropdown */}
+            {/* Properties dropdown */}
             <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
               <button
                 className={`nav-dropdown-btn ${activeDropdown === 'search' ? 'active' : ''}`}
@@ -393,8 +209,7 @@ const Navbar = () => {
               </button>
               {activeDropdown === 'search' && (
                 <div className="dropdown-menu">
-                  {/* <Link to="/search" className="dropdown-item" onClick={() => setActiveDropdown(null)}>All Properties</Link> */}
-                   <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Buy</Link>
+                  <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Buy</Link>
                   {isAuthenticated ? (
                     <Link to="/create-listing" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Sell</Link>
                   ) : (
@@ -425,26 +240,6 @@ const Navbar = () => {
               <>
                 <Link to="/favorites" className="nav-link">My Favourites</Link>
                 <Link to="/my-visits" className="nav-link">Site Visits</Link>
-
-                {/* Dashboard dropdown
-                <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
-                  <button
-                    className={`nav-dropdown-btn ${activeDropdown === 'dashboard' ? 'active' : ''}`}
-                    onMouseEnter={() => setActiveDropdown('dashboard')}
-                  >
-                    Dashboard <ChevronDown size={14} className={`chevron ${activeDropdown === 'dashboard' ? 'open' : ''}`} />
-                  </button>
-                  {activeDropdown === 'dashboard' && (
-                    <div className="dropdown-menu">
-                      <Link to="/dashboard?tab=overview" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Overview</Link>
-                      <Link to="/dashboard?tab=listings" className="dropdown-item" onClick={() => setActiveDropdown(null)}>My Listings</Link>
-                      <Link to="/dashboard?tab=transactions" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Token History</Link>
-                      {(user?.role === 'Seller' || user?.role === 'Broker') && (
-                        <Link to="/dashboard?tab=payouts" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Payout Accounts</Link>
-                      )}
-                    </div>
-                  )}
-                </div> */}
               </>
             )}
 
@@ -452,15 +247,8 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                <Link
-                  to={user?.role === 'Admin' ? '/admin' : '/dashboard'}
-                  className="btn-dashboard"
-                >
-                  Dashboard
-                </Link>
-                <button onClick={handleLogout} className="btn-logout">
-                  Logout
-                </button>
+                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="btn-dashboard">Dashboard</Link>
+                <button onClick={handleLogout} className="btn-logout">Logout</button>
               </>
             ) : (
               <>
@@ -470,11 +258,11 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Quick Actions & Hamburger */}
+          {/* Mobile: Quick icon + hamburger */}
           <div className="mobile-actions">
             {isAuthenticated && (
-              <Link 
-                to={user?.role === 'Admin' ? '/admin' : '/dashboard'} 
+              <Link
+                to={user?.role === 'Admin' ? '/admin' : '/dashboard'}
                 className="mob-quick-link"
                 onClick={() => setIsOpen(false)}
                 title="Dashboard"
@@ -488,59 +276,56 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* ── Mobile Menu — all items same font-size and padding ── */}
         <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
-          <Link to="/" className="mob-link" onClick={() => setIsOpen(false)}>Home</Link>
-          <Link to="/about" className="mob-link" onClick={() => setIsOpen(false)}>About</Link>
 
+          {/* Main */}
+          <Link to="/" className="mob-item" onClick={() => setIsOpen(false)}>Home</Link>
+          <Link to="/about" className="mob-item" onClick={() => setIsOpen(false)}>About</Link>
 
-          <div className="mob-section-label">Properties</div>
-          {/* <Link to="/search" className="mob-sub-link" onClick={() => setIsOpen(false)}>All Properties</Link> */}
-          <Link to="/search?type=buy" className="mob-sub-link" onClick={() => setIsOpen(false)}>Buy</Link>
+          {/* Properties */}
+          <span className="mob-category">Properties</span>
+          <Link to="/search?type=buy" className="mob-sub-item" onClick={() => setIsOpen(false)}>Buy Property</Link>
           {isAuthenticated ? (
-            <Link to="/create-listing" className="mob-sub-link" onClick={() => setIsOpen(false)}>Sell</Link>
+            <Link to="/create-listing" className="mob-sub-item" onClick={() => setIsOpen(false)}>Sell / List Property</Link>
           ) : (
-            <Link to="/login" className="mob-sub-link" onClick={() => setIsOpen(false)}>Sell</Link>
+            <Link to="/login" className="mob-sub-item" onClick={() => setIsOpen(false)}>Sell / List Property</Link>
           )}
-          <Link to="/brokers" className="mob-sub-link" onClick={() => setIsOpen(false)}>Contact Brokers</Link>
+          <Link to="/brokers" className="mob-sub-item" onClick={() => setIsOpen(false)}>Contact Brokers</Link>
 
+          {/* Tools */}
+          <span className="mob-category">Tools</span>
+          <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>Area Converter</Link>
+          <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>Boundary Map</Link>
 
-          <div className="mob-section-label">Tools</div>
-          <Link to="/area-converter" className="mob-sub-link" onClick={() => setIsOpen(false)}>Area Converter</Link>
-          <Link to="/boundary-map" className="mob-sub-link" onClick={() => setIsOpen(false)}>Boundary Map</Link>
-
+          {/* Auth-only */}
           {isAuthenticated && (
             <>
-              <Link to="/favorites" className="mob-link" onClick={() => setIsOpen(false)}>My Favourites</Link>
-              <Link to="/my-visits" className="mob-link" onClick={() => setIsOpen(false)}>Site Visits</Link>
+              <span className="mob-category">My Account</span>
+              <Link to="/favorites" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Favourites</Link>
+              <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>Site Visits</Link>
 
-              <div className="mob-section-label">Dashboard</div>
-              <Link to="/dashboard?tab=overview" className="mob-sub-link" onClick={() => setIsOpen(false)}>Overview</Link>
-              <Link to="/dashboard?tab=listings" className="mob-sub-link" onClick={() => setIsOpen(false)}>My Listings</Link>
-              <Link to="/dashboard?tab=transactions" className="mob-sub-link" onClick={() => setIsOpen(false)}>Token History</Link>
+              <span className="mob-category">Dashboard</span>
+              <Link to="/dashboard?tab=overview" className="mob-sub-item" onClick={() => setIsOpen(false)}>Overview</Link>
+              <Link to="/dashboard?tab=listings" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Listings</Link>
+              <Link to="/dashboard?tab=transactions" className="mob-sub-item" onClick={() => setIsOpen(false)}>Token History</Link>
               {(user?.role === 'Seller' || user?.role === 'Broker') && (
-                <Link to="/dashboard?tab=payouts" className="mob-sub-link" onClick={() => setIsOpen(false)}>Payout Accounts</Link>
+                <Link to="/dashboard?tab=payouts" className="mob-sub-item" onClick={() => setIsOpen(false)}>Payout Accounts</Link>
               )}
             </>
           )}
 
-          {isAuthenticated ? (
-            <>
-              <Link
-                to={user?.role === 'Admin' ? '/admin' : '/dashboard'}
-                className="mob-link"
-                onClick={() => setIsOpen(false)}
-              >
-                Dashboard
-              </Link>
+          {/* Auth strip at bottom */}
+          <div className="mob-auth-strip">
+            {isAuthenticated ? (
               <button onClick={handleLogout} className="mob-btn-logout">Logout</button>
-            </>
-          ) : (
-            <div className="mob-auth">
-              <Link to="/login" className="mob-btn-login" onClick={() => setIsOpen(false)}>Login</Link>
-              <Link to="/register" className="mob-btn-signup" onClick={() => setIsOpen(false)}>Sign Up</Link>
-            </div>
-          )}
+            ) : (
+              <>
+                <Link to="/login" className="mob-btn-login" onClick={() => setIsOpen(false)}>Login</Link>
+                <Link to="/register" className="mob-btn-signup" onClick={() => setIsOpen(false)}>Sign Up</Link>
+              </>
+            )}
+          </div>
         </div>
       </nav>
     </>
