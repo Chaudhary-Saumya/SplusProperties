@@ -134,6 +134,20 @@ exports.verifyPayment = async (req, res) => {
             { path: 'listingId', select: 'title location images price tokenAmount' }
         ]);
 
+        // Emit socket events for real-time dashboard updates
+        const io = req.app.get('io');
+        if (io) {
+            const buyerId = transaction.buyerId._id || transaction.buyerId;
+            const sellerId = transaction.sellerId._id || transaction.sellerId;
+
+            // Notify buyer and seller about the new payment and reservation
+            io.to(buyerId.toString()).emit('payment_created', transaction);
+            io.to(buyerId.toString()).emit('listing_reserved', listing);
+            
+            io.to(sellerId.toString()).emit('payment_created', transaction);
+            io.to(sellerId.toString()).emit('listing_reserved', listing);
+        }
+
         res.status(200).json({
             success: true,
             message: 'Payment verified and property tokened successfully',

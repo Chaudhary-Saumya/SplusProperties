@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import socket from '../utils/socket';
 
 export const AuthContext = createContext();
 
@@ -9,6 +10,31 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
 
     axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    useEffect(() => {
+        if (user) {
+            const userId = user.id || user._id;
+            if (!socket.connected) {
+                socket.connect();
+            }
+            // Join user-specific room
+            socket.emit('join', userId);
+
+            // Re-join on reconnect
+            const handleReconnect = () => {
+                socket.emit('join', userId);
+            };
+            socket.on('connect', handleReconnect);
+
+            return () => {
+                socket.off('connect', handleReconnect);
+            };
+        } else {
+            if (socket.connected) {
+                socket.disconnect();
+            }
+        }
+    }, [user]);
 
     useEffect(() => {
         if (token) {

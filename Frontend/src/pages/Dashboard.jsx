@@ -132,9 +132,9 @@ const Dashboard = () => {
         return res.data.data;
       }
     },
-    refetchInterval: user?.role === 'Seller' || user?.role === 'Broker' ? 5000 : 15000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchOnMount: "always",
   });
 
   const { data: inquiriesData, isLoading: inquiriesLoading } = useQuery({
@@ -144,9 +144,9 @@ const Dashboard = () => {
       const res = await axios.get("/api/inquiries");
       return res.data.data;
     },
-    refetchInterval: user?.role === 'Seller' || user?.role === 'Broker' ? 3000 : 10000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchOnMount: "always",
   });
 
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
@@ -156,9 +156,9 @@ const Dashboard = () => {
       const res = await axios.get("/api/payments");
       return res.data.data;
     },
-    refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchOnMount: "always",
   });
 
   const { data: systemSettings } = useQuery({
@@ -378,19 +378,6 @@ const Dashboard = () => {
       socket.off("connect", inv);
     };
   }, [user, showSettings, queryClient]);
-
-  // Polling fallback
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboardInquiries"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboardTransactions"] });
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [user, queryClient]);
 
   if (loading || !user) {
     return (
