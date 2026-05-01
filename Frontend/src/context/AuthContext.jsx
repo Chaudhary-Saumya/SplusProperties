@@ -11,8 +11,6 @@ export const AuthProvider = ({ children }) => {
 
     axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
-    console.log("API URL:", import.meta.env.VITE_API_URL);
-
     useEffect(() => {
         if (user) {
             const userId = user.id || user._id;
@@ -118,6 +116,20 @@ export const AuthProvider = ({ children }) => {
         return res.data;
     };
 
+    const forgotPassword = async (email) => {
+        const res = await axios.post('/api/auth/forgot-password', { email });
+        return res.data;
+    };
+
+    const resetPassword = async (email, otp, newPassword) => {
+        const res = await axios.post('/api/auth/reset-password', { email, otp, newPassword });
+        const { token: newToken, user: newUser } = res.data;
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        setToken(newToken);
+        setUser(newUser);
+        return res.data;
+    };
+
     const logout = () => {
         setToken(null);
         setUser(null);
@@ -133,6 +145,8 @@ export const AuthProvider = ({ children }) => {
             register,
             verifyOTP,
             resendOTP,
+            forgotPassword,
+            resetPassword,
             logout,
             isAuthenticated: !!user
         }}>

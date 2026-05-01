@@ -47,7 +47,8 @@ const Search = () => {
     const [searchInput, setSearchInput] = useState('');
     const [isVerifiedOnly, setIsVerifiedOnly] = useState(false);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
-    const [filters, setFilters] = useState({ minPrice: '', maxPrice: '' });
+    const [filters, setFilters] = useState({ minPrice: '', maxPrice: '', minArea: '', maxArea: '' });
+    const [debouncedFilters, setDebouncedFilters] = useState(filters);
     const [isGeoMode, setIsGeoMode] = useState(false);
     const [userCoords, setUserCoords] = useState(null);
     const [geoLoading, setGeoLoading] = useState(false);
@@ -57,14 +58,16 @@ const Search = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [wishlist, setWishlist] = useState(new Set());
 
-    const { data: resultData, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['listings', searchTerm, isVerifiedOnly, filters.minPrice, filters.maxPrice, sortBy, isGeoMode, userCoords, page],
+    const { data: resultData, isLoading, isError, error, refetch, isFetching } = useQuery({
+        queryKey: ['listings', searchTerm, isVerifiedOnly, debouncedFilters.minPrice, debouncedFilters.maxPrice, debouncedFilters.minArea, debouncedFilters.maxArea, sortBy, isGeoMode, userCoords, page],
         queryFn: async () => {
             let url = `/api/listings?page=${page}&limit=12&sort=${sortBy}`;
             if (searchTerm) url += `&search=${searchTerm}`;
-            if (isVerifiedOnly) url += `&isVerified=true`;
-            if (filters.minPrice) url += `&minPrice=${filters.minPrice}`;
-            if (filters.maxPrice) url += `&maxPrice=${filters.maxPrice}`;
+            if (isVerifiedOnly) url += `&listingType=Verified`;
+            if (debouncedFilters.minPrice) url += `&minPrice=${debouncedFilters.minPrice}`;
+            if (debouncedFilters.maxPrice) url += `&maxPrice=${debouncedFilters.maxPrice}`;
+            if (debouncedFilters.minArea) url += `&minArea=${debouncedFilters.minArea}`;
+            if (debouncedFilters.maxArea) url += `&maxArea=${debouncedFilters.maxArea}`;
             if (isGeoMode && userCoords) url += `&lat=${userCoords.lat}&lng=${userCoords.lng}&radius=50`;
             const res = await axios.get(url);
             return res.data;
@@ -78,6 +81,9 @@ const Search = () => {
 
     const debouncedSetSearch = useMemo(() => debounce((val) => setSearchTerm(val), 500), []);
     useEffect(() => { debouncedSetSearch(searchInput); }, [searchInput, debouncedSetSearch]);
+
+    const debouncedSetFilters = useMemo(() => debounce((val) => setDebouncedFilters(val), 600), []);
+    useEffect(() => { debouncedSetFilters(filters); }, [filters, debouncedSetFilters]);
 
     const observer = useRef();
     const lastElementRef = (node) => {
@@ -107,7 +113,7 @@ const Search = () => {
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    useEffect(() => { setPage(1); }, [isVerifiedOnly, filters, isGeoMode, userCoords, searchTerm]);
+    useEffect(() => { setPage(1); }, [isVerifiedOnly, debouncedFilters, isGeoMode, userCoords, searchTerm]);
 
     const triggerGeoSearch = () => {
         if (isGeoMode) { setIsGeoMode(false); setUserCoords(null); return; }
@@ -125,12 +131,15 @@ const Search = () => {
         setWishlist(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
     };
 
-    const resetFilters = () => { setFilters({ minPrice: '', maxPrice: '' }); setIsVerifiedOnly(false); };
+    const resetFilters = () => { 
+        setFilters({ minPrice: '', maxPrice: '', minArea: '', maxArea: '' }); 
+        setIsVerifiedOnly(false); 
+    };
 
     const inputClass = "w-full px-3 py-2.5 bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg text-sm font-bold text-[#1a2340] placeholder-[#b0a898] focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all";
 
     /* ── Sidebar Filters ── */
-    const SidebarFilters = () => (
+    const filtersContent = (
         <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0ebe0]">
                 <h3 className="text-sm font-bold text-[#1a2340] uppercase tracking-widest flex items-center gap-2">
@@ -153,12 +162,19 @@ const Search = () => {
                     </div>
                 </FilterSection>
 
-                <FilterSection title="Listing Type">
+                {/* <FilterSection title="Area (Sq.Ft)">
+                    <div className="space-y-2">
+                        <input type="number" placeholder="Min Area" value={filters.minArea} onChange={e => setFilters(p => ({ ...p, minArea: e.target.value }))} className={inputClass} />
+                        <input type="number" placeholder="Max Area" value={filters.maxArea} onChange={e => setFilters(p => ({ ...p, maxArea: e.target.value }))} className={inputClass} />
+                    </div>
+                </FilterSection> */}
+
+                {/* <FilterSection title="Listing Type">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-600 text-[#374151]">Verified Only</span>
                         <Toggle checked={isVerifiedOnly} onChange={setIsVerifiedOnly} />
                     </div>
-                </FilterSection>
+                </FilterSection> */}
             </div>
         </div>
     );
@@ -176,7 +192,11 @@ const Search = () => {
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                         {/* Search Input Group */}
                         <div className="flex flex-1 items-center bg-[#fdfaf5] border-2 border-[#e2d9c5] focus-within:border-[#c9a84c] focus-within:ring-2 focus-within:ring-[#c9a84c]/20 rounded-lg px-3 py-2 transition-all gap-2 relative">
-                            <SearchIcon size={18} className="text-[#c9a84c] flex-shrink-0" />
+                            {isFetching ? (
+                                <div className="w-4 h-4 border-2 border-[#c9a84c] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                            ) : (
+                                <SearchIcon size={18} className="text-[#c9a84c] flex-shrink-0" />
+                            )}
                             <input
                                 type="text"
                                 placeholder={isGeoMode ? '📍 Searching Near You...' : 'Search Location, City or Property...'}
@@ -249,7 +269,7 @@ const Search = () => {
             {/* ── Mobile Filter Drawer ── */}
             {showMobileFilters && (
                 <div className="lg:hidden bg-white border-b border-[#e2d9c5] px-4 py-4 shadow-md">
-                    <SidebarFilters />
+                    {filtersContent}
                 </div>
             )}
 
@@ -260,7 +280,7 @@ const Search = () => {
                     {/* ── Left Sidebar ── */}
                     <div className="hidden lg:block w-64 flex-shrink-0">
                         <div className="sticky top-32">
-                            <SidebarFilters />
+                            {filtersContent}
                         </div>
                     </div>
 
@@ -271,7 +291,7 @@ const Search = () => {
                         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                             <div>
                                 <h2 className="text-lg font-bold text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                    {isLoading && page === 1 ? 'Searching...' : `${totalResults.toLocaleString('en-IN')} Properties Found`}
+                                    {isLoading ? 'Searching...' : `${totalResults.toLocaleString('en-IN')} Properties Found`}
                                 </h2>
                                 {isGeoMode && (
                                     <p className="text-xs text-[#c9a84c] font-bold mt-0.5">📍 Showing results near your location</p>
@@ -295,10 +315,10 @@ const Search = () => {
                         {/* Cards */}
                         {isError ? (
                             <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
-                        ) : isLoading && page === 1 ? (
+                        ) : (isLoading && page === 1 && listings.length === 0) ? (
                             <div className="space-y-4">{[1, 2, 3].map(i => <ListingSkeleton key={i} variant="list" />)}</div>
                         ) : listings.length === 0 ? (
-                            <EmptyState actionText="Clear All Filters" actionLink="/search" title="No Properties Found" message="Try adjusting your search criteria or clearing the filters." />
+                            <EmptyState onAction={resetFilters} actionText="Clear All Filters" title="No Properties Found" message="Try adjusting your search criteria or clearing the filters." />
                         ) : (
                             <div className="space-y-4">
                                 {listings.map((listing, idx) => (
@@ -323,7 +343,7 @@ const Search = () => {
 
                                             {/* Badges */}
                                             <div className="absolute top-2 left-2 flex flex-col gap-1.5">
-                                               
+
                                                 {listing.status === 'Reserved' && (
                                                     <span className="bg-[#dc2626] text-white text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider">Reserved</span>
                                                 )}
@@ -391,7 +411,7 @@ const Search = () => {
                                                     <span className="flex items-center gap-1 text-[10px] font-bold text-[#1d4ed8] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">
                                                         <Eye size={9} /> {listing.views || 0} Views
                                                     </span>
-                                                   
+
                                                 </div>
 
                                                 {/* Description */}

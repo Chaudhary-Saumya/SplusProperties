@@ -501,3 +501,83 @@ exports.deletePaymentAccount = asyncHandler(async (req, res, next) => {
         data: user.paymentAccounts
     });
 });
+
+// @desc    Forgot Password - Send OTP
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ success: false, error: 'Please provide an email' });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'No account found with that email' });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    user.otp = otp;
+    user.otpExpire = otpExpire;
+    await user.save();
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'Password Reset OTP - LandSell',
+            message: `Your OTP for password reset is: ${otp}. It will expire in 10 minutes.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
+                    <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
+                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${otp}</h1>
+                    </div>
+                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+                </div>
+            `
+        });
+
+        res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
+    } catch (err) {
+        console.error('Forgot Password Email Error:', err);
+        res.status(500).json({ success: false, error: 'Failed to send OTP email' });
+    }
+});
+
+// @desc    Reset Password
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ success: false, error: 'Please provide email, OTP and new password' });
+    }
+
+    const user = await User.findOne({ 
+        email, 
+        otp,
+        otpExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
+    }
+
+    // Set new password
+    user.password = newPassword;
+    user.otp = undefined;
+    user.otpExpire = undefined;
+    await user.save();
+
+    // Auto-login after reset
+    sendTokenResponse(user, 200, res, req);
+});

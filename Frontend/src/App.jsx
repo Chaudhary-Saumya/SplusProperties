@@ -43,6 +43,7 @@ import Brokers from './pages/Brokers';
 import AreaConverter from './pages/AreaConverter';
 import BoundaryMap from './pages/BoundaryMap';
 import VerifyOTP from './pages/VerifyOTP';
+import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
 
 import { useContext } from 'react';
@@ -124,6 +125,7 @@ function App() {
 <Route path="/seller/:id" element={<SellerProfile />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
 
           </Routes>

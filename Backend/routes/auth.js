@@ -16,7 +16,9 @@ const {
     updatePaymentAccount,
     deletePaymentAccount,
     verifyOTP,
-    resendOTP
+    resendOTP,
+    forgotPassword,
+    resetPassword
 } = require('../controllers/authController');
 const { protect } = require('../middlewares/auth');
 
@@ -48,6 +50,18 @@ router.post('/resend-otp', [
     check('email', 'Email is required').isEmail(),
     validate
 ], resendOTP);
+
+router.post('/forgot-password', [
+    check('email', 'Please include a valid email').isEmail(),
+    validate
+], forgotPassword);
+
+router.post('/reset-password', [
+    check('email', 'Please include a valid email').isEmail(),
+    check('otp', 'OTP must be 6 digits').isLength({ min: 6, max: 6 }),
+    check('newPassword', 'Password must be 6 or more characters').isLength({ min: 6 }),
+    validate
+], resetPassword);
 
 router.post('/google', googleLogin);
 router.get('/me', protect, getMe);

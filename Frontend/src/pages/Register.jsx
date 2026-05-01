@@ -21,7 +21,18 @@ const Register = () => {
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        
+        // Restriction for phone: only numbers and max 10 digits
+        if (name === 'phone') {
+            const onlyNums = value.replace(/[^0-9]/g, '');
+            if (onlyNums.length <= 10) {
+                setFormData({ ...formData, [name]: onlyNums });
+            }
+            return;
+        }
+
+        setFormData({ ...formData, [name]: value });
     };
 
     const handleSubmit = async (e) => {
@@ -32,7 +43,9 @@ const Register = () => {
             await register(formData);
             navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
         } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed. Please try again.');
+            // Check for specific backend message first, then error field, then fallback
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -361,9 +374,12 @@ const Register = () => {
                             <div className="reg-field">
                                 <label className="reg-label">Phone Number</label>
                                 <input
-                                    type="text" name="phone" className="reg-input"
-                                    value={formData.phone} onChange={handleChange}
-                                    placeholder="+91 98765 43210" required
+                                    type="tel" name="phone" className="reg-input"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    placeholder="9876543210" required
+                                    maxLength="10"
+                                    pattern="[0-9]{10}"
                                 />
                             </div>
                         </div>

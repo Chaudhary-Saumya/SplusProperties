@@ -67,6 +67,24 @@ exports.getListings = asyncHandler(async (req, res, next) => {
         parsedQuery.status = { $ne: 'Reserved' };
     }
 
+    // Explicitly handle Min/Max Price mapping
+    if (req.query.minPrice || req.query.maxPrice) {
+        parsedQuery.price = {};
+        if (req.query.minPrice) parsedQuery.price.$gte = Number(req.query.minPrice);
+        if (req.query.maxPrice) parsedQuery.price.$lte = Number(req.query.maxPrice);
+        delete parsedQuery.minPrice;
+        delete parsedQuery.maxPrice;
+    }
+
+    // Explicitly handle Min/Max Area mapping
+    if (req.query.minArea || req.query.maxArea) {
+        parsedQuery.numericArea = {};
+        if (req.query.minArea) parsedQuery.numericArea.$gte = Number(req.query.minArea);
+        if (req.query.maxArea) parsedQuery.numericArea.$lte = Number(req.query.maxArea);
+        delete parsedQuery.minArea;
+        delete parsedQuery.maxArea;
+    }
+
     // Finding resource
     console.log('Final Search Query:', JSON.stringify(parsedQuery, null, 2));
     query = Listing.find(parsedQuery).select('-description -videos -documents').populate({
@@ -106,6 +124,9 @@ exports.getListings = asyncHandler(async (req, res, next) => {
     }
 
     const total = await Listing.countDocuments(countQuery);
+    
+    // Production optimization: If total results are cached or known, we could skip count, 
+    // but for now, we keep it for accurate pagination.
 
     // Executing query
     let listings;

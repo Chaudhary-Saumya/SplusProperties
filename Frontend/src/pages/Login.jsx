@@ -355,7 +355,7 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <a href="/forgot-password" className="login-forgot">Forgot password?</a>
+                        <Link to="/forgot-password" className="login-forgot">Forgot password?</Link>
 
                         <button type="submit" className="login-btn" disabled={loading}>
                             {loading ? 'Signing In...' : 'Sign In'}

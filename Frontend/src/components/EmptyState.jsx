@@ -2,7 +2,7 @@ import React from 'react';
 import { SearchX, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const EmptyState = ({ type = 'search', title, message, actionText, actionLink }) => {
+const EmptyState = ({ type = 'search', title, message, actionText, actionLink, onAction }) => {
     const navigate = useNavigate();
     
     const icons = {
@@ -21,7 +21,7 @@ const EmptyState = ({ type = 'search', title, message, actionText, actionLink })
             </p>
             {actionText && (
                 <button 
-                    onClick={() => navigate(actionLink || '/')}
+                    onClick={() => onAction ? onAction() : navigate(actionLink || '/')}
                     className="bg-slate-900 hover:bg-slate-800 text-white px-10 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-slate-900/10 active:scale-95"
                 >
                     {actionText}
