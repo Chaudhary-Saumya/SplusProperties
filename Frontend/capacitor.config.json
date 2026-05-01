@@ -1,0 +1,8 @@
+{
+  "appId": "com.splus.properties",
+  "appName": "Splus Properties",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
