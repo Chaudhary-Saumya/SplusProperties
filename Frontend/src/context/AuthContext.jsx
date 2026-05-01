@@ -9,7 +9,9 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(localStorage.getItem('token'));
 
-    axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+
+    console.log("API URL:", import.meta.env.VITE_API_URL);
 
     useEffect(() => {
         if (user) {
