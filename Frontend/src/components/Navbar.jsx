@@ -232,6 +232,7 @@ const Navbar = () => {
                 <div className="dropdown-menu">
                   <Link to="/area-converter" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Area Converter</Link>
                   <Link to="/boundary-map" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Boundary Map</Link>
+                  {isAuthenticated && <Link to="/saved-maps" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Saved Boundaries</Link>}
                 </div>
               )}
             </div>
@@ -297,6 +298,7 @@ const Navbar = () => {
           <span className="mob-category">Tools</span>
           <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>Area Converter</Link>
           <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>Boundary Map</Link>
+          {isAuthenticated && <Link to="/saved-maps" className="mob-sub-item" onClick={() => setIsOpen(false)}>Saved Boundaries</Link>}
 
           {/* Auth-only */}
           {isAuthenticated && (

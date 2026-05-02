@@ -9,7 +9,28 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(localStorage.getItem('token'));
 
+    // Set baseURL
     axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+    
+    // IMMEDIATELY set header if token exists to avoid race conditions on reload
+    if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Response Interceptor to handle 401
+    axios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            if (error.response && error.response.status === 401) {
+                // Stale token or unauthorized
+                setToken(null);
+                setUser(null);
+                localStorage.removeItem('token');
+                delete axios.defaults.headers.common['Authorization'];
+            }
+            return Promise.reject(error);
+        }
+    );
 
     useEffect(() => {
         if (user) {

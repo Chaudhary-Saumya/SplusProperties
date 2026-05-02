@@ -42,6 +42,8 @@ import SellerProfile from './pages/SellerProfile';
 import Brokers from './pages/Brokers';
 import AreaConverter from './pages/AreaConverter';
 import BoundaryMap from './pages/BoundaryMap';
+import SharedMap from './pages/SharedMap';
+import SavedMaps from './pages/SavedMaps';
 import VerifyOTP from './pages/VerifyOTP';
 import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
@@ -82,6 +84,21 @@ const queryClient = new QueryClient({
   },
 });
 
+const LayoutWrapper = ({ children }) => {
+  const location = useLocation();
+  const hidePaths = ['/boundary-map', '/m/'];
+  const shouldHide = hidePaths.some(path => location.pathname.startsWith(path));
+
+  return (
+    <div className="app-wrapper">
+      {!shouldHide && <Navbar />}
+      <main>
+        {children}
+      </main>
+    </div>
+  );
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -103,9 +120,7 @@ function App() {
         toastClassName="!rounded-2xl !shadow-lg !font-medium"
         bodyClassName="!text-sm"
       />
-      <div className="app-wrapper">
-        <Navbar />
-        <main>
+      <LayoutWrapper>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
@@ -122,16 +137,16 @@ function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/create-listing" element={<CreateListing />} />
             <Route path="/edit-listing/:id" element={<EditListing />} />
-<Route path="/seller/:id" element={<SellerProfile />} />
+            <Route path="/seller/:id" element={<SellerProfile />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
+            <Route path="/saved-maps" element={<SavedMaps />} />
+            <Route path="/m/:shareId" element={<SharedMap />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
-
           </Routes>
-        </main>
-      </div>
-    </Router>
+      </LayoutWrapper>
+      </Router>
     </QueryClientProvider>
   );
 }
