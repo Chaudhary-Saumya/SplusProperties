@@ -15,6 +15,7 @@ const Navbar = () => {
     setIsOpen(false);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const toggleDropdown = (name) => {
     setActiveDropdown(activeDropdown === name ? null : name);
   };
@@ -26,9 +27,12 @@ const Navbar = () => {
 
         .navbar-root {
           position: sticky; top: 0; z-index: 50;
-          background: #ffffff;
-          border-bottom: 2px solid #1a2340;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(26, 35, 64, 0.1);
           font-family: 'Nunito Sans', sans-serif;
+          transition: all 0.3s ease;
         }
         .navbar-inner {
           max-width: 1400px; margin: 0 auto;

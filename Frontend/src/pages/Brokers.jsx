@@ -24,7 +24,6 @@ const BrokerCard = ({ broker, onClick }) => (
             <div className="flex-1 min-w-0">
                 <h3
                     className="text-lg font-bold text-[#1a2340] group-hover:text-[#c9a84c] transition-colors mb-1.5 truncate"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
                 >
                     {broker.name}
                 </h3>
@@ -40,7 +39,6 @@ const BrokerCard = ({ broker, onClick }) => (
             <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg p-3 text-center">
                 <div
                     className="text-2xl font-black text-[#1a2340] mb-0.5"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
                 >
                     {broker.listingsCount ?? 0}
                 </div>
@@ -127,7 +125,6 @@ const Brokers = () => {
                     </span>
                     <h1
                         className="text-4xl sm:text-5xl font-bold text-[#1a2340] mb-4"
-                        style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                         Verified Brokers
                     </h1>
@@ -149,7 +146,7 @@ const Brokers = () => {
                                     <Icon size={16} className="text-[#c9a84c]" />
                                 </div>
                                 <div>
-                                    <div className="text-xl font-black text-white" style={{ fontFamily: "'Playfair Display', serif" }}>{value}</div>
+                                    <div className="text-xl font-black text-white" >{value}</div>
                                     <div className="text-[10px] font-bold text-[#c9a84c]/70 uppercase tracking-widest">{label}</div>
                                 </div>
                             </div>

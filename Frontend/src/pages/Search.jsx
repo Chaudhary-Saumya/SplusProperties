@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useContext } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download, MessageCircle } from 'lucide-react';
 import ListingSkeleton from '../components/ListingSkeleton';
 import ErrorBox from '../components/ErrorBox';
 import EmptyState from '../components/EmptyState';
@@ -43,6 +45,7 @@ const Toggle = ({ checked, onChange }) => (
 const Search = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAuthenticated } = useContext(AuthContext);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [isVerifiedOnly, setIsVerifiedOnly] = useState(false);
@@ -126,9 +129,24 @@ const Search = () => {
         } else { toast.error('Geolocation not supported.'); }
     };
 
-    const toggleWishlist = (e, id) => {
+    const toggleWishlist = async (e, id) => {
         e.stopPropagation();
-        setWishlist(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+        if (!isAuthenticated) {
+            toast.info('Please login to save favorites');
+            navigate('/login');
+            return;
+        }
+        try {
+            await axios.post(`/api/auth/favorites/${id}`);
+            setWishlist(prev => {
+                const s = new Set(prev);
+                s.has(id) ? s.delete(id) : s.add(id);
+                return s;
+            });
+            toast.success(wishlist.has(id) ? 'Removed from favorites' : 'Added to favorites!');
+        } catch (err) {
+            toast.error('Failed to update favorites');
+        }
     };
 
     const resetFilters = () => { 
@@ -187,8 +205,8 @@ const Search = () => {
             <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
 
             {/* ── Sticky Search Bar ── */}
-            <div className="sticky top-[68px] z-30 bg-white border-b border-[#e2d9c5] shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div className="sticky top-[68px] z-30 bg-white/80 backdrop-blur-md border-b border-[#e2d9c5]/50 shadow-sm transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                         {/* Search Input Group */}
                         <div className="flex flex-1 items-center bg-[#fdfaf5] border-2 border-[#e2d9c5] focus-within:border-[#c9a84c] focus-within:ring-2 focus-within:ring-[#c9a84c]/20 rounded-lg px-3 py-2 transition-all gap-2 relative">
@@ -322,8 +340,12 @@ const Search = () => {
                         ) : (
                             <div className="space-y-4">
                                 {listings.map((listing, idx) => (
-                                    <div
+                                    <motion.div
                                         key={listing._id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.3, delay: idx * 0.05 }}
                                         ref={idx === listings.length - 1 ? lastElementRef : null}
                                         onClick={() => navigate(`/listings/${listing._id}`)}
                                         className="bg-white border border-[#e2d9c5] hover:border-[#c9a84c] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-lg group flex flex-col sm:flex-row"
@@ -349,13 +371,26 @@ const Search = () => {
                                                 )}
                                             </div>
 
-                                            {/* Wishlist */}
-                                            <button
-                                                onClick={e => toggleWishlist(e, listing._id)}
-                                                className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform"
-                                            >
-                                                <Heart size={14} className={wishlist.has(listing._id) ? 'fill-red-500 text-red-500' : 'text-[#6b7280]'} />
-                                            </button>
+                                            {/* Wishlist & WhatsApp */}
+                                            <div className="absolute top-2 right-2 flex flex-col gap-2">
+                                                <button
+                                                    onClick={e => toggleWishlist(e, listing._id)}
+                                                    className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                                                >
+                                                    <Heart size={14} className={wishlist.has(listing._id) ? 'fill-red-500 text-red-500' : 'text-[#6b7280]'} />
+                                                </button>
+                                                <button 
+                                                    className="w-8 h-8 bg-[#25d366] rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        const phone = listing.createdBy?.phone || '';
+                                                        window.open(`https://wa.me/${phone}`, '_blank');
+                                                    }}
+                                                    title="WhatsApp Seller"
+                                                >
+                                                    <MessageCircle size={14} className="fill-current" />
+                                                </button>
+                                            </div>
 
                                             {/* Bottom overlay */}
                                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
@@ -456,7 +491,7 @@ const Search = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
 
                                 {/* Infinite scroll loader */}

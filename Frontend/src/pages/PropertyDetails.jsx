@@ -6,7 +6,7 @@ import {
     Heart, Share2, MapPin, Calendar, CheckCircle2, Phone, ChevronRight,
     ArrowLeft, Maximize2, Eye, LandPlot, UserCheck, FileText, Users,
     ShieldCheck, Download, MessageSquare, ExternalLink, Image, Clock,
-    Check, X, Zap, ZapOff, Award, Star, StarHalf, StarOff, UserRound, MessageCircle
+    Check, X, Zap, ZapOff, Award, Star, StarHalf, StarOff, UserRound, MessageCircle, Navigation, Layers
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
@@ -15,6 +15,31 @@ import ErrorBox from '../components/ErrorBox';
 import DetailSkeleton from '../components/DetailSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
 import SEO from '../components/SEO';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in Leaflet + Vite
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
+
+function MapRecenter({ position }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position?.lat) {
+            map.setView([position.lat, position.lng], 15);
+        }
+    }, [position, map]);
+    return null;
+}
 
 const PropertyDetails = () => {
     const { id } = useParams();
@@ -201,24 +226,16 @@ const { data: listing, isLoading, isError, error, refetch } = useQuery({
         }
     };
 
-    /*
-    const handleContactSeller = async () => {
-        if (!isAuthenticated) return navigate('/login');
-        setRequestingContact(true);
-        try {
-            await axios.post('/api/inquiries', {
-                listingId: id,
-                type: 'Inquiry',
-                message: 'Hi, I am interested in this property. Can you please provide more details and answer my questions?'
-            });
-            toast.success('Message sent to seller successfully!');
-        } catch (err) {
-            toast.error('Failed to send message. Please try again.');
-        } finally {
-            setRequestingContact(false);
-        }
+    const handleWhatsApp = () => {
+        const phone = listing.createdBy?.phone || '';
+        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing.title} (${window.location.href}). Can we discuss further?`);
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     };
-    */
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+        toast.info('Link copied to clipboard!');
+    };
 
     if (isLoading) return <DetailSkeleton />;
     if (isError) return <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />;
@@ -350,10 +367,18 @@ const renderStars = () => {
                         </div>
                     </div>
 
-                    {/* Location */}
-                    <div className="flex items-center gap-2 text-[#6b7280] text-sm font-bold">
-                        <MapPin size={16} className="text-[#c9a84c]" />
-                        {listing.location}
+                    {/* Location + Share */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-[#6b7280] text-sm font-bold">
+                            <MapPin size={16} className="text-[#c9a84c]" />
+                            {listing.location}
+                        </div>
+                        <button 
+                            onClick={handleCopyLink}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e2d9c5] rounded-xl text-[#1a2340] font-bold text-xs hover:border-[#c9a84c] transition-all"
+                        >
+                            <Share2 size={14} /> Share Link
+                        </button>
                     </div>
                 </div>
 
@@ -503,10 +528,17 @@ const renderStars = () => {
                                     <button
                                         onClick={handleSiteVisitRequest}
                                         disabled={requestingVisit}
-                                        className="w-full py-3 bg-linear-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] disabled:cursor-not-allowed disabled:opacity-60 text-white font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider"
+                                        className="w-full py-3 bg-[#1a2340] hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60 text-white font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider"
                                     >
                                         <Calendar size={16} className="stroke-[2.5px]" />
                                         {requestingVisit ? 'Requesting...' : 'Contact Seller'}
+                                    </button>
+                                    <button
+                                        onClick={handleWhatsApp}
+                                        className="w-full py-3 bg-[#25d366] hover:bg-[#128c7e] text-white font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider"
+                                    >
+                                        <MessageCircle size={16} className="fill-current" />
+                                        WhatsApp Chat
                                     </button>
                                     <button
                                         onClick={handleFavorite}
@@ -585,6 +617,52 @@ const renderStars = () => {
                         {listing.description || 'No description provided.'}
                     </p>
                 </div>
+
+                {/* ── Map Location Section ── */}
+                {listing.mapCoordinates && listing.mapCoordinates.lat && (
+                    <div className="bg-white border border-[#e2d9c5] rounded-2xl overflow-hidden mb-8 shadow-sm">
+                        <div className="p-6 border-b border-[#f8f5ee] flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-[#1a2340] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                <MapPin size={20} className="text-[#c9a84c]" /> Property Location
+                            </h3>
+                            {listing.mapConfig && (
+                                <button 
+                                    onClick={() => navigate(`/shared-map/${listing.mapConfig.shareId}`)}
+                                    className="bg-[#1a2340] text-[#c9a84c] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#2563eb] hover:text-white transition-all shadow-md"
+                                >
+                                    <Layers size={14} /> View Interactive Boundary Map
+                                </button>
+                            )}
+                        </div>
+                        
+                        <div className="h-80 w-full relative z-0">
+                            <MapContainer 
+                                center={[listing.mapCoordinates.lat, listing.mapCoordinates.lng]} 
+                                zoom={15} 
+                                style={{ height: '100%', width: '100%' }}
+                                scrollWheelZoom={false}
+                            >
+                                <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                <Marker position={[listing.mapCoordinates.lat, listing.mapCoordinates.lng]}>
+                                    <Popup>
+                                        <div className="font-bold text-[#1a2340]">{listing.title}</div>
+                                        <div className="text-xs text-[#6b7280]">{listing.location}</div>
+                                    </Popup>
+                                </Marker>
+                                <MapRecenter position={listing.mapCoordinates} />
+                            </MapContainer>
+                        </div>
+                        
+                        <div className="p-4 bg-[#fdfaf5] flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c]">
+                                <Navigation size={16} />
+                            </div>
+                            <p className="text-xs font-600 text-[#1a2340]/60">
+                                Exact location as pinned by the seller. Use the "Interactive Map" button for boundary visualization.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Amenities / Features ── */}
                 {listing.amenities?.length > 0 && (

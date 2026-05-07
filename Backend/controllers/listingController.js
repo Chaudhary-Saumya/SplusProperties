@@ -301,7 +301,21 @@ exports.getListing = asyncHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, error: 'Listing not found' });
     }
 
-    res.status(200).json({ success: true, data: listing });
+    // Check for associated Boundary Map
+    const MapConfig = require('../models/MapConfig');
+    const mapConfig = await MapConfig.findOne({ listingId: listing._id });
+
+    res.status(200).json({ 
+        success: true, 
+        data: {
+            ...listing.toObject(),
+            mapConfig: mapConfig ? {
+                shareId: mapConfig.shareId,
+                thumbnail: mapConfig.thumbnail,
+                polygonsCount: mapConfig.polygons?.length
+            } : null
+        }
+    });
 });
 
 // @desc    Record unique listing view

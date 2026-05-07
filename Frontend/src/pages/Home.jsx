@@ -1,7 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { AuthContext } from '../context/AuthContext';
+import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle } from 'lucide-react';
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
 import { useQuery } from '@tanstack/react-query';
@@ -214,7 +217,29 @@ const HeroCarousel = () => {
 
 
 const Home = () => {
+  const { user, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [wishlist, setWishlist] = useState(new Set());
+
+  const toggleWishlist = async (e, id) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast.info('Please login to save favorites');
+      navigate('/login');
+      return;
+    }
+    try {
+      await axios.post(`/api/auth/favorites/${id}`);
+      setWishlist(prev => {
+        const s = new Set(prev);
+        s.has(id) ? s.delete(id) : s.add(id);
+        return s;
+      });
+      toast.success(wishlist.has(id) ? 'Removed from favorites' : 'Added to favorites!');
+    } catch (err) {
+      toast.error('Failed to update favorites');
+    }
+  };
   const [search, setSearch] = useState('');
 
   const { data: trendingData, isLoading, isError, error, refetch } = useQuery({
@@ -244,7 +269,7 @@ const Home = () => {
       <HeroCarousel />
 
       {/* ── Floating Search Bar ── */}
-      <div style={{ background: '#f8f5ee', padding: '0 24px' }}>
+      {/* <div style={{ background: '#f8f5ee', padding: '0 24px' }}>
         <form onSubmit={handleSearch} className="home-search-bar" style={{
           maxWidth: 780, margin: '0 auto', display: 'flex',
           background: '#fff', borderRadius: 12, padding: 8,
@@ -278,7 +303,7 @@ const Home = () => {
             Search
           </button>
         </form>
-      </div>
+      </div> */}
 
       {/* ── Stats Strip ── */}
       <div style={{ background: '#1a2340', padding: '28px 24px' }}>
@@ -398,15 +423,28 @@ const Home = () => {
     .badge-reserved  { background: #dc2626; color: #fff; }
 
     .prop-wishlist {
-      position: absolute;
-      top: 10px; right: 10px;
       width: 32px; height: 32px;
       background: rgba(255,255,255,0.92);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       border: none; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: transform 0.2s;
     }
+    .prop-wishlist:hover { transform: scale(1.1); }
+    .prop-wishlist.active { background: #fff0f0; }
+
+    .prop-whatsapp {
+      width: 32px; height: 32px;
+      background: #25d366;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      border: none; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: transform 0.2s;
+    }
+    .prop-whatsapp:hover { transform: scale(1.1); background: #128c7e; }
 
     /* ── Content Side ── */
     .prop-content {
@@ -557,9 +595,13 @@ const Home = () => {
   ) : isLoading ? (
     [1, 2, 3].map(i => <ListingSkeleton key={i} variant="list" />)
   ) : trending.length > 0 ? (
-    trending.map(listing => (
-      <div
+    trending.map((listing, idx) => (
+      <motion.div
         key={listing._id}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: idx * 0.1 }}
         className="prop-card"
         onClick={() => navigate(`/listings/${listing._id}`)}
       >
@@ -578,10 +620,27 @@ const Home = () => {
             )}
           </div>
 
-          {/* Wishlist */}
-          <button className="prop-wishlist" onClick={e => e.stopPropagation()} title="Save to Favourites">
-            <Heart size={16} color="#555" />
-          </button>
+          {/* Wishlist & WhatsApp */}
+          <div className="absolute top-2.5 right-2.5 flex flex-col gap-2 z-10">
+            <button 
+              className={`prop-wishlist ${wishlist.has(listing._id) ? 'active' : ''}`} 
+              onClick={e => toggleWishlist(e, listing._id)} 
+              title="Save to Favourites"
+            >
+              <Heart size={16} className={wishlist.has(listing._id) ? 'fill-[#dc2626] text-[#dc2626]' : 'text-[#555]'} />
+            </button>
+            <button 
+              className="prop-whatsapp"
+              onClick={e => {
+                e.stopPropagation();
+                const phone = listing.createdBy?.phone || '';
+                window.open(`https://wa.me/${phone}`, '_blank');
+              }}
+              title="WhatsApp Seller"
+            >
+              <MessageCircle size={16} className="fill-current" />
+            </button>
+          </div>
 
           {/* Bottom overlay: completion / date */}
           <div className="prop-img-bottom">
@@ -665,7 +724,7 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     ))
   ) : (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: '#aaa', fontWeight: 700, fontSize: 18, border: '2px dashed #e0e0e0', borderRadius: 16, background: '#fafafa' }}>

@@ -72,7 +72,7 @@ const StatCard = ({
     </div>
     <div
       className="text-2xl font-black text-[#1a2340] mb-1"
-      style={{ fontFamily: "'Playfair Display', serif" }}
+    
     >
       {value}
     </div>
@@ -88,7 +88,7 @@ const SectionHeader = ({ icon: Icon, title, action }) => (
   <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#f0ebe0]">
     <h2
       className="text-xl font-bold text-[#1a2340] flex items-center gap-2"
-      style={{ fontFamily: "'Playfair Display', serif" }}
+   
     >
       <Icon size={20} className="text-[#c9a84c]" /> {title}
     </h2>
@@ -1244,7 +1244,7 @@ const Dashboard = () => {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div className="h-1 w-full bg-linear-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0]">
-              <h3 className="text-lg font-bold text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h3 className="text-lg font-bold text-[#1a2340]">
                 {editingAccountId ? "Edit Account" : "Add Payout Account"}
               </h3>
               <button

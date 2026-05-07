@@ -11,6 +11,7 @@ const errorHandler = require('./middlewares/errorMiddleware');
 const path = require('path');
 const morgan = require('morgan');
 const logger = require('./utils/logger');
+const compression = require('compression');
 
 // Load env vars
 dotenv.config();
@@ -22,6 +23,9 @@ autoSeed();
 
 const app = express();
 
+// Use compression
+app.use(compression());
+
 // HTTP Request Logging (morgan) -> piped into winston logger
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat, {
@@ -32,7 +36,8 @@ app.use(morgan(morganFormat, {
 
 // Security Middlewares
 app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
 }));
 const allowedOrigins = [
   "http://localhost:5173",
@@ -52,7 +57,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 2000, 
+    max: 5000, // Increased for better UX
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again after 15 minutes',
@@ -61,13 +66,13 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Specific rate limit for listing creation (max 4 per 30 mins)
+// Specific rate limit for listing creation (max 20 per 10 mins)
 const listingLimiter = rateLimit({
-    windowMs: 30 * 60 * 1000,
-    max: 4,
+    windowMs: 10 * 60 * 1000,
+    max: 20,
     message: {
         success: false,
-        message: 'Too many listings created from this IP, please try again after 30 minutes',
+        message: 'Too many listings created. Please wait a few minutes before adding more.',
         errorCode: 'RATE_LIMIT_EXCEEDED'
     }
 });

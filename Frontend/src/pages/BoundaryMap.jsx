@@ -566,21 +566,27 @@ const BoundaryMap = () => {
       {/* ── Top Bar: Branding & Search ── */}
       <div className="absolute top-0 left-0 z-[1000] pointer-events-none w-full p-2 sm:p-6 flex flex-col gap-3 items-stretch sm:items-start sm:flex-row">
         {/* Branding Link */}
-        <Link 
-          to="/" 
+        <button 
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/');
+            }
+          }}
           className="bg-[#1a2340]/95 backdrop-blur-xl px-4 py-3 sm:px-5 sm:py-4 flex items-center gap-3 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5 pointer-events-auto transition-all hover:border-[#c9a84c]/40 active:scale-95 group"
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c] group-hover:bg-[#c9a84c] group-hover:text-[#1a2340] transition-all">
             <ArrowRight size={18} className="rotate-180" />
           </div>
-          <div className="hidden sm:block">
+          <div className="hidden sm:block text-left">
             <div className="text-white text-[10px] font-black uppercase tracking-[0.3em] leading-none mb-1.5">Splus Properties</div>
             <div className="text-[#c9a84c] text-[10px] font-bold flex items-center gap-1.5">
-              Back to Website <ChevronRight size={10} className="opacity-50" />
+              Go Back <ChevronRight size={10} className="opacity-50" />
             </div>
           </div>
-          <div className="sm:hidden text-white text-[10px] font-black uppercase tracking-widest">Home</div>
-        </Link>
+          <div className="sm:hidden text-white text-[10px] font-black uppercase tracking-widest">Back</div>
+        </button>
 
         {/* Search Bar */}
         <form 

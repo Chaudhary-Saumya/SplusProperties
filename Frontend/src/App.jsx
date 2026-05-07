@@ -4,6 +4,7 @@ import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const trackedPaths = new Set();
 
@@ -99,29 +100,20 @@ const LayoutWrapper = ({ children }) => {
   );
 };
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-      <SocketManager />
-      <AnalyticsTracker />
-      <ToastContainer
-        position="top-center"
-        autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        limit={5}
-        toastClassName="!rounded-2xl !shadow-lg !font-medium"
-        bodyClassName="!text-sm"
-      />
-      <LayoutWrapper>
-          <Routes>
+    <LayoutWrapper>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/brokers" element={<Brokers />} />
@@ -145,7 +137,34 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
           </Routes>
-      </LayoutWrapper>
+        </motion.div>
+      </AnimatePresence>
+    </LayoutWrapper>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <SocketManager />
+        <AnalyticsTracker />
+        <ToastContainer
+          position="top-center"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          limit={5}
+          toastClassName="!rounded-2xl !shadow-lg !font-medium"
+          bodyClassName="!text-sm"
+        />
+        <AppContent />
       </Router>
     </QueryClientProvider>
   );
