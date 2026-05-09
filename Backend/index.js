@@ -41,7 +41,7 @@ app.use(helmet({
 }));
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://splusproperties-frontend.onrender.com"
+  "https://properties.kharsan.com"
 ];
 
 app.use(cors({
