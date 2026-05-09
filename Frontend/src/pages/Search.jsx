@@ -308,7 +308,7 @@ const Search = () => {
                         {/* Results Header */}
                         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                             <div>
-                                <h2 className="text-lg font-bold text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                <h2 className="text-lg font-bold text-[#1a2340]">
                                     {isLoading ? 'Searching...' : `${totalResults.toLocaleString('en-IN')} Properties Found`}
                                 </h2>
                                 {isGeoMode && (
@@ -412,7 +412,7 @@ const Search = () => {
 
                                             <div>
                                                 {/* Title */}
-                                                <h3 className="text-lg font-bold text-[#1a2340] group-hover:text-[#c9a84c] transition-colors leading-tight mb-1 pr-20" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                                <h3 className="text-lg font-bold text-[#1a2340] group-hover:text-[#c9a84c] transition-colors leading-tight mb-1 pr-20" >
                                                     {listing.title}
                                                 </h3>
 

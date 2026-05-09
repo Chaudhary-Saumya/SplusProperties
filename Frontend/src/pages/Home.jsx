@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
@@ -237,7 +238,7 @@ const Home = () => {
       });
       toast.success(wishlist.has(id) ? 'Removed from favorites' : 'Added to favorites!');
     } catch (err) {
-      toast.error('Failed to update favorites');
+      toast.error('Failed to update favorites', err);
     }
   };
   const [search, setSearch] = useState('');
@@ -319,7 +320,7 @@ const Home = () => {
             { num: 'Zero', label: 'Hidden Charges' },
           ].map(({ num, label }) => (
             <div key={label} style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, color: '#c9a84c', fontWeight: 700 }}>{num}</div>
+              <div style={{ fontSize: 28, color: '#c9a84c', fontWeight: 700 }}>{num}</div>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600, letterSpacing: '0.5px', marginTop: 4 }}>{label}</div>
             </div>
           ))}
@@ -334,7 +335,7 @@ const Home = () => {
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>Most Viewed</div>
               <h2 style={{ fontFamily: "'Nunito Sans', serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1a2340', fontWeight: 700, margin: 0 }}>
-                Trending Properties 🔥
+                Trending Properties 
               </h2>
               <p style={{ color: '#6b7280', fontWeight: 600, marginTop: 8, fontSize: 15 }}>
                 The most demanded plots with highest interaction volumes.
@@ -468,7 +469,6 @@ const Home = () => {
     }
 
     .prop-title {
-      font-family: 'Playfair Display', serif;
       font-size: 20px;
       font-weight: 700;
       color: #1a1a2e;

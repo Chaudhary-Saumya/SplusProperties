@@ -27,7 +27,7 @@ const About = () => {
         </div>
         
         <div className="relative z-20 text-center px-6 max-w-4xl mx-auto animate-fade-in translate-y-4">
-          <h1 className="font-playfair text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Elevating the <span className="text-[#c9a84c]">Standard</span> of Real Estate
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-slate-200 font-medium max-w-2xl mx-auto">
@@ -43,7 +43,7 @@ const About = () => {
             <div className="inline-block px-4 py-1.5 bg-[#c9a84c]/10 rounded-full border border-[#c9a84c]/20">
               <span className="text-[#c9a84c] font-bold text-xs md:text-sm tracking-widest uppercase">Our Pedigree</span>
             </div>
-            <h2 className="font-playfair text-3xl md:text-4xl font-bold text-[#1a2340]">The Splus Ecosystem</h2>
+            <h2 className=" text-3xl md:text-4xl font-bold text-[#1a2340]">The Splus Ecosystem</h2>
             <p className="text-slate-600 leading-relaxed text-base md:text-lg">
               Splus Properties is a flagship vertical under the esteemed <span className="font-bold text-[#1a2340]">SplusTechnologies</span> banner. Our brand represents a fusion of technological innovation and traditional real estate values.
             </p>
@@ -83,7 +83,7 @@ const About = () => {
       {/* Leadership Section */}
       <section className="py-16 md:py-24 px-6 max-w-6xl mx-auto overflow-hidden">
         <div className="text-center mb-16">
-          <h2 className="font-playfair text-4xl md:text-5xl font-bold text-[#1a2340] mb-4">Brains Behind Splus</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-[#1a2340] mb-4">Brains Behind Splus</h2>
           <div className="w-24 h-1.5 bg-[#c9a84c] mx-auto rounded-full" />
         </div>
 
@@ -157,7 +157,7 @@ const About = () => {
         <div className="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-[#c9a84c]/5 rounded-full blur-3xl -mr-32 -mt-32 md:-mr-48 md:-mt-48" />
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="font-playfair text-3xl md:text-5xl font-bold mb-6">Our Vision & Legacy</h2>
+            <h2 className=" text-3xl md:text-5xl font-bold mb-6">Our Vision & Legacy</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-base md:text-lg leading-relaxed">
               We don't just sell land; we facilitate the creation of legacies. Our vision is to build a vertically integrated ecosystem where quality, transparency, and innovation come together.
             </p>
@@ -190,7 +190,7 @@ const About = () => {
       </section>
 
       <style>{`
-        .font-playfair { font-family: 'Playfair Display', serif; }
+        
         .animate-fade-in {
           animation: fadeIn 0.8s ease-out forwards;
         }

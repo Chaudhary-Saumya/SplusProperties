@@ -4,7 +4,10 @@ import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
-import { motion, AnimatePresence } from 'framer-motion';
+// eslint-disable-next-line no-unused-vars
+import { AnimatePresence, motion } from 'framer-motion';
+import ScrollToTopOnRouteChange from './components/ScrollToTopOnRouteChange';
+
 
 const trackedPaths = new Set();
 
@@ -149,7 +152,9 @@ function App() {
       <Router>
         <SocketManager />
         <AnalyticsTracker />
+        <ScrollToTopOnRouteChange />
         <ToastContainer
+
           position="top-center"
           autoClose={4000}
           hideProgressBar={false}
