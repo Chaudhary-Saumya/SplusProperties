@@ -111,7 +111,7 @@ const Login = () => {
                     margin-bottom: 16px;
                 }
                 .login-left-heading {
-                    font-family: 'Playfair Display', serif;
+                   
                     font-size: clamp(2rem, 3vw, 2.8rem);
                     color: #fff; font-weight: 700; line-height: 1.2;
                     margin: 0 0 16px;
@@ -128,7 +128,7 @@ const Login = () => {
                     text-align: center;
                 }
                 .login-trust-num {
-                    font-family: 'Playfair Display', serif;
+                   
                     font-size: 22px; color: #c9a84c; font-weight: 700;
                 }
                 .login-trust-label {
@@ -160,7 +160,7 @@ const Login = () => {
                 @media (max-width: 600px) { .login-right { padding: 36px 24px; } }
 
                 .login-logo {
-                    font-family: 'Playfair Display', serif;
+                
                     font-size: 20px; font-weight: 700;
                     color: #1a2340; text-decoration: none;
                     display: inline-block; margin-bottom: 36px;
@@ -168,7 +168,7 @@ const Login = () => {
                 .login-logo span { color: #c9a84c; }
 
                 .login-title {
-                    font-family: 'Playfair Display', serif;
+                  
                     font-size: 28px; font-weight: 700;
                     color: #1a2340; margin: 0 0 6px;
                 }

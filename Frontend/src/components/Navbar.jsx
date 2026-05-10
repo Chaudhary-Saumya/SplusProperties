@@ -42,12 +42,11 @@ const Navbar = () => {
         }
 
         /* Logo */
-        .logo { display: flex; flex-direction: column; align-items: center; text-decoration: none; line-height: 1; padding: 8px 0; transition: transform 0.2s; }
+        .logo { display: flex; flex-direction: column; align-items: center; text-decoration: none; line-height: 1; padding: 4px 0; transition: transform 0.2s; }
         .logo:hover { transform: scale(1.03); }
-        .logo-main { position: relative; display: flex; align-items: center; justify-content: center; }
-        .logo-s { font-family: 'Playfair Display', serif; font-size: 55px; font-weight: 700; color: #c9a84c; margin: 0; padding: 0; }
-        .logo-plus { font-family: 'Great Vibes', cursive; font-size: 25px; color: #1a2340; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 2; pointer-events: none; }
-        .logo-text { font-family: 'Nunito Sans', sans-serif; font-size: 10px; font-weight: 800; color: #1a2340; letter-spacing: 5px; text-transform: uppercase; margin-top: -1px; padding-left: 5px; }
+        .logo-main { display: flex; align-items: center; justify-content: center; }
+        .logo-svg { height: 78px; width: auto; }
+        .logo-text-svg { font-family: 'Nunito Sans', sans-serif; font-weight: 800; text-transform: uppercase; }
 
         /* Desktop nav */
         .nav-desktop { display: flex; align-items: center; gap: 4px; }
@@ -192,10 +191,45 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="logo" onClick={() => setIsOpen(false)}>
             <div className="logo-main">
-              <span className="logo-s">S</span>
-              <span className="logo-plus">Plus</span>
+              <svg viewBox="0 0 500 500" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
+                {/* Background Accent - Soft Blue/Grey Rect */}
+                <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
+                
+                {/* Architectural Lines - Dark Navy */}
+                <g stroke="#1a2340" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+                  {/* Left building part */}
+                  <path d="M25 320 H90 V225 L190 150" />
+                  {/* Center building part */}
+                  <path d="M190 320 V75 H295 V320" />
+                  {/* Right building part */}
+                  <path d="M295 185 L395 245 V320 H495" />
+                  {/* Base line for center */}
+                  <path d="M190 320 H295" strokeWidth="12" />
+                </g>
+                
+                {/* Branding Text */}
+                <text 
+                  x="250" 
+                  y="415" 
+                  textAnchor="middle" 
+                  className="logo-text-svg" 
+                  fill="#c9a84c" 
+                  style={{ fontSize: '82px', fontWeight: '900', fontFamily: 'Nunito Sans, sans-serif' }}
+                >
+                  KHARSAN
+                </text>
+                <text 
+                  x="250" 
+                  y="470" 
+                  textAnchor="middle" 
+                  className="logo-text-svg" 
+                  fill="#1a2340" 
+                  style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px', fontFamily: 'Nunito Sans, sans-serif' }}
+                >
+                  PROPERTIES
+                </text>
+              </svg>
             </div>
-            <div className="logo-text">PROPERTIES</div>
           </Link>
 
           {/* Desktop Navigation */}

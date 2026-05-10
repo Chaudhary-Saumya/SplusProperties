@@ -5,7 +5,8 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle } from 'lucide-react';
+import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target } from 'lucide-react';
+
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
 import { useQuery } from '@tanstack/react-query';
@@ -213,6 +214,121 @@ const HeroCarousel = () => {
 
 
     </div>
+  );
+};
+
+
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+const Footer = () => {
+  const navigate = useNavigate();
+  return (
+    <footer style={{ background: '#1a2340', color: '#fff', padding: '80px 24px 40px', borderTop: '5px solid #c9a84c', fontFamily: "'Nunito Sans', sans-serif" }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px 60px', marginBottom: 60 }}>
+          
+          {/* Left Side: Logo (approx 20%) */}
+          <div style={{ flex: '1 1 280px' }}>
+            <div 
+              onClick={() => { window.scrollTo(0,0); navigate('/'); }}
+              style={{ cursor: 'pointer', marginBottom: 28, display: 'inline-block', transform: 'scale(0.85)', transformOrigin: 'left' }}
+            >
+              <svg viewBox="0 0 500 500" style={{ height: 90, width: 'auto' }} xmlns="http://www.w3.org/2000/svg">
+                <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
+                <g stroke="#fff" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+                  <path d="M25 320 H90 V225 L190 150" />
+                  <path d="M190 320 V75 H295 V320" />
+                  <path d="M295 185 L395 245 V320 H495" />
+                  <path d="M190 320 H295" strokeWidth="12" />
+                </g>
+                <text x="250" y="415" textAnchor="middle" fill="#c9a84c" style={{ fontSize: '82px', fontWeight: '900' }}>KHARSAN</text>
+                <text x="250" y="470" textAnchor="middle" fill="#fff" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px' }}>PROPERTIES</text>
+              </svg>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 }}>
+              Leading the digital transformation of real estate. We specialize in verified agricultural, residential, and commercial land management with intelligent mapping technology.
+            </p>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Globe size={18} />
+              </a>
+              <a href="mailto:support@kharsan.com" title="Email" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Mail size={18} />
+              </a>
+              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <MessageCircle size={18} />
+              </a>
+            </div>
+          </div>
+
+          {/* Right Side: Links (approx 80% on desktop) */}
+          <div style={{ flex: '3 1 600px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 40 }}>
+            {/* Quick Links */}
+            <div>
+              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Explore</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Link to="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Home</Link>
+                <Link to="/about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>About Us</Link>
+                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Trending Plots</Link>
+                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Verified Sellers</Link>
+                <Link to="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Market Blogs</Link>
+              </div>
+            </div>
+
+            {/* Services */}
+            <div>
+              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Services</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Link to="/search?type=buy" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Buy Property</Link>
+                <Link to="/create-listing" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Sell Property</Link>
+                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Land Mapping</Link>
+                <Link to="/brokers" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Broker Connect</Link>
+                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Legal Verification</Link>
+              </div>
+            </div>
+
+            {/* Tools */}
+            <div>
+              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Smart Tools</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Boundary Map</Link>
+                <Link to="/area-converter" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Area Converter</Link>
+                <Link to="/saved-maps" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Saved Boundaries</Link>
+                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>KML Exporter</Link>
+                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>PDF Reports</Link>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Contact</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <a href="mailto:support@kharsan.com" style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
+                  <Mail size={16} style={{ color: '#c9a84c' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>support@kharsan.com</span>
+                </a>
+                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
+                  <Globe size={16} style={{ color: '#c9a84c' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>www.properties.kharsan.com</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Strip */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 32, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600 }}>
+            © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan Technologies. All rights reserved.
+          </p>
+          <div style={{ display: 'flex', gap: 24 }}>
+            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
+              <a key={item} href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 12, fontWeight: 700 }}>{item}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 };
 
@@ -740,8 +856,11 @@ const Home = () => {
           </div>
         </div>
       </div>
+      {/* ── Footer ── */}
+      <Footer />
     </div>
   );
 };
 
-export default Home;    
+export default Home;
+    

@@ -5,7 +5,7 @@ import Me from '../assets/Me.jpeg';
 
 const About = () => {
   useEffect(() => {
-    document.title = "About Us | Splus Properties";
+    document.title = "About Us | Kharsan Properties";
     window.scrollTo(0, 0);
   }, []);
 
@@ -13,7 +13,7 @@ const About = () => {
     <div className="min-h-screen bg-[#f8f5ee]">
       <SEO 
         title="About Us | Our Vision & Leadership"
-        description="Learn about Splus Properties and its parent SplusTechnologies. Our vision is to build a legacy through technological innovation and trust in the real estate sector."
+        description="Learn about Kharsan Properties and its parent Kharsan Technologies. Our vision is to build a legacy through technological innovation and trust in the real estate sector."
       />
       {/* Hero Section */}
       <section className="relative h-[50vh] md:h-[60vh] flex items-center justify-center overflow-hidden">
@@ -31,7 +31,7 @@ const About = () => {
             Elevating the <span className="text-[#c9a84c]">Standard</span> of Real Estate
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-slate-200 font-medium max-w-2xl mx-auto">
-            Building legacies, one property at a time. Splus Properties is the cornerstone of excellence in modern land and property management.
+            Building legacies, one property at a time. Kharsan Properties is the cornerstone of excellence in modern land and property management.
           </p>
         </div>
       </section>
@@ -43,9 +43,9 @@ const About = () => {
             <div className="inline-block px-4 py-1.5 bg-[#c9a84c]/10 rounded-full border border-[#c9a84c]/20">
               <span className="text-[#c9a84c] font-bold text-xs md:text-sm tracking-widest uppercase">Our Pedigree</span>
             </div>
-            <h2 className=" text-3xl md:text-4xl font-bold text-[#1a2340]">The Splus Ecosystem</h2>
+            <h2 className=" text-3xl md:text-4xl font-bold text-[#1a2340]">The Kharsan Ecosystem</h2>
             <p className="text-slate-600 leading-relaxed text-base md:text-lg">
-              Splus Properties is a flagship vertical under the esteemed <span className="font-bold text-[#1a2340]">SplusTechnologies</span> banner. Our brand represents a fusion of technological innovation and traditional real estate values.
+              Kharsan Properties is a flagship vertical under the esteemed <span className="font-bold text-[#1a2340]">Kharsan Technologies</span> banner. Our brand represents a fusion of technological innovation and traditional real estate values.
             </p>
             <div className="flex flex-col space-y-4 pt-4">
               <div className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 transition-transform hover:scale-[1.02]">
@@ -53,7 +53,7 @@ const About = () => {
                   <Globe size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#1a2340] text-sm md:text-base">SplusTechnologies</h4>
+                  <h4 className="font-bold text-[#1a2340] text-sm md:text-base">Kharsan Technologies</h4>
                   <p className="text-xs md:text-sm text-slate-500">The Global Innovation Hub & Parent Brand</p>
                 </div>
               </div>
@@ -63,7 +63,7 @@ const About = () => {
                   <Shield size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#1a2340] text-sm md:text-base">Splus Properties</h4>
+                  <h4 className="font-bold text-[#1a2340] text-sm md:text-base">Kharsan Properties</h4>
                   <p className="text-xs md:text-sm text-slate-500">Premium Real Estate & Land Management</p>
                 </div>
               </div>
@@ -83,7 +83,7 @@ const About = () => {
       {/* Leadership Section */}
       <section className="py-16 md:py-24 px-6 max-w-6xl mx-auto overflow-hidden">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-[#1a2340] mb-4">Brains Behind Splus</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-[#1a2340] mb-4">Brains Behind Kharsan</h2>
           <div className="w-24 h-1.5 bg-[#c9a84c] mx-auto rounded-full" />
         </div>
 
@@ -104,18 +104,18 @@ const About = () => {
                 <p className="text-[#c9a84c] font-bold tracking-widest text-sm uppercase mt-1">Owner, Founder & Lead Creator</p>
               </div>
               <p className="text-slate-600 text-lg leading-relaxed italic border-l-4 border-[#c9a84c] pl-6 py-2">
-                "As the creator of the Splus Properties ecosystem, my focus is on merging technological precision with the timeless value of land. We are building more than a platform; we are building a digital legacy."
+                "As the creator of the Kharsan Properties ecosystem, my focus is on merging technological precision with the timeless value of land. We are building more than a platform; we are building a digital legacy."
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                 <a 
-                  href="mailto:saumyachaudhary9409@gmail.com" 
+                  href="mailto:saumya@kharsan.com" 
                   className="flex items-center gap-3 bg-[#1a2340] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#2a3a6a] transition-all shadow-md active:scale-95"
                 >
                   <Mail size={20} />
                   Contact Directly
                 </a>
                 <span className="text-slate-500 font-medium hidden sm:block">|</span>
-                <span className="text-slate-500 font-medium">saumyachaudhary9409@gmail.com</span>
+                <span className="text-slate-500 font-medium">saumya@kharsan.com</span>
               </div>
             </div>
           </div>
@@ -137,14 +137,25 @@ const About = () => {
                 <div className="flex items-start gap-4 p-4 bg-[#f8f5ee] rounded-2xl">
                   <Lightbulb className="text-[#c9a84c] shrink-0 mt-1" size={24} />
                   <p className="text-slate-700 text-lg leading-relaxed">
-                    The core idea behind the Splus platform was conceived and nurtured by Ashvin Chaudhary. His visionary approach laid the foundation for what Splus is today.
+                    The core idea behind the Kharsan platform was conceived and nurtured by Ashvin Chaudhary. His visionary approach laid the foundation for what Kharsan is today.
                   </p>
                 </div>
                 <div className="flex items-start gap-4 p-4 bg-[#f8f5ee] rounded-2xl">
                   <Briefcase className="text-[#1a2340] shrink-0 mt-1" size={24} />
                   <p className="text-slate-700 text-lg leading-relaxed">
-                    Beyond the idea, he manages the strategic direction and operational integrity of the Splus ecosystem, ensuring we stay true to our goal of creating a legacy.
+                    Beyond the idea, he manages the strategic direction and operational integrity of the Kharsan ecosystem, ensuring we stay true to our goal of creating a legacy.
                   </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                  <a 
+                    href="mailto:ashvin@kharsan.com" 
+                    className="flex items-center gap-3 bg-[#1a2340] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#2a3a6a] transition-all shadow-md active:scale-95"
+                  >
+                    <Mail size={20} />
+                    Contact Directly
+                  </a>
+                  <span className="text-slate-500 font-medium hidden sm:block">|</span>
+                  <span className="text-slate-500 font-medium">ashvin@kharsan.com</span>
                 </div>
               </div>
             </div>
@@ -185,7 +196,7 @@ const About = () => {
       {/* Footer Branding */}
       <section className="py-10 md:py-12 border-t border-slate-200 text-center px-6">
         <p className="text-slate-400 text-xs md:text-sm font-medium tracking-widest uppercase">
-          A Legacy Brand of <span className="text-[#1a2340]">SplusTechnologies</span>
+          A Legacy Brand of <span className="text-[#1a2340]">Kharsan Technologies</span>
         </p>
       </section>
 

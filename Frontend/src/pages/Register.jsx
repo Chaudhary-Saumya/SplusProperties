@@ -143,7 +143,7 @@ const Register = () => {
                     margin-bottom: 16px;
                 }
                 .reg-left-heading {
-                    font-family: 'Playfair Display', serif;
+                   
                     font-size: clamp(1.8rem, 2.8vw, 2.6rem);
                     color: #fff; font-weight: 700; line-height: 1.25;
                     margin: 0 0 16px;
@@ -183,7 +183,7 @@ const Register = () => {
                 @media (max-width: 600px) { .reg-right { padding: 36px 24px; max-width: 100%; } }
 
                 .reg-logo {
-                    font-family: 'Playfair Display', serif;
+                    
                     font-size: 20px; font-weight: 700;
                     color: #1a2340; text-decoration: none;
                     display: inline-block; margin-bottom: 32px;
@@ -191,7 +191,7 @@ const Register = () => {
                 .reg-logo span { color: #c9a84c; }
 
                 .reg-title {
-                    font-family: 'Playfair Display', serif;
+                    
                     font-size: 26px; font-weight: 700;
                     color: #1a2340; margin: 0 0 6px;
                 }
@@ -355,7 +355,7 @@ const Register = () => {
 
 
                     <h1 className="reg-title">Create Account</h1>
-                    <p className="reg-subtitle">Join Splus Properties — it's free & takes 2 minutes</p>
+                    <p className="reg-subtitle">Join Kharsan Properties — it's free & takes 2 minutes</p>
 
                     {error && <div className="reg-error">⚠ {error}</div>}
 

@@ -190,7 +190,7 @@ const SharedMap = () => {
               <Building2 size={20} />
             </div>
             <div>
-              <div className="text-white text-[10px] font-black uppercase tracking-[0.3em] leading-none mb-1.5">Splus Properties</div>
+              <div className="text-white text-[10px] font-black uppercase tracking-[0.3em] leading-none mb-1.5">Kharsan Properties</div>
               <div className="text-[#c9a84c] text-xs font-bold flex items-center gap-1">
                 Plot Boundary Map <ChevronRight size={10} className="opacity-50" />
               </div>
@@ -267,7 +267,7 @@ const SharedMap = () => {
                 <Building2 size={16} />
               </div>
               <div>
-                <div className="text-white text-[9px] font-black uppercase tracking-widest leading-none">Splus Properties</div>
+                <div className="text-white text-[9px] font-black uppercase tracking-widest leading-none">Kharsan Properties</div>
                 <div className="text-[#c9a84c] text-[10px] font-bold mt-0.5">Plot Boundary Map</div>
               </div>
             </div>

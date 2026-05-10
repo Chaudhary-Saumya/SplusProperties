@@ -2,7 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
 const SEO = ({ title, description, image, url, type = 'website' }) => {
-  const siteName = 'Splus Properties';
+  const siteName = 'Kharsan Properties';
   const fullTitle = `${title} | ${siteName}`;
   const defaultUrl = window.location.href;
   const defaultImage = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80'; // Using a nice land image as default

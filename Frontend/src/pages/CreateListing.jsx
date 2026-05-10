@@ -232,7 +232,7 @@ const CreateListing = () => {
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em] mb-3">
                         <Building2 size={14} />
-                        <span>Splus Properties</span>
+                        <span>Kharsan Properties</span>
                         <ChevronRight size={12} />
                         <span>New Listing</span>
                     </div>

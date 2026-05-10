@@ -49,7 +49,7 @@ const TILES = {
 };
 
 const COLORS = [
-  { name: 'Splus Gold', value: '#c9a84c' },
+  { name: 'Kharsan Gold', value: '#c9a84c' },
   { name: 'Emerald', value: '#10b981' },
   { name: 'Sky Blue', value: '#0ea5e9' },
   { name: 'Crimson', value: '#ef4444' },
@@ -321,7 +321,7 @@ const BoundaryMap = () => {
 
   // ── KML export ───────────────────────────────────────────────
   const exportKML = () => {
-    let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document><name>Land Plots — Splus Properties</name>`;
+    let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document><name>Land Plots — Kharsan Properties</name>`;
     
     polygons.forEach(p => {
       if (p.points.length < 3) return;
@@ -367,7 +367,7 @@ const BoundaryMap = () => {
       doc.setTextColor(201, 168, 76);
       doc.setFontSize(26);
       doc.setFont('helvetica', 'bold');
-      doc.text('Splus Properties', 105, 22, { align: 'center' });
+      doc.text('Kharsan Properties', 105, 22, { align: 'center' });
       
       doc.setFontSize(10);
       doc.setTextColor(255, 255, 255, 0.7);
@@ -441,10 +441,10 @@ const BoundaryMap = () => {
       // Footer
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text(`© ${new Date().getFullYear()} Splus Properties · This report is for boundary visualization purposes only.`, 105, 288, { align: 'center' });
+      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · This report is for boundary visualization purposes only.`, 105, 288, { align: 'center' });
       doc.text(`Report Generated on ${date}`, 105, 292, { align: 'center' });
 
-      doc.save(`Splus-Boundary-Report-${Date.now()}.pdf`);
+      doc.save(`Kharsan-Boundary-Report-${Date.now()}.pdf`);
       toast.update(loadingToast, { render: 'Report downloaded successfully!', type: 'success', isLoading: false, autoClose: 3000 });
     } catch (err) {
       console.error(err);
@@ -580,7 +580,7 @@ const BoundaryMap = () => {
             <ArrowRight size={18} className="rotate-180" />
           </div>
           <div className="hidden sm:block text-left">
-            <div className="text-white text-[10px] font-black uppercase tracking-[0.3em] leading-none mb-1.5">Splus Properties</div>
+            <div className="text-white text-[10px] font-black uppercase tracking-[0.3em] leading-none mb-1.5">Kharsan Properties</div>
             <div className="text-[#c9a84c] text-[10px] font-bold flex items-center gap-1.5">
               Go Back <ChevronRight size={10} className="opacity-50" />
             </div>
