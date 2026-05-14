@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -51,6 +51,7 @@ import SavedMaps from './pages/SavedMaps';
 import VerifyOTP from './pages/VerifyOTP';
 import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
+import Calculator from './pages/Calculator';
 
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
@@ -105,6 +106,19 @@ const LayoutWrapper = ({ children }) => {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Check both key and keyCode (F9 is 120) for better compatibility
+      if (e.key === 'F9' || e.keyCode === 120) {
+        e.preventDefault();
+        navigate('/calculator');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   return (
     <LayoutWrapper>
@@ -139,6 +153,7 @@ function AppContent() {
             <Route path="/m/:shareId" element={<SharedMap />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
+            <Route path="/calculator" element={<Calculator />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

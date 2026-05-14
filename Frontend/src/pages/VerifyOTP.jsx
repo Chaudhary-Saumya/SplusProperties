@@ -49,7 +49,7 @@ const VerifyOTP = () => {
         setError(null);
         try {
             await verifyOTP(email, otpString);
-            navigate('/search');
+            navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Verification failed');
         } finally {

@@ -70,6 +70,67 @@ const Navbar = () => {
         .btn-logout { font-size: 13px; font-weight: 700; color: #fff; background: #c9a84c; border: 2px solid #c9a84c; padding: 9px 18px; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
         .btn-logout:hover { background: #b8933a; border-color: #b8933a; }
 
+        /* User Menu Styles */
+        .user-dropdown-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 14px;
+          border-radius: 12px;
+          background: #f8f9ff;
+          border: 1px solid rgba(201, 168, 76, 0.2);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .user-dropdown-btn:hover {
+          background: #f0f4ff;
+          border-color: #c9a84c;
+          box-shadow: 0 4px 12px rgba(26, 35, 64, 0.08);
+        }
+        .user-name {
+          font-size: 16px;
+          font-weight: 800;
+          color: #c19b33ff;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          text-transform: capitalize;
+        }
+        .dropdown-menu.user-menu {
+          right: 0;
+          left: auto;
+          min-width: 200px;
+          padding: 8px;
+        }
+        .user-menu-header {
+          padding: 10px 14px;
+          border-bottom: 1px solid #f0f4ff;
+          margin-bottom: 6px;
+        }
+        .user-menu-role {
+          font-size: 10px;
+          font-weight: 800;
+          color: #c9a84c;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .logout-item {
+          color: #dc2626 !important;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          text-align: left;
+          background: none;
+          border: none;
+          cursor: pointer;
+        }
+        .logout-item:hover {
+          background: #fff1f1 !important;
+          color: #b91c1c !important;
+        }
+
         /* Mobile toggle */
         .hamburger { display: none; background: none; border: none; cursor: pointer; color: #1a2340; padding: 4px; }
         @media (max-width: 900px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
@@ -269,6 +330,7 @@ const Navbar = () => {
               {activeDropdown === 'tools' && (
                 <div className="dropdown-menu">
                   <Link to="/area-converter" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Area Converter</Link>
+                  <Link to="/calculator" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Calculator (FN + F9)</Link>
                   <Link to="/boundary-map" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Boundary Map</Link>
                   {isAuthenticated && <Link to="/saved-maps" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Saved Boundaries</Link>}
                 </div>
@@ -286,8 +348,27 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="btn-dashboard">Dashboard</Link>
-                <button onClick={handleLogout} className="btn-logout">Logout</button>
+                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="nav-link">Dashboard</Link>
+                <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
+                  <button
+                    className="user-dropdown-btn"
+                    onMouseEnter={() => setActiveDropdown('user')}
+                    onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span className="user-name">{user.name.split(' ')[0]}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280' }}>{user.role}</span>
+                    </div>
+                    <ChevronDown size={14} className={`chevron ${activeDropdown === 'user' ? 'open' : ''}`} color="#c9a84c" />
+                  </button>
+                  {activeDropdown === 'user' && (
+                    <div className="dropdown-menu user-menu" style={{ minWidth: '150px' }}>
+                      <button onClick={handleLogout} className="dropdown-item logout-item">
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -317,6 +398,13 @@ const Navbar = () => {
 
         {/* ── Mobile Menu — all items same font-size and padding ── */}
         <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
+          {isAuthenticated && (
+            <div style={{ padding: '20px 18px', background: '#f8f5ee', borderBottom: '1px solid #e2d9c5' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', marginBottom: '4px' }}>Logged in as</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1a2340' }}>{user.name}</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280' }}>{user.role}</div>
+            </div>
+          )}
 
           {/* Main */}
           <Link to="/" className="mob-item" onClick={() => setIsOpen(false)}>Home</Link>
@@ -335,6 +423,7 @@ const Navbar = () => {
           {/* Tools */}
           <span className="mob-category">Tools</span>
           <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>Area Converter</Link>
+          <Link to="/calculator" className="mob-sub-item" onClick={() => setIsOpen(false)}>Calculator</Link>
           <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>Boundary Map</Link>
           {isAuthenticated && <Link to="/saved-maps" className="mob-sub-item" onClick={() => setIsOpen(false)}>Saved Boundaries</Link>}
 

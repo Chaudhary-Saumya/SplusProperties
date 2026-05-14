@@ -31,6 +31,19 @@ const ListingSkeleton = ({ variant = 'card', isDark = false }) => {
     );
   }
 
+  if (variant === 'square') {
+    return (
+      <div className={`flex-0 0 300px min-w-[300px] border border-[#e2d9c5] rounded-[20px] overflow-hidden animate-pulse ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+        <div className={`aspect-square w-full ${isDark ? 'bg-slate-700' : 'bg-[#f3f4f6]'}`}></div>
+        <div className="p-5 space-y-3">
+          <div className={`h-6 rounded-lg w-1/2 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}></div>
+          <div className={`h-4 rounded-lg w-3/4 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}></div>
+          <div className={`h-3 rounded-lg w-1/2 ${isDark ? 'bg-slate-700' : 'bg-slate-50'}`}></div>
+        </div>
+      </div>
+    );
+  }
+
   // Default card variant
   return (
     <div className={`min-w-[340px] max-w-[340px] border shadow-sm rounded-3xl overflow-hidden animate-pulse ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>

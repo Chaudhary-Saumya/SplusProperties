@@ -59,7 +59,7 @@ const Register = () => {
                     setShowCompleteModal(true);
                 } else {
                     if (data?.user?.role === 'Admin') navigate('/admin');
-                    else navigate('/search');
+                    else navigate('/');
                 }
         } catch (err) {
             setError(err.response?.data?.error || 'Google Login failed.');
@@ -71,7 +71,7 @@ const Register = () => {
             const data = await completeProfile(profileData);
             setShowCompleteModal(false);
             if (data?.role === 'Admin' || user?.role === 'Admin') navigate('/admin');
-            else navigate('/search');
+            else navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Profile completion failed.');
         }

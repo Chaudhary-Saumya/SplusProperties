@@ -9,7 +9,7 @@ import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDo
 
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import { getImageUrl } from '../utils/imageUrl';
 
@@ -43,6 +43,7 @@ const slides = [
 
 /* ─── Hero Carousel ───────────────────────────────────────────────────────── */
 const HeroCarousel = () => {
+  const { user, isAuthenticated } = useContext(AuthContext);
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
@@ -80,7 +81,13 @@ const HeroCarousel = () => {
     if (isRightSwipe) go(current - 1);
   };
 
-  const slide = slides[current];
+  const baseSlide = slides[current];
+  const slide = { ...baseSlide };
+  
+  if (current === 0 && isAuthenticated && user) {
+    slide.tag = `Welcome, ${user.name}`;
+    slide.heading = `Hello ${user.name.split(' ')[0]},\nFind Your Perfect Plot`;
+  }
 
   return (
     <div 
@@ -336,30 +343,11 @@ const Footer = () => {
 const Home = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [wishlist, setWishlist] = useState(new Set());
-
-  const toggleWishlist = async (e, id) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      toast.info('Please login to save favorites');
-      navigate('/login');
-      return;
-    }
-    try {
-      await axios.post(`/api/auth/favorites/${id}`);
-      setWishlist(prev => {
-        const s = new Set(prev);
-        s.has(id) ? s.delete(id) : s.add(id);
-        return s;
-      });
-      toast.success(wishlist.has(id) ? 'Removed from favorites' : 'Added to favorites!');
-    } catch (err) {
-      toast.error('Failed to update favorites', err);
-    }
-  };
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
 
-  const { data: trendingData, isLoading, isError, error, refetch } = useQuery({
+  // Fetch trending properties
+  const { data: trendingData, isLoading: isTrendingLoading, isError: isTrendingError, error: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: ['trending'],
     queryFn: async () => {
       const res = await axios.get('/api/recommendations/trending');
@@ -367,12 +355,181 @@ const Home = () => {
     }
   });
 
-  const trending = (trendingData || []).slice(0, 4);
+  // Fetch my listings for Seller/Broker
+  const { data: myListingsData, isLoading: isMyListingsLoading } = useQuery({
+    queryKey: ['myListings', user?._id],
+    enabled: !!user && (user.role === 'Seller' || user.role === 'Broker'),
+    queryFn: async () => {
+      const res = await axios.get(`/api/listings?createdBy=${user._id || user.id}`);
+      return res.data.data;
+    }
+  });
+
+  // Fetch profile data for Buyer (includes favorites)
+  const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = useQuery({
+    queryKey: ['profile', user?._id],
+    enabled: !!user && user.role === 'Buyer',
+    queryFn: async () => {
+      const res = await axios.get('/api/auth/me');
+      return res.data.data;
+    },
+    staleTime: 0, // Always fetch fresh data for profile/favorites
+    refetchOnWindowFocus: true,
+  });
+
+  const trending = (trendingData || []).slice(0, 8);
+  const myListings = myListingsData || [];
+  const myFavorites = profileData?.favorites || [];
+
+  // Force refetch on mount or auth change
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'Buyer') {
+      refetchProfile();
+    }
+  }, [isAuthenticated, user?.role, refetchProfile]);
+
+  // Create a Set of favorite IDs for quick lookup
+  const wishlistIds = new Set(myFavorites.map(f => f._id));
+
+  // Toggle wishlist with optimistic updates and proper cache management
+  const toggleWishlist = async (e, listingId) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.info('Please login to save favorites');
+      navigate('/login');
+      return;
+    }
+
+    if (!user || user.role !== 'Buyer') {
+      toast.warning('Only buyers can save favorites');
+      return;
+    }
+
+    const wasInWishlist = wishlistIds.has(listingId);
+    
+    // Find the full listing object for optimistic update
+    let listingToToggle = null;
+    
+    // Search in trending data
+    if (trendingData) {
+      listingToToggle = trendingData.find(item => item._id === listingId);
+    }
+    
+    // If not found in trending, search in current favorites
+    if (!listingToToggle && myFavorites) {
+      listingToToggle = myFavorites.find(item => item._id === listingId);
+    }
+
+    if (!listingToToggle) {
+      console.error('Listing not found for toggle');
+      toast.error('Unable to update favorites');
+      return;
+    }
+
+    // Optimistically update the cache BEFORE making the API call
+    queryClient.setQueryData(['profile', user._id], (oldData) => {
+      if (!oldData) return oldData;
+
+      let newFavorites;
+      if (wasInWishlist) {
+        // Remove from favorites
+        newFavorites = oldData.favorites.filter(fav => fav._id !== listingId);
+      } else {
+        // Add to favorites
+        newFavorites = [...oldData.favorites, listingToToggle];
+      }
+
+      return {
+        ...oldData,
+        favorites: newFavorites
+      };
+    });
+
+    // Show immediate feedback
+    toast.success(wasInWishlist ? 'Removed from favorites' : 'Added to favorites!', {
+      autoClose: 2000,
+    });
+
+    try {
+      // Make the API call
+      await axios.post(`/api/auth/favorites/${listingId}`);
+      
+      // Refetch to ensure data consistency with backend
+      await queryClient.invalidateQueries(['profile', user._id]);
+      
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      
+      // Revert the optimistic update on error
+      queryClient.setQueryData(['profile', user._id], (oldData) => {
+        if (!oldData) return oldData;
+
+        let revertedFavorites;
+        if (wasInWishlist) {
+          // Add it back
+          revertedFavorites = [...oldData.favorites, listingToToggle];
+        } else {
+          // Remove it
+          revertedFavorites = oldData.favorites.filter(fav => fav._id !== listingId);
+        }
+
+        return {
+          ...oldData,
+          favorites: revertedFavorites
+        };
+      });
+
+      toast.error('Failed to update favorites. Please try again.', {
+        autoClose: 3000,
+      });
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) navigate(`/search?query=${search}`);
   };
+
+  const getSectionData = () => {
+    if (!isAuthenticated) return { 
+      title: 'Trending Properties', 
+      sub: 'The most demanded plots with highest interaction volumes.', 
+      data: trending,
+      isLoading: isTrendingLoading,
+      isError: isTrendingError,
+      error: trendingError,
+      refetch: refetchTrending
+    };
+
+    if (user.role === 'Buyer') return {
+      title: 'My Favourite Properties',
+      sub: 'Quick access to the lands you saved for later.',
+      data: myFavorites,
+      isLoading: isProfileLoading,
+      isError: false,
+      refetch: refetchProfile,
+      emptyTitle: 'No Favourites Yet',
+      emptySub: 'Start exploring and heart the properties you love to see them here.',
+      cta: 'Explore Listings',
+      ctaLink: '/search'
+    };
+
+    return {
+      title: 'My Listed Properties',
+      sub: 'Track and manage the properties you have listed.',
+      data: myListings,
+      isLoading: isMyListingsLoading,
+      isError: false,
+      refetch: () => {}, // Handled by myListings query
+      emptyTitle: 'No Listings Yet',
+      emptySub: 'Start your journey as a seller by listing your first property today.',
+      cta: 'List My First Property',
+      ctaLink: '/create-listing'
+    };
+  };
+
+  const { title, sub, data, isLoading, isError, error, refetch, emptyTitle, emptySub, cta, ctaLink } = getSectionData();
 
   return (
     <div style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
@@ -443,424 +600,235 @@ const Home = () => {
         </div>
       </div>
 
-      {/* ── Trending Properties ── */}
-      <div style={{ background: '#f8f5ee', padding: '64px 24px 80px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          {/* Section Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, borderBottom: '2px solid #e2d9c5', paddingBottom: 20 }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>Most Viewed</div>
-              <h2 style={{ fontFamily: "'Nunito Sans', serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1a2340', fontWeight: 700, margin: 0 }}>
-                Trending Properties 
-              </h2>
-              <p style={{ color: '#6b7280', fontWeight: 600, marginTop: 8, fontSize: 15 }}>
-                The most demanded plots with highest interaction volumes.
-              </p>
-            </div>
-            <Link to="/search" style={{
-              background: '#1a2340', color: '#c9a84c', textDecoration: 'none',
-              padding: '10px 24px', borderRadius: 8, fontWeight: 800,
-              fontSize: 13, letterSpacing: '1px', textTransform: 'uppercase',
-              border: '2px solid #1a2340', whiteSpace: 'nowrap',
-            }}>
-              Explore All
-            </Link>
-          </div>
+      <style>{`
+        .carousel-container {
+          display: flex;
+          gap: 24px;
+          overflow-x: auto;
+          padding: 10px 4px 40px;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none;  /* IE and Edge */
+        }
+        .carousel-container::-webkit-scrollbar {
+          display: none; /* Chrome, Safari and Opera */
+        }
+        .square-card {
+          flex: 0 0 300px;
+          scroll-snap-align: start;
+          background: #fff;
+          border-radius: 20px;
+          border: 1px solid #e2d9c5;
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          cursor: pointer;
+          position: relative;
+        }
+        .square-card:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 20px 40px rgba(26,35,64,0.12);
+          border-color: #c9a84c;
+        }
+        .square-card-img-wrap {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1/1;
+          overflow: hidden;
+          background: #f3f4f6;
+        }
+        .square-card-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.6s ease;
+        }
+        .square-card:hover .square-card-img {
+          transform: scale(1.1);
+        }
+        .square-card-content {
+          padding: 20px;
+        }
+        .square-card-price {
+          font-size: 20px;
+          font-weight: 900;
+          color: #1a2340;
+          margin-bottom: 4px;
+        }
+        .square-card-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #1a2340;
+          margin-bottom: 8px;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .square-card-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 11px;
+          color: #6b7280;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .square-card-badge {
+          position: absolute;
+          top: 15px;
+          left: 15px;
+          background: #1a2340;
+          color: #c9a84c;
+          padding: 4px 12px;
+          border-radius: 8px;
+          font-size: 10px;
+          font-weight: 800;
+          z-index: 10;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .empty-state-card {
+          background: #fff;
+          border: 2px dashed #e2d9c5;
+          border-radius: 20px;
+          padding: 60px 40px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+        .heart-btn {
+          transition: all 0.2s ease;
+        }
+        .heart-btn:active {
+          transform: scale(0.9);
+        }
+      `}</style>
 
-          {/* Cards */}
-
-
-<div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-  <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
-
-    .prop-card {
-      display: flex;
-      flex-direction: row;
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid #e0e0e0;
-      overflow: hidden;
-      cursor: pointer;
-      transition: box-shadow 0.25s, border-color 0.25s;
-      min-height: 220px;
-      font-family: 'Nunito Sans', sans-serif;
-    }
-    .prop-card:hover {
-      box-shadow: 0 8px 32px rgba(0,0,0,0.13);
-      border-color: #2563eb;
-    }
-
-    /* ── Image Side ── */
-    .prop-img-wrap {
-      position: relative;
-      width: 290px;
-      min-width: 240px;
-      flex-shrink: 0;
-      background: #e5e7eb;
-      overflow: hidden;
-    }
-    .prop-img-wrap img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.5s;
-    }
-    .prop-card:hover .prop-img-wrap img {
-      transform: scale(1.04);
-    }
-    .prop-img-bottom {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
-      padding: 28px 12px 10px;
-      font-size: 12px;
-      color: #fff;
-      font-weight: 600;
-    }
-    .prop-img-bottom strong { font-weight: 800; }
-
-    .prop-top-badges {
-      position: absolute;
-      top: 10px; left: 10px;
-      display: flex; gap: 6px; flex-wrap: wrap;
-    }
-    .badge {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 10px; font-weight: 800;
-      padding: 4px 9px; border-radius: 5px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .badge-verified  { background: #0f4c35; color: #fff; }
-    .badge-zero      { background: #1a2340; color: #fff; }
-    .badge-reserved  { background: #dc2626; color: #fff; }
-
-    .prop-wishlist {
-      width: 32px; height: 32px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      border: none; cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: transform 0.2s;
-    }
-    .prop-wishlist:hover { transform: scale(1.1); }
-    .prop-wishlist.active { background: #fff0f0; }
-
-    .prop-whatsapp {
-      width: 32px; height: 32px;
-      background: #25d366;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff;
-      border: none; cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: transform 0.2s;
-    }
-    .prop-whatsapp:hover { transform: scale(1.1); background: #128c7e; }
-
-    /* ── Content Side ── */
-    .prop-content {
-      flex: 1;
-      padding: 20px 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-    }
-
-    .prop-new-tag {
-      position: absolute;
-      top: 0; right: 0;
-      background: #2563eb;
-      color: #fff;
-      font-size: 10px; font-weight: 800;
-      padding: 5px 14px;
-      text-transform: uppercase; letter-spacing: 1px;
-      clip-path: polygon(12px 0%, 100% 0%, 100% 100%, 0% 100%);
-    }
-
-    .prop-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a2e;
-      margin: 0 0 4px;
-      line-height: 1.3;
-    }
-    .prop-subtitle {
-      font-size: 13px;
-      color: #555;
-      font-weight: 600;
-      margin-bottom: 14px;
-    }
-    .prop-subtitle strong { color: #1a1a2e; }
-
-    .prop-price-row {
-      display: flex;
-      gap: 0;
-      margin-bottom: 12px;
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      overflow: hidden;
-      width: fit-content;
-    }
-    .prop-price-cell {
-      padding: 10px 20px;
-      border-right: 1px solid #e8e8e8;
-    }
-    .prop-price-cell:last-child { border-right: none; }
-    .prop-price-label {
-      font-size: 11px; color: #888; font-weight: 600; margin-bottom: 2px;
-    }
-    .prop-price-value {
-      font-size: 18px; font-weight: 800; color: #1a1a2e;
-      font-family: 'Nunito Sans', sans-serif;
-    }
-
-    .prop-desc {
-      font-size: 13px; color: #777; font-weight: 500;
-      line-height: 1.6;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-
-    .prop-stats {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
-    }
-    .prop-stat {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 11px; font-weight: 700;
-      padding: 3px 10px; border-radius: 5px;
-    }
-    .prop-stat-red   { background: #fff0f0; color: #c0392b; border: 1px solid #fdd; }
-    .prop-stat-blue  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .prop-stat-green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-
-    .prop-location {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 12px; color: #666; font-weight: 600;
-      margin-bottom: 14px;
-    }
-
-    /* ── Card Footer ── */
-    .prop-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 14px;
-      border-top: 1px solid #f0f0f0;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .prop-seller {
-      display: flex; align-items: center; gap: 10px;
-      cursor: pointer;
-    }
-    .prop-seller-avatar {
-      width: 34px; height: 34px; border-radius: 50%;
-      background: #1a2340; color: #c9a84c;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 14px; flex-shrink: 0;
-    }
-    .prop-seller-name  { font-size: 13px; font-weight: 800; color: #1a1a2e; }
-    .prop-seller-meta  { font-size: 10px; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .prop-actions { display: flex; gap: 10px; align-items: center; }
-
-    .btn-contact {
-      display: flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border-radius: 8px;
-      font-size: 13px; font-weight: 700;
-      background: #fff; border: 1.5px solid #d1d5db; color: #1a1a2e;
-      cursor: pointer; font-family: 'Nunito Sans', sans-serif;
-      transition: background 0.15s, border-color 0.15s;
-      white-space: nowrap;
-    }
-    .btn-contact:hover { background: #f0f4ff; border-color: #2563eb; color: #2563eb; }
-
-    .btn-view {
-      display: flex; align-items: center; gap: 6px;
-      padding: 9px 22px; border-radius: 8px;
-      font-size: 13px; font-weight: 800;
-      background: #2563eb; color: #fff;
-      text-decoration: none; border: none; cursor: pointer;
-      font-family: 'Nunito Sans', sans-serif;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    .btn-view:hover { background: #1d4ed8; }
-
-    /* Mobile stacking */
-    @media (max-width: 640px) {
-      .prop-card { flex-direction: column; }
-      .prop-img-wrap { width: 100%; min-height: 200px; }
-      .prop-price-row { width: 100%; }
-      .prop-price-cell { flex: 1; }
-    }
-  `}</style>
-
-  {isError ? (
-    <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
-  ) : isLoading ? (
-    [1, 2, 3].map(i => <ListingSkeleton key={i} variant="list" />)
-  ) : trending.length > 0 ? (
-    trending.map((listing, idx) => (
-      <motion.div
-        key={listing._id}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: idx * 0.1 }}
-        className="prop-card"
-        onClick={() => navigate(`/listings/${listing._id}`)}
-      >
-        {/* ── Left: Image ── */}
-        <div className="prop-img-wrap">
-          {listing.images?.length > 0 ? (
-            <img src={getImageUrl(listing.images[0])} alt={listing.title} />
-          ) : (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', background: '#f3f4f6' }}>No Image</div>
-          )}
-
-          {/* Top Badges */}
-          <div className="prop-top-badges">
-            {listing.status === 'Reserved' && (
-              <span className="badge badge-reserved">Reserved</span>
-            )}
-          </div>
-
-          {/* Wishlist & WhatsApp */}
-          <div className="absolute top-2.5 right-2.5 flex flex-col gap-2 z-10">
-            <button 
-              className={`prop-wishlist ${wishlist.has(listing._id) ? 'active' : ''}`} 
-              onClick={e => toggleWishlist(e, listing._id)} 
-              title="Save to Favourites"
-            >
-              <Heart size={16} className={wishlist.has(listing._id) ? 'fill-[#dc2626] text-[#dc2626]' : 'text-[#555]'} />
-            </button>
-            <button 
-              className="prop-whatsapp"
-              onClick={e => {
-                e.stopPropagation();
-                const phone = listing.createdBy?.phone || '';
-                window.open(`https://wa.me/${phone}`, '_blank');
-              }}
-              title="WhatsApp Seller"
-            >
-              <MessageCircle size={16} className="fill-current" />
-            </button>
-          </div>
-
-          {/* Bottom overlay: completion / date */}
-          <div className="prop-img-bottom">
-            Listed · <strong>{new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-          </div>
-        </div>
-
-        {/* ── Right: Content ── */}
-        <div className="prop-content">
-          {/* NEW BOOKING tag */}
-          {listing.status !== 'Reserved' && (
-            <div className="prop-new-tag">New Listing</div>
-          )}
-
+    <div style={{ background: '#f8f5ee', padding: '64px 24px 80px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {/* Section Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, borderBottom: '2px solid #e2d9c5', paddingBottom: 20 }}>
           <div>
-            {/* Title */}
-            <h3 className="prop-title">{listing.title}</h3>
-
-            {/* Subtitle: type + location */}
-            <p className="prop-subtitle">
-              <strong>{listing.propertyType || 'Plot / Land'}</strong>{' '}
-              in {listing.location}
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>
+              {isAuthenticated ? 'Personalized for You' : 'Most Viewed'}
+            </div>
+            <h2 style={{ fontFamily: "'Nunito Sans', serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1a2340', fontWeight: 700, margin: 0 }}>
+              {title} 
+            </h2>
+            <p style={{ color: '#6b7280', fontWeight: 600, marginTop: 8, fontSize: 15 }}>
+              {sub}
             </p>
-
-            {/* Price Boxes */}
-            <div className="prop-price-row">
-              <div className="prop-price-cell">
-                <div className="prop-price-label">Area</div>
-                <div className="prop-price-value" style={{ fontSize: 15 }}>{listing.area || '—'}</div>
-              </div>
-              <div className="prop-price-cell">
-                <div className="prop-price-label">Total Price</div>
-                <div className="prop-price-value">₹{listing.price?.toLocaleString('en-IN')}</div>
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="prop-location">
-              <MapPin size={13} color="#c9a84c" />
-              {listing.location}
-            </div>
-
-            {/* Stats */}
-            <div className="prop-stats">
-              <span className="prop-stat prop-stat-red">
-                <Users size={10} /> {listing.contacts || 0}+ Showings Requested
-              </span>
-              <span className="prop-stat prop-stat-blue">
-                <Eye size={10} /> {listing.views || 0} Interest Hits
-              </span>
-            </div>
-
-            {/* Description */}
-            <p className="prop-desc">{listing.description || 'No description provided.'}</p>
           </div>
-
-          {/* Footer */}
-          <div className="prop-footer">
-            <div
-              className="prop-seller"
-              onClick={e => { e.stopPropagation(); navigate(`/seller/${listing.createdBy?._id || listing.createdBy}`); }}
-            >
-              <div className="prop-seller-avatar">{listing.createdBy?.name?.charAt(0) || 'U'}</div>
-              <div>
-                <div className="prop-seller-name">{listing.createdBy?.role === 'Broker' ? 'Builder' : listing.createdBy?.role || 'Seller'}</div>
-                <div className="prop-seller-meta">{listing.createdBy?.name || 'Authorized Seller'}</div>
-              </div>
-            </div>
-
-            <div className="prop-actions">
-              <button className="btn-contact" onClick={e => e.stopPropagation()}>
-                <Phone size={14} /> Contact Seller
-              </button>
-              <Link
-                to={`/listings/${listing._id}`}
-                className="btn-view"
-                onClick={e => e.stopPropagation()}
-              >
-                View Number
-              </Link>
-            </div>
-          </div>
+          <Link to={ctaLink || "/search"} style={{
+            background: '#1a2340', color: '#c9a84c', textDecoration: 'none',
+            padding: '12px 28px', borderRadius: 12, fontWeight: 800,
+            fontSize: 13, letterSpacing: '1px', textTransform: 'uppercase',
+            border: '2px solid #1a2340', whiteSpace: 'nowrap',
+            transition: 'all 0.2s',
+          }}>
+            {cta || 'Explore All'}
+          </Link>
         </div>
-      </motion.div>
-    ))
-  ) : (
-    <div style={{ textAlign: 'center', padding: '80px 20px', color: '#aaa', fontWeight: 700, fontSize: 18, border: '2px dashed #e0e0e0', borderRadius: 16, background: '#fafafa' }}>
-      No trending properties at the moment. Check back soon!
-    </div>
-  )}
-</div>
-          {/* Mobile Explore All */}
-          <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <Link to="/search" style={{ display: 'inline-block', background: '#1a2340', color: '#c9a84c', textDecoration: 'none', padding: '14px 36px', borderRadius: 8, fontWeight: 800, fontSize: 14, letterSpacing: '1px', textTransform: 'uppercase' }}>
-              Explore All Properties
+
+        {/* Content */}
+        {isError ? (
+          <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
+        ) : isLoading ? (
+          <div className="carousel-container">
+            {[1, 2, 3, 4].map(i => <ListingSkeleton key={i} variant="square" />)}
+          </div>
+        ) : data.length === 0 ? (
+          <div className="empty-state-card">
+            <div style={{ width: 80, height: 80, borderRadius: 20, background: '#f8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {user?.role === 'Buyer' ? <Heart size={32} color="#c9a84c" /> : <Target size={32} color="#c9a84c" />}
+            </div>
+            <h3 style={{ fontSize: 24, fontWeight: 800, color: '#1a2340', margin: 0 }}>{emptyTitle}</h3>
+            <p style={{ color: '#6b7280', fontWeight: 600, margin: 0, maxWidth: 400 }}>{emptySub}</p>
+            <Link to={ctaLink} style={{
+              background: '#c9a84c', color: '#1a1200', textDecoration: 'none',
+              padding: '14px 32px', borderRadius: 12, fontWeight: 800,
+              fontSize: 14, letterSpacing: '1px', textTransform: 'uppercase',
+              boxShadow: '0 8px 24px rgba(201,168,76,0.3)',
+            }}>
+              {cta}
             </Link>
           </div>
-        </div>
+        ) : (
+          <div className="carousel-container">
+            {data.map((listing, idx) => {
+              const isInWishlist = wishlistIds.has(listing._id);
+              
+              return (
+                <motion.div
+                  key={listing._id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: idx * 0.05 }}
+                  className="square-card"
+                  onClick={() => navigate(`/listings/${listing._id}`)}
+                >
+                  <div className="square-card-badge">
+                    {listing.propertyType || 'Land'}
+                  </div>
+                  
+                  {isAuthenticated && user?.role === 'Buyer' && (
+                    <button 
+                      className="heart-btn"
+                      style={{
+                        position: 'absolute', top: 15, right: 15, zIndex: 11,
+                        background: 'rgba(255,255,255,0.95)', padding: 8, borderRadius: 10,
+                        border: 'none', cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      }}
+                      onClick={e => toggleWishlist(e, listing._id)}
+                      aria-label={isInWishlist ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Heart 
+                        size={18} 
+                        fill={isInWishlist ? "#dc2626" : "none"} 
+                        color={isInWishlist ? "#dc2626" : "#6b7280"} 
+                        strokeWidth={2.5}
+                      />
+                    </button>
+                  )}
+
+                  <div className="square-card-img-wrap">
+                    {listing.images?.length > 0 ? (
+                      <img src={getImageUrl(listing.images[0])} alt={listing.title} className="square-card-img" />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontWeight: 800, fontSize: 12 }}>NO IMAGE</div>
+                    )}
+                  </div>
+
+                  <div className="square-card-content">
+                    <div className="square-card-price">
+                      ₹{listing.price?.toLocaleString('en-IN')}
+                    </div>
+                    <h3 className="square-card-title">{listing.title}</h3>
+                    <div className="square-card-meta">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MapPin size={12} color="#c9a84c" />
+                        {listing.location?.split(',')[0]}
+                      </div>
+                      <div style={{ color: '#c9a84c' }}>•</div>
+                      <div>{listing.area || 'N/A'}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {/* ── Footer ── */}
+    </div>
+    {/* ── Footer ── */}
       <Footer />
     </div>
   );
 };
 
 export default Home;
-    

@@ -25,7 +25,7 @@ const Login = () => {
         try {
             const data = await login(credentials.identifier, credentials.password);
             if (data?.user?.role === 'Admin') navigate('/admin');
-            else navigate('/search');
+            else navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Login failed. Please try again.');
         } finally {
@@ -41,7 +41,7 @@ const Login = () => {
                     setShowCompleteModal(true);
                 } else {
                     if (data?.user?.role === 'Admin') navigate('/admin');
-                    else navigate('/search');
+                    else navigate('/');
                 }
         } catch (err) {
             setError(err.response?.data?.error || 'Google Login failed.');
@@ -53,7 +53,7 @@ const Login = () => {
             const data = await completeProfile(profileData);
             setShowCompleteModal(false);
             if (data?.role === 'Admin' || user?.role === 'Admin') navigate('/admin');
-            else navigate('/dashboard');
+            else navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Profile completion failed.');
         }
