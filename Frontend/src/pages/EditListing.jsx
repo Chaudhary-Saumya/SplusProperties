@@ -3,7 +3,117 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { UploadCloud, MapPin, Save, ArrowLeft, Building2, ChevronRight, X, CreditCard, ImageIcon } from 'lucide-react';
+import { UploadCloud, MapPin, Save, ArrowLeft, Building2, ChevronRight, X, CreditCard, ImageIcon, Target, Navigation } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in Leaflet + Vite
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
+
+async function reverseGeocode(lat, lng) {
+    try {
+        const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        return res.data.display_name;
+    } catch (e) {
+        console.error("Reverse geocoding error", e);
+        return null;
+    }
+}
+
+function MapRecenter({ position }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position?.lat) {
+            map.setView([position.lat, position.lng], 15);
+        }
+    }, [position, map]);
+    return null;
+}
+
+function LocationMarker({ position, setPosition, setLocation }) {
+    useMapEvents({
+        async click(e) {
+            setPosition(e.latlng);
+            const address = await reverseGeocode(e.latlng.lat, e.latlng.lng);
+            if (address) setLocation(address);
+        },
+    });
+    return position === null ? null : (
+        <Marker position={position}>
+            <Popup>Precise Location</Popup>
+        </Marker>
+    );
+}
+
+function MapSearch({ onSelect }) {
+    const [query, setQuery] = useState('');
+    const [mapSuggestions, setMapSuggestions] = useState([]);
+    const [showMapSuggestions, setShowMapSuggestions] = useState(false);
+
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            if (query.length > 2) {
+                try {
+                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+                    setMapSuggestions(res.data);
+                    setShowMapSuggestions(true);
+                } catch (e) { console.error(e); }
+            } else {
+                setMapSuggestions([]);
+                setShowMapSuggestions(false);
+            }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [query]);
+
+    return (
+        <div className="absolute top-4 left-4 z-[1000] w-64 md:w-80">
+            <div className="relative">
+                <div className="flex items-center bg-white rounded-xl shadow-xl border border-[#1a2340]/10 overflow-hidden">
+                    <div className="pl-4 text-[#1a2340]/40"><SearchIcon size={14} /></div>
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search for a location..."
+                        className="w-full px-3 py-3 text-xs font-bold text-[#1a2340] outline-none placeholder:text-[#1a2340]/30"
+                    />
+                </div>
+                {showMapSuggestions && mapSuggestions.length > 0 && (
+                    <ul className="absolute top-full left-0 w-full bg-white mt-1 rounded-xl shadow-2xl border border-[#1a2340]/10 overflow-hidden max-h-60 overflow-y-auto">
+                        {mapSuggestions.map((s, idx) => (
+                            <li
+                                key={idx}
+                                onClick={() => {
+                                    const coords = { lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
+                                    onSelect(coords, s.display_name);
+                                    setQuery(s.display_name.split(',')[0]);
+                                    setShowMapSuggestions(false);
+                                }}
+                                className="px-4 py-3 hover:bg-[#f8f5ee] cursor-pointer border-b border-[#f8f5ee] last:border-0"
+                            >
+                                <p className="text-xs font-black text-[#1a2340]">{s.display_name.split(',')[0]}</p>
+                                <p className="text-[10px] text-[#1a2340]/40 font-bold truncate">{s.display_name}</p>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+}
+
+import { useMapEvents } from 'react-leaflet';
 import { getImageUrl } from '../utils/imageUrl';
 
 // ── Shared style tokens ──────────────────────────────────────────
@@ -11,8 +121,8 @@ const inputCls = "w-full px-5 py-3.5 rounded-xl border border-[#1a2340]/15 bg-[#
 const labelCls = "block text-[10px] font-black text-[#1a2340]/50 mb-2 uppercase tracking-[0.15em]";
 
 // ── Section card wrapper (matches CreateListing) ─────────────────
-const SectionCard = ({ icon, title, subtitle, children, accent }) => (
-    <div className="relative bg-white rounded-2xl border border-[#1a2340]/10 shadow-sm overflow-hidden">
+const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }) => (
+    <div className={`relative bg-white rounded-2xl border border-[#1a2340]/10 shadow-sm ${className}`}>
         <div className="flex items-start gap-4 px-7 pt-6 pb-5 border-b border-[#f8f5ee]">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${accent ? 'bg-[#c9a84c]' : 'bg-[#1a2340]'}`}>
                 {React.cloneElement(icon, { size: 18, className: accent ? 'text-[#1a2340]' : 'text-[#c9a84c]' })}
@@ -38,11 +148,19 @@ const EditListing = () => {
         description: '',
         price: '',
         location: '',
+        plotNumber: '',
+        areaName: '',
         listingType: 'Verified',
-        isBookingEnabled: false,
         tokenAmount: '',
-        payoutAccountId: ''
+        payoutAccountId: '',
+        locationMode: 'address',
+        mapCoordinates: { lat: null, lng: null },
+        mapBounds: null
     });
+
+    const [locationMethod, setLocationMethod] = useState('address');
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     const [areaValue, setAreaValue] = useState('');
     const [areaUnit, setAreaUnit] = useState('Sq Ft');
@@ -64,11 +182,16 @@ const EditListing = () => {
                     description: data.description,
                     price: data.price.toString(),
                     location: data.location,
-                    listingType: data.listingType,
-                    isBookingEnabled: data.isBookingEnabled || false,
+                    plotNumber: data.plotNumber || '',
+                    areaName: data.areaName || '',
                     tokenAmount: data.tokenAmount || '',
-                    payoutAccountId: data.payoutAccountId?._id || data.payoutAccountId || ''
+                    payoutAccountId: data.payoutAccountId?._id || data.payoutAccountId || '',
+                    locationMode: data.locationMode || 'address',
+                    mapCoordinates: data.mapCoordinates || { lat: null, lng: null },
+                    mapBounds: null,
+                    isBookingEnabled: data.isBookingEnabled || false
                 });
+                setLocationMethod(data.locationMode || 'address');
                 const areaParts = data.area ? data.area.split(' ') : [];
                 if (areaParts.length >= 2) {
                     setAreaValue(areaParts[0]);
@@ -98,6 +221,39 @@ const EditListing = () => {
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            if (formData.location.length > 2 && locationMethod === 'address' && !formData.mapCoordinates.lat) {
+                try {
+                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.location)}&addressdetails=1&limit=5`);
+                    setSuggestions(res.data);
+                    setShowSuggestions(true);
+                } catch (e) { console.error(e); }
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [formData.location, locationMethod, formData.mapCoordinates.lat]);
+
+    const detectMyLocation = () => {
+        if (!navigator.geolocation) return toast.error("Geolocation not supported");
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                setFormData(prev => ({
+                    ...prev,
+                    mapCoordinates: { lat: latitude, lng: longitude }
+                }));
+                setLocationMethod('map');
+                setFormData(prev => ({ ...prev, locationMode: 'map' }));
+                toast.success("Location detected via GPS");
+            },
+            () => toast.error("Unable to retrieve location")
+        );
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -120,7 +276,9 @@ const EditListing = () => {
                 ...formData,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
-                images: uploadedImagePaths
+                images: uploadedImagePaths,
+                plotNumber: formData.plotNumber,
+                areaName: formData.areaName
             };
             await axios.put(`/api/listings/${id}`, listingPayload);
             toast.success('Listing successfully updated!');
@@ -137,7 +295,6 @@ const EditListing = () => {
         setExistingImages(existingImages.filter((_, i) => i !== idx));
     };
 
-    // ── Loading state ────────────────────────────────────────────
     if (fetchLoading) return (
         <div className="min-h-screen bg-[#f8f5ee]">
             <div className="bg-[#1a2340] px-6 py-10 md:px-16">
@@ -153,7 +310,6 @@ const EditListing = () => {
         </div>
     );
 
-    // ── Access denied ────────────────────────────────────────────
     if (!user || (user.role !== 'Seller' && user.role !== 'Broker' && user.role !== 'Admin')) {
         return (
             <div className="min-h-screen bg-[#f8f5ee] flex items-center justify-center">
@@ -170,8 +326,6 @@ const EditListing = () => {
 
     return (
         <div className="min-h-screen bg-[#f8f5ee]">
-
-            {/* ── Hero bar ── */}
             <div className="bg-[#1a2340] text-white px-6 py-10 md:px-16">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em] mb-3">
@@ -197,9 +351,7 @@ const EditListing = () => {
                 </div>
             </div>
 
-            {/* ── Form body ── */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-6">
-
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl font-bold flex items-center gap-3">
                         <X size={18} className="shrink-0" /> {error}
@@ -207,8 +359,6 @@ const EditListing = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-
-                    {/* ── SECTION 1: Property Info ── */}
                     <SectionCard icon={<Building2 />} title="Property Details" subtitle="Update the core information about this listing">
                         <div className="space-y-6">
                             <div>
@@ -220,7 +370,6 @@ const EditListing = () => {
                                     placeholder="e.g. 500 Sq Yd Corner Plot in Sector 14"
                                 />
                             </div>
-
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
                                     <label className={labelCls}>Price (INR)</label>
@@ -254,32 +403,128 @@ const EditListing = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            <div>
-                                <label className={labelCls + ' flex items-center gap-1.5'}>
-                                    <MapPin size={11} className="text-[#c9a84c]" /> Location / Address
-                                </label>
-                                <input
-                                    type="text" name="location" required
-                                    value={formData.location} onChange={handleChange}
-                                    className={inputCls}
-                                    placeholder="City, Village or full address..."
-                                />
-                            </div>
-
-                            <div>
-                                <label className={labelCls}>Detailed Description</label>
-                                <textarea
-                                    name="description" required rows="5"
-                                    value={formData.description} onChange={handleChange}
-                                    className={inputCls + ' resize-none'}
-                                    placeholder="Describe the property, amenities, proximity to landmarks..."
-                                />
-                            </div>
                         </div>
                     </SectionCard>
 
-                    {/* ── SECTION 2: Images ── */}
+                    <SectionCard 
+                        icon={<MapPin />} 
+                        title="Geographic Position" 
+                        subtitle="Pinpoint your property on the map for higher buyer trust"
+                        className={showSuggestions ? 'z-[100]' : 'z-10'}
+                    >
+                        <div className="bg-[#f8f5ee] p-2 rounded-2xl border border-[#1a2340]/10 flex gap-2 mb-6">
+                            {[
+                                { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
+                                { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> }
+                            ].map((method) => (
+                                <button
+                                    key={method.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setLocationMethod(method.id);
+                                        setFormData({ ...formData, locationMode: method.id });
+                                    }}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${locationMethod === method.id ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg' : 'text-[#1a2340]/40 hover:bg-[#1a2340]/5'}`}
+                                >
+                                    {method.icon} {method.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {locationMethod === 'address' && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className={labelCls}>Plot / Survey Number</label>
+                                        <input
+                                            type="text" name="plotNumber"
+                                            value={formData.plotNumber}
+                                            onChange={handleChange}
+                                            className={inputCls}
+                                            placeholder="e.g. 102/B or 55"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Area / Landmark Name</label>
+                                        <input
+                                            type="text" name="areaName"
+                                            value={formData.areaName}
+                                            onChange={handleChange}
+                                            className={inputCls}
+                                            placeholder="e.g. Near Shiv Temple"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="relative">
+                                    <label className={labelCls}>Village / City (Search)</label>
+                                    <input
+                                        type="text" name="location" required
+                                        value={formData.location}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value, mapCoordinates: { lat: null, lng: null } })}
+                                        autoComplete="off"
+                                        className={inputCls}
+                                        placeholder="Search village or city..."
+                                    />
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <ul className="absolute top-[105%] left-0 w-full bg-white border border-[#1a2340]/15 shadow-2xl rounded-2xl z-[100] p-2 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-[#c9a84c]/20">
+                                            {suggestions.map((s, idx) => (
+                                                <li
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        const b = s.boundingbox;
+                                                        setFormData({
+                                                            ...formData,
+                                                            location: s.display_name,
+                                                            mapCoordinates: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
+                                                            mapBounds: [[parseFloat(b[0]), parseFloat(b[2])], [parseFloat(b[1]), parseFloat(b[3])]]
+                                                        });
+                                                        setShowSuggestions(false);
+                                                        setLocationMethod('map');
+                                                        setFormData(prev => ({ ...prev, locationMode: 'map' }));
+                                                    }}
+                                                    className="p-4 hover:bg-[#f8f5ee] cursor-pointer rounded-xl transition-all group"
+                                                >
+                                                    <span className="block text-[#1a2340] font-black text-sm group-hover:text-[#c9a84c]">{s.display_name.split(',')[0]}</span>
+                                                    <span className="text-[10px] text-[#1a2340]/40 font-bold truncate mt-1">{s.display_name}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {locationMethod === 'map' && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
+                                        Drop Pin on Precise Location
+                                    </p>
+                                    <button 
+                                        type="button" 
+                                        onClick={detectMyLocation} 
+                                        className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all"
+                                    >
+                                        <Navigation size={12} /> Use My GPS Location
+                                    </button>
+                                </div>
+                                <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative z-0">
+                                    <MapContainer center={[formData.mapCoordinates.lat || 24.10, formData.mapCoordinates.lng || 72.38]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                                        <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                        <MapSearch onSelect={(pos, addr) => setFormData({ ...formData, mapCoordinates: pos, location: addr || formData.location })} />
+                                        <LocationMarker
+                                            position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
+                                            setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
+                                            setLocation={(addr) => setFormData(prev => ({ ...prev, location: addr }))}
+                                        />
+                                        <MapRecenter position={formData.mapCoordinates} />
+                                    </MapContainer>
+                                </div>
+                            </div>
+                        )}
+                    </SectionCard>
+
+                    {/* ── SECTION 3: Property Photos ── */}
                     <SectionCard icon={<ImageIcon />} title="Property Photos" subtitle="Manage existing images or add new ones" accent>
                         {existingImages.length > 0 && (
                             <div className="flex flex-wrap gap-3 mb-5 p-4 bg-[#f8f5ee] rounded-xl border border-[#1a2340]/10">
@@ -318,7 +563,7 @@ const EditListing = () => {
                         </div>
                     </SectionCard>
 
-                    {/* ── SECTION 3: Token Booking ── */}
+                    {/* ── SECTION 4: Token Booking ── */}
                     <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable or update online reservations for this property">
                         <div className="flex items-center justify-between">
                             <div>

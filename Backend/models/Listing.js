@@ -29,6 +29,19 @@ const listingSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add a location string']
     },
+    locationMode: {
+        type: String,
+        enum: ['address', 'map'],
+        default: 'address'
+    },
+    plotNumber: {
+        type: String,
+        trim: true
+    },
+    areaName: {
+        type: String,
+        trim: true
+    },
     mapCoordinates: {
         lat: String,
         lng: String

@@ -243,7 +243,7 @@ const Search = () => {
                                             <div>
                                                 <div className="text-sm font-bold text-[#1a2340]">{s.title}</div>
                                                 <div className="text-xs text-[#9ca3af] flex items-center gap-1 mt-0.5">
-                                                    <MapPin size={10} /> {s.location}
+                                                    <MapPin size={10} /> {s.plotNumber ? `Plot: ${s.plotNumber}, ` : ''}{s.areaName ? `Area: ${s.areaName}, ` : ''}{s.location}
                                                 </div>
                                             </div>
                                             <div className="text-sm font-black text-[#c9a84c]">₹{s.price?.toLocaleString('en-IN')}</div>
@@ -418,7 +418,7 @@ const Search = () => {
 
                                                 {/* Subtitle */}
                                                 <p className="text-sm text-[#6b7280] font-600 mb-3">
-                                                    <strong className="text-[#1a2340]">{listing.propertyType || 'Plot / Land'}</strong> in {listing.location}
+                                                    <strong className="text-[#1a2340]">{listing.propertyType || 'Plot / Land'}</strong> in {listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}{listing.areaName ? `Area: ${listing.areaName}, ` : ''}{listing.location}
                                                 </p>
 
                                                 {/* Price + Area boxes */}
@@ -435,7 +435,7 @@ const Search = () => {
 
                                                 {/* Location */}
                                                 <p className="flex items-center gap-1.5 text-xs text-[#6b7280] font-600 mb-3">
-                                                    <MapPin size={12} className="text-[#c9a84c]" /> {listing.location}
+                                                    <MapPin size={12} className="text-[#c9a84c]" /> {listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}{listing.areaName ? `Area: ${listing.areaName}, ` : ''}{listing.location}
                                                 </p>
 
                                                 {/* Stats */}

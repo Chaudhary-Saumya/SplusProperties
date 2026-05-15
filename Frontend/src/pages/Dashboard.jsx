@@ -761,7 +761,7 @@ const Dashboard = () => {
                               {l.title}
                             </div>
                             <div className="text-xs text-[#9ca3af] font-600 flex items-center gap-1 mt-0.5">
-                              <MapPin size={10} /> {l.location}
+                              <MapPin size={10} /> {l.plotNumber ? `Plot: ${l.plotNumber}, ` : ''}{l.areaName ? `Area: ${l.areaName}, ` : ''}{l.location}
                             </div>
                             <div className="text-sm font-black text-[#1a2340] mt-1">
                               ₹{l.price?.toLocaleString("en-IN")}
@@ -863,7 +863,7 @@ const Dashboard = () => {
                                             {l.title}
                                         </h3>
                                         <p className="text-xs text-[#9ca3af] font-600 flex items-center gap-1 mt-1">
-                                            <MapPin size={10} /> {l.location}
+                                            <MapPin size={10} /> {l.plotNumber ? `Plot: ${l.plotNumber}, ` : ''}{l.areaName ? `Area: ${l.areaName}, ` : ''}{l.location}
                                         </p>
                                         <div className="flex items-center justify-between mt-4">
                                             <div className="text-base font-black text-[#1a2340]">

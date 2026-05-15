@@ -12,9 +12,62 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Users', 'Listings', 'Inquiries', 'Analytics', 'Settings'
     const [settings, setSettings] = useState([]);
     const [updatingSetting, setUpdatingSetting] = useState(null);
+    const [selectedUserRole, setSelectedUserRole] = useState('All');
+    
+    // Pagination states
+    const [usersPage, setUsersPage] = useState(1);
+    const [listingsPage, setListingsPage] = useState(1);
+    const [inquiriesPage, setInquiriesPage] = useState(1);
+    const [analyticsPage, setAnalyticsPage] = useState(1);
+    const ITEMS_PER_PAGE = 8;
     
 
 
+
+    // Pagination Component
+    const Pagination = ({ totalItems, currentPage, onPageChange }) => {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        if (totalPages <= 1) return null;
+
+        return (
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, totalItems)} to {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} results
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => onPageChange(currentPage - 1)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                            currentPage === 1 ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
+                        }`}
+                    >
+                        Previous
+                    </button>
+                    {[...Array(totalPages)].map((_, i) => (
+                        <button
+                            key={i + 1}
+                            onClick={() => onPageChange(i + 1)}
+                            className={`w-9 h-9 rounded-xl text-xs font-bold border transition-all ${
+                                currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+                            }`}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => onPageChange(currentPage + 1)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                            currentPage === totalPages ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
+                        }`}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+        );
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -167,10 +220,28 @@ const Admin = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
                             <h1 className="text-3xl font-bold text-slate-900">Platform Users</h1>
                             <div className="flex flex-wrap gap-2">
+                                <button 
+                                    onClick={() => setSelectedUserRole('All')}
+                                    className={`px-4 py-2 rounded-xl border shadow-sm text-sm font-bold transition-all ${
+                                        selectedUserRole === 'All' 
+                                        ? 'bg-slate-900 text-white border-slate-900' 
+                                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                                    }`}
+                                >
+                                    All: <span className="ml-1">{data.users.length}</span>
+                                </button>
                                 {data.usersBreakdown.map(role => (
-                                    <div key={role._id} className="bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm text-sm font-bold text-slate-700">
-                                        {role._id}s: <span className="text-blue-600 ml-1">{role.count}</span>
-                                    </div>
+                                    <button 
+                                        key={role._id} 
+                                        onClick={() => setSelectedUserRole(role._id)}
+                                        className={`px-4 py-2 rounded-xl border shadow-sm text-sm font-bold transition-all ${
+                                            selectedUserRole === role._id 
+                                            ? 'bg-blue-600 text-white border-blue-600' 
+                                            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-400'
+                                        }`}
+                                    >
+                                        {role._id}s: <span className={selectedUserRole === role._id ? 'text-white/90' : 'text-blue-600'}>{role.count}</span>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -187,15 +258,18 @@ const Admin = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {data.users.map(u => (
-                                            <tr key={u._id} className="hover:bg-slate-50/50">
+                                        {data.users
+                                            .filter(u => selectedUserRole === 'All' || u.role === selectedUserRole)
+                                            .slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE)
+                                            .map(u => (
+                                            <tr key={u._id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-4">
                                                     <p className="font-bold text-slate-900 whitespace-nowrap">{u.name}</p>
                                                     <p className="text-sm text-slate-500">{u.email}</p>
                                                 </td>
-                                                <td className="p-4 text-slate-600 text-sm whitespace-nowrap">{u.phone}</td>
+                                                <td className="p-4 text-slate-600 text-sm font-semibold whitespace-nowrap">{u.phone}</td>
                                                 <td className="p-4">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-black whitespace-nowrap ${
                                                         u.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
                                                         u.role === 'Seller' ? 'bg-blue-100 text-blue-800' :
                                                         u.role === 'Broker' ? 'bg-amber-100 text-amber-800' :
@@ -204,11 +278,11 @@ const Admin = () => {
                                                         {u.role}
                                                     </span>
                                                 </td>
-                                                <td className="p-4 text-center font-bold text-slate-700">
+                                                <td className="p-4 text-center font-black text-slate-700">
                                                     {u.listingCount > 0 ? (
-                                                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">{u.listingCount} Properties</span>
+                                                        <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100">{u.listingCount} Properties</span>
                                                     ) : (
-                                                        <span className="text-slate-400 font-normal">-</span>
+                                                        <span className="text-slate-300 font-normal italic">No Listings</span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -216,6 +290,11 @@ const Admin = () => {
                                     </tbody>
                                 </table>
                             </div>
+                            <Pagination 
+                                totalItems={data.users.filter(u => selectedUserRole === 'All' || u.role === selectedUserRole).length} 
+                                currentPage={usersPage} 
+                                onPageChange={setUsersPage} 
+                            />
                         </div>
                     </div>
                 )}
@@ -236,7 +315,9 @@ const Admin = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {data.allListings.map(l => (
+                                        {data.allListings
+                                            .slice((listingsPage - 1) * ITEMS_PER_PAGE, listingsPage * ITEMS_PER_PAGE)
+                                            .map(l => (
                                             <tr key={l._id} className="hover:bg-slate-50/50">
                                                 <td className="p-4 min-w-[200px]">
                                                     <p className="font-bold text-slate-900 truncate max-w-xs">{l.title}</p>
@@ -259,6 +340,7 @@ const Admin = () => {
                                     </tbody>
                                 </table>
                             </div>
+                            <Pagination totalItems={data.allListings.length} currentPage={listingsPage} onPageChange={setListingsPage} />
                         </div>
                     </div>
                 )}
@@ -271,51 +353,56 @@ const Admin = () => {
                             {inquiries.length === 0 ? (
                                 <div className="p-12 text-center text-slate-500 font-medium">No site requests logged globally.</div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50 border-b border-slate-100">
-                                            <tr>
-                                                <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Property Owner</th>
-                                                <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Buyer Detail</th>
-                                                <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Requested Listing</th>
-                                                <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Status Tracker</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {inquiries.map(inq => (
-                                                <tr key={inq._id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="p-4">
-                                                        {inq.listingId?.createdBy?.name ? (
-                                                            <>
-                                                                <p className="font-bold text-slate-900 truncate max-w-xs">{inq.listingId.createdBy.name}</p>
-                                                                <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded mt-1 inline-block border border-slate-200 shadow-sm">{inq.listingId.createdBy.role}</span>
-                                                            </>
-                                                        ) : (
-                                                            <p className="text-slate-400 italic">Unknown</p>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <p className="font-bold text-blue-700 whitespace-nowrap">{inq.userId?.name}</p>
-                                                        <p className="text-sm font-semibold text-slate-500 mt-0.5">{inq.userId?.phone}</p>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <p className="font-semibold text-slate-800 truncate max-w-[200px]" title={inq.listingId?.title}>{inq.listingId?.title}</p>
-                                                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{new Date(inq.createdAt).toLocaleDateString()}</p>
-                                                    </td>
-                                                    <td className="p-4 text-right">
-                                                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm inline-block border ${
-                                                            inq.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                                                            inq.status === 'Contacted' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                                            'bg-amber-100 text-amber-800 border-amber-200'
-                                                        }`}>
-                                                            {inq.status}
-                                                        </span>
-                                                    </td>
+                                <>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 border-b border-slate-100">
+                                                <tr>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Property Owner</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Buyer Detail</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Requested Listing</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Status Tracker</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {inquiries
+                                                    .slice((inquiriesPage - 1) * ITEMS_PER_PAGE, inquiriesPage * ITEMS_PER_PAGE)
+                                                    .map(inq => (
+                                                    <tr key={inq._id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="p-4">
+                                                            {inq.listingId?.createdBy?.name ? (
+                                                                <>
+                                                                    <p className="font-bold text-slate-900 truncate max-w-xs">{inq.listingId.createdBy.name}</p>
+                                                                    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded mt-1 inline-block border border-slate-200 shadow-sm">{inq.listingId.createdBy.role}</span>
+                                                                </>
+                                                            ) : (
+                                                                <p className="text-slate-400 italic">Unknown</p>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-4">
+                                                            <p className="font-bold text-blue-700 whitespace-nowrap">{inq.userId?.name}</p>
+                                                            <p className="text-sm font-semibold text-slate-500 mt-0.5">{inq.userId?.phone}</p>
+                                                        </td>
+                                                        <td className="p-4">
+                                                            <p className="font-semibold text-slate-800 truncate max-w-[200px]" title={inq.listingId?.title}>{inq.listingId?.title}</p>
+                                                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{new Date(inq.createdAt).toLocaleDateString()}</p>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm inline-block border ${
+                                                                inq.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                                                inq.status === 'Contacted' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                                'bg-amber-100 text-amber-800 border-amber-200'
+                                                            }`}>
+                                                                {inq.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <Pagination totalItems={inquiries.length} currentPage={inquiriesPage} onPageChange={setInquiriesPage} />
+                                </>
                             )}
                         </div>
                     </div>
@@ -325,25 +412,53 @@ const Admin = () => {
                 {activeTab === 'Analytics' && data && (
                     <div className="animate-fade-in max-w-6xl mx-auto">
                         <h1 className="text-3xl font-bold text-slate-900 mb-6">Traffic & Page Hits Log</h1>
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden p-6 max-w-4xl">
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                             {data.pageHits.length === 0 ? (
                                 <p className="text-slate-500 text-center py-10 font-medium">No hit logic recorded yet.</p>
                             ) : (
-                                <div className="space-y-4">
-                                    {data.pageHits.map(hit => (
-                                        <div key={hit._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-5 bg-slate-50 rounded-2xl border border-slate-200 gap-4 hover:shadow-sm transition-shadow">
-                                            <div>
-                                                <p className="font-bold text-slate-900 text-lg flex items-center gap-2 mb-1">
-                                                    <Activity size={18} className="text-blue-500" /> {hit.path}
-                                                </p>
-                                                <p className="text-sm text-slate-500 font-medium">Date Logged: <span className="text-slate-700">{hit.date}</span></p>
-                                            </div>
-                                            <div className="bg-blue-100/50 border border-blue-200 text-blue-800 px-6 py-3 rounded-2xl font-extrabold text-2xl flex items-center gap-2">
-                                                {hit.hits} <span className="text-xs font-bold opacity-60 bg-blue-200/50 px-2 py-1 rounded">URL HITS</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 border-b border-slate-100">
+                                                <tr>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Page Path</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Last Sync Date</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Total Activity</th>
+                                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Trend Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {data.pageHits
+                                                    .slice((analyticsPage - 1) * ITEMS_PER_PAGE, analyticsPage * ITEMS_PER_PAGE)
+                                                    .map(hit => (
+                                                    <tr key={hit._id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="p-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                                                    <Activity size={16} />
+                                                                </div>
+                                                                <p className="font-bold text-slate-900">{hit.path}</p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-4 text-sm font-semibold text-slate-500">{hit.date}</td>
+                                                        <td className="p-4 text-center">
+                                                            <span className="text-lg font-black text-slate-900">{hit.hits}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-tighter">Hits recorded</span>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                                hit.hits > 50 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+                                                            }`}>
+                                                                {hit.hits > 50 ? 'High Traffic' : 'Stable'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <Pagination totalItems={data.pageHits.length} currentPage={analyticsPage} onPageChange={setAnalyticsPage} />
+                                </>
                             )}
                         </div>
                     </div>

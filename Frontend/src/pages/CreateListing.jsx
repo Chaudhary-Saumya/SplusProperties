@@ -7,7 +7,7 @@ import {
   UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2, 
   IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff, 
   LayoutDashboard, Eye, Edit3, PanelRightClose, PanelRightOpen, ExternalLink,
-  PlusCircle, Sparkles
+  PlusCircle, Sparkles, Search as SearchIcon
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +27,64 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+function MapSearch({ onSelect }) {
+    const [query, setQuery] = useState('');
+    const [mapSuggestions, setMapSuggestions] = useState([]);
+    const [showMapSuggestions, setShowMapSuggestions] = useState(false);
+
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            if (query.length > 2) {
+                try {
+                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+                    setMapSuggestions(res.data);
+                    setShowMapSuggestions(true);
+                } catch (e) { console.error(e); }
+            } else {
+                setMapSuggestions([]);
+                setShowMapSuggestions(false);
+            }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [query]);
+
+    return (
+        <div className="absolute top-4 left-4 z-[1000] w-64 md:w-80">
+            <div className="relative">
+                <div className="flex items-center bg-white rounded-xl shadow-xl border border-[#1a2340]/10 overflow-hidden">
+                    <div className="pl-4 text-[#1a2340]/40"><SearchIcon size={14} /></div>
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search for a location..."
+                        className="w-full px-3 py-3 text-xs font-bold text-[#1a2340] outline-none placeholder:text-[#1a2340]/30"
+                    />
+                </div>
+                {showMapSuggestions && mapSuggestions.length > 0 && (
+                    <ul className="absolute top-full left-0 w-full bg-white mt-1 rounded-xl shadow-2xl border border-[#1a2340]/10 overflow-hidden max-h-60 overflow-y-auto">
+                        {mapSuggestions.map((s, idx) => (
+                            <li
+                                key={idx}
+                                onClick={() => {
+                                    const coords = { lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
+                                    onSelect(coords, s.display_name);
+                                    setQuery(s.display_name.split(',')[0]);
+                                    setShowMapSuggestions(false);
+                                }}
+                                className="px-4 py-3 hover:bg-[#f8f5ee] cursor-pointer border-b border-[#f8f5ee] last:border-0"
+                            >
+                                <p className="text-xs font-black text-[#1a2340]">{s.display_name.split(',')[0]}</p>
+                                <p className="text-[10px] text-[#1a2340]/40 font-medium truncate">{s.display_name}</p>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+}
+
 async function reverseGeocode(lat, lng) {
     try {
         const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
@@ -45,18 +103,16 @@ function LocationMarker({ position, setPosition, setLocation }) {
             if (address) setLocation(address);
         },
     });
-    return position.lat === null ? null : <Marker position={position}></Marker>;
+    return position === null ? null : <Marker position={position}></Marker>;
 }
 
-function MapRecenter({ position, bounds }) {
+function MapRecenter({ position }) {
     const map = useMap();
     useEffect(() => {
-        if (bounds) {
-            map.fitBounds(bounds);
-        } else if (position.lat) {
-            map.setView([position.lat, position.lng], map.getZoom() < 12 ? 14 : map.getZoom());
+        if (position?.lat) {
+            map.setView([position.lat, position.lng], 14);
         }
-    }, [position, bounds, map]);
+    }, [position, map]);
     return null;
 }
 
@@ -77,8 +133,8 @@ const StepPill = ({ number, label, active, done }) => (
 );
 
 // Section card wrapper
-const SectionCard = ({ icon, title, subtitle, children, accent }) => (
-    <div className="relative bg-white rounded-3xl border border-[#1a2340]/10 shadow-sm overflow-hidden transition-all hover:shadow-md">
+const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }) => (
+    <div className={`relative bg-white rounded-3xl border border-[#1a2340]/10 shadow-sm transition-all hover:shadow-md ${className}`}>
         <div className="flex items-start gap-3 sm:gap-4 px-4 sm:px-7 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#f8f5ee]">
             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${accent ? 'bg-[#c9a84c]' : 'bg-[#1a2340]'}`}>
                 {React.cloneElement(icon, { size: 16, className: accent ? 'text-[#1a2340]' : 'text-[#c9a84c]' })}
@@ -107,17 +163,19 @@ const CreateListing = () => {
         description: '',
         price: '',
         location: '',
+        plotNumber: '',
+        areaName: '',
         listingType: 'Verified',
         isBookingEnabled: false,
         tokenAmount: '',
         payoutAccountId: '',
+        locationMode: 'address',
         mapCoordinates: { lat: null, lng: null },
         mapBounds: null
     });
     const [payoutAccounts, setPayoutAccounts] = useState([]);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [locationMethod, setLocationMethod] = useState('address');
     const [areaValue, setAreaValue] = useState('');
     const [areaUnit, setAreaUnit] = useState('Sq Ft');
@@ -219,7 +277,9 @@ const CreateListing = () => {
                 ...formData,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
-                images: uploadedImagePaths
+                images: uploadedImagePaths,
+                plotNumber: formData.plotNumber,
+                areaName: formData.areaName
             };
             await axios.post('/api/listings', listingPayload);
             toast.success('Listing successfully created!');
@@ -248,7 +308,6 @@ const CreateListing = () => {
 
     return (
         <div className="min-h-screen bg-[#f8f5ee]">
-            {/* ── Top Hero Bar ── */}
             <div className="bg-[#1a2340] text-white px-6 py-10 md:px-16 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#c9a84c]/5 rounded-full blur-3xl -mr-32 -mt-32" />
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -277,11 +336,9 @@ const CreateListing = () => {
                 </div>
             </div>
 
-            {/* ── Main Layout ── */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
                 <div className="flex flex-col lg:flex-row gap-10 items-start">
                     
-                    {/* LEFT COLUMN: The Form (65%) */}
                     <motion.div 
                         layout
                         className={`transition-all duration-500 w-full ${showSidebar ? 'lg:w-[65%]' : 'lg:w-full'}`}
@@ -297,7 +354,6 @@ const CreateListing = () => {
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-8">
-                            {/* Steps Indicator */}
                             <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar mb-4">
                                 <StepPill number="1" label="Details" done active />
                                 <StepPill number="2" label="Location" active />
@@ -362,19 +418,25 @@ const CreateListing = () => {
                                 </div>
                             </SectionCard>
 
-                            <SectionCard icon={<MapPin />} title="Geographic Position" subtitle="Define exactly where your legacy stands">
+                            <SectionCard 
+                                icon={<MapPin />} 
+                                title="Geographic Position" 
+                                subtitle="Define exactly where your legacy stands"
+                            >
                                 <div className="space-y-6">
                                     <div className="flex flex-wrap bg-[#f8f5ee] p-2 rounded-2xl border border-[#1a2340]/10 gap-2">
                                         {[
                                             { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
-                                            { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> },
-                                            { id: 'gps', label: 'Current GPS', icon: <Navigation size={14} /> }
+                                            { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> }
                                         ].map((method) => (
-                                            <button
+                                            <button 
                                                 key={method.id}
                                                 type="button"
-                                                onClick={() => setLocationMethod(method.id)}
-                                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                onClick={() => {
+                                                    setLocationMethod(method.id);
+                                                    setFormData({ ...formData, locationMode: method.id });
+                                                }}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                                     locationMethod === method.id
                                                     ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg'
                                                     : 'text-[#1a2340]/50 hover:text-[#1a2340] hover:bg-white'
@@ -386,60 +448,90 @@ const CreateListing = () => {
                                     </div>
 
                                     {locationMethod === 'address' && (
-                                        <div className="relative">
-                                            <label className={labelCls}>Search Location</label>
-                                            <input
-                                                type="text" name="location" required
-                                                value={formData.location}
-                                                onChange={(e) => setFormData({ ...formData, location: e.target.value, mapCoordinates: { lat: null, lng: null } })}
-                                                autoComplete="off"
-                                                className={inputCls}
-                                                placeholder="Type city or village..."
-                                            />
-                                            {showSuggestions && suggestions.length > 0 && (
-                                                <ul className="absolute top-[105%] left-0 w-full bg-white border border-[#1a2340]/15 shadow-2xl rounded-2xl z-50 p-2 overflow-hidden">
-                                                    {suggestions.map((s, idx) => (
-                                                        <li
-                                                            key={idx}
-                                                            onClick={() => {
-                                                                const b = s.boundingbox;
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    location: s.display_name,
-                                                                    mapCoordinates: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
-                                                                    mapBounds: [[parseFloat(b[0]), parseFloat(b[2])], [parseFloat(b[1]), parseFloat(b[3])]]
-                                                                });
-                                                                setShowSuggestions(false);
-                                                                setLocationMethod('map');
-                                                            }}
-                                                            className="p-4 hover:bg-[#f8f5ee] cursor-pointer rounded-xl transition-all group"
-                                                        >
-                                                            <span className="block text-[#1a2340] font-black text-sm group-hover:text-[#c9a84c]">{s.display_name.split(',')[0]}</span>
-                                                            <span className="text-[10px] text-[#1a2340]/40 font-bold truncate mt-1">{s.display_name}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
+                                        <div className="space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className={labelCls}>Plot / Survey Number</label>
+                                                    <input
+                                                        type="text" name="plotNumber"
+                                                        value={formData.plotNumber}
+                                                        onChange={handleChange}
+                                                        className={inputCls}
+                                                        placeholder="e.g. 102/B or 55"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className={labelCls}>Area / Landmark Name</label>
+                                                    <input
+                                                        type="text" name="areaName"
+                                                        value={formData.areaName}
+                                                        onChange={handleChange}
+                                                        className={inputCls}
+                                                        placeholder="e.g. Near Shiv Temple"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="relative">
+                                                <label className={labelCls}>Village / City (Search)</label>
+                                                <input
+                                                    type="text" name="location" required
+                                                    value={formData.location}
+                                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                                    autoComplete="off"
+                                                    className={inputCls}
+                                                    placeholder="Search village or city..."
+                                                />
+                                                {showSuggestions && suggestions.length > 0 && (
+                                                    <ul className="absolute top-[105%] left-0 w-full bg-white border border-[#1a2340]/15 shadow-2xl rounded-2xl z-[100] p-2 max-h-72 overflow-y-auto">
+                                                        {suggestions.map((s, idx) => (
+                                                            <li
+                                                                key={idx}
+                                                                onClick={() => {
+                                                                    const b = s.boundingbox;
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        location: s.display_name,
+                                                                        mapCoordinates: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
+                                                                        mapBounds: [[parseFloat(b[0]), parseFloat(b[2])], [parseFloat(b[1]), parseFloat(b[3])]]
+                                                                    });
+                                                                    setShowSuggestions(false);
+                                                                }}
+                                                                className="p-4 hover:bg-[#f8f5ee] cursor-pointer rounded-xl transition-all group"
+                                                            >
+                                                                <span className="block text-[#1a2340] font-black text-sm group-hover:text-[#c9a84c]">{s.display_name.split(',')[0]}</span>
+                                                                <span className="text-[10px] text-[#1a2340]/40 font-bold truncate mt-1">{s.display_name}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
-                                    {(locationMethod === 'map' || locationMethod === 'gps') && (
+                                    {locationMethod === 'map' && (
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center">
                                                 <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
-                                                    {locationMethod === 'gps' ? 'Detecting Site GPS...' : 'Drop Pin on Precise Location'}
+                                                    Drop Pin on Precise Location
                                                 </p>
-                                                {locationMethod === 'gps' && (
-                                                    <button type="button" onClick={detectMyLocation} className="bg-[#1a2340] text-[#c9a84c] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md">
-                                                        Refresh GPS
-                                                    </button>
-                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={detectMyLocation} 
+                                                    className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
+                                                >
+                                                    <Navigation size={12} /> Use My GPS Location
+                                                </button>
                                             </div>
-                                            <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative z-0">
+                                            <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative">
                                                 <MapContainer center={[formData.mapCoordinates.lat || 24.10, formData.mapCoordinates.lng || 72.38]} zoom={15} style={{ height: '100%', width: '100%' }}>
                                                     <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                                    <LocationMarker position={formData.mapCoordinates} setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos, mapBounds: null })} setLocation={(addr) => setFormData(p => ({ ...p, location: addr }))} />
-                                                    <MapRecenter position={formData.mapCoordinates} bounds={formData.mapBounds} />
+                                                    <MapSearch onSelect={(pos, addr) => setFormData({ ...formData, mapCoordinates: pos, location: addr || formData.location })} />
+                                                    <LocationMarker
+                                                        position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
+                                                        setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
+                                                        setLocation={(addr) => setFormData(prev => ({ ...prev, location: addr }))}
+                                                    />
+                                                    <MapRecenter position={formData.mapCoordinates} />
                                                 </MapContainer>
                                             </div>
                                         </div>

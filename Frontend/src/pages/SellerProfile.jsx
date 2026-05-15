@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Phone, Mail, Calendar, CheckCircle2, ArrowLeft, Users, Eye, Image, Building2, Award, Heart } from 'lucide-react';
+import { MapPin, Phone, Mail, Calendar, CheckCircle2, ArrowLeft, Users, Eye, Image, Building2, Award, Heart, Share2, Copy } from 'lucide-react';
+import { toast } from 'react-toastify';
 import ListingSkeleton from '../components/ListingSkeleton';
 import ErrorBox from '../components/ErrorBox';
 import EmptyState from '../components/EmptyState';
@@ -72,7 +73,6 @@ const ListingCard = ({ listing }) => {
                     {/* Title */}
                     <h3
                         className="text-lg font-bold text-[#1a2340] group-hover:text-[#c9a84c] transition-colors leading-tight mb-1 pr-20"
-                        style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                         {listing.title}
                     </h3>
@@ -147,7 +147,9 @@ const SellerProfile = () => {
     } = useQuery({
         queryKey: ['sellerProfile', id],
         queryFn: async () => {
-            const res = await axios.get(`/api/listings/seller/${id}`);
+            // Clean ID in case text was appended to the URL (e.g. from shared links)
+            const cleanId = id.split(/[\s%]/)[0];
+            const res = await axios.get(`/api/listings/seller/${cleanId}`);
             return res.data.data;
         }
     });
@@ -191,6 +193,25 @@ const SellerProfile = () => {
 
     const { user, activeListings, reservedListings } = profile;
 
+    const handleShare = async () => {
+        const profileUrl = `${window.location.origin}/seller/${user._id || user.id}`;
+        const shareData = {
+            title: `${user.name} - Kharsan Properties`,
+            url: profileUrl
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(profileUrl);
+                toast.success('Profile link copied to clipboard');
+            }
+        } catch (err) {
+            console.error('Error sharing:', err);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
@@ -229,7 +250,7 @@ const SellerProfile = () => {
                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
                                     <h1
                                         className="text-2xl sm:text-3xl font-bold text-[#1a2340]"
-                                        style={{ fontFamily: "'Playfair Display', serif" }}
+                                        
                                     >
                                         {user.name}
                                     </h1>
@@ -237,22 +258,30 @@ const SellerProfile = () => {
                                         {user.role}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-[#15803d]">
-                                    <CheckCircle2 size={14} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">Verified Partner</span>
+                                <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
+                                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-[#15803d]">
+                                        <CheckCircle2 size={14} />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Verified Partner</span>
+                                    </div>
+                                    <button
+                                        onClick={handleShare}
+                                        className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#f8f5ee] hover:bg-[#c9a84c]/20 text-[#1a2340] text-[10px] font-black uppercase tracking-widest transition-all border border-[#e2d9c5]"
+                                    >
+                                        <Share2 size={12} /> Share Profile
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Stats pills */}
                             <div className="flex gap-4">
                                 <div className="text-center bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg px-5 py-3">
-                                    <div className="text-2xl font-black text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    <div className="text-2xl font-black text-[#1a2340]" >
                                         {activeListings.length}
                                     </div>
                                     <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Active</div>
                                 </div>
                                 <div className="text-center bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg px-5 py-3">
-                                    <div className="text-2xl font-black text-[#dc2626]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    <div className="text-2xl font-black text-[#dc2626]" >
                                         {reservedListings.length}
                                     </div>
                                     <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Reserved</div>
@@ -290,7 +319,6 @@ const SellerProfile = () => {
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#15803d] inline-block" />
                                 <h2
                                     className="text-xl font-bold text-[#1a2340]"
-                                    style={{ fontFamily: "'Playfair Display', serif" }}
                                 >
                                     Available Inventory
                                 </h2>
@@ -298,7 +326,7 @@ const SellerProfile = () => {
                             <p className="text-sm text-[#6b7280] font-600">Current non-reserved properties listed by this partner.</p>
                         </div>
                         <div className="text-right bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg px-4 py-2">
-                            <div className="text-xl font-black text-[#1a2340]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                            <div className="text-xl font-black text-[#1a2340]" >
                                 {activeListings.length}
                             </div>
                             <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Active Plots</div>
@@ -324,7 +352,7 @@ const SellerProfile = () => {
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#dc2626] inline-block" />
                                 <h2
                                     className="text-xl font-bold text-[#1a2340]"
-                                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  
                                 >
                                     Past Success & Reserved
                                 </h2>
@@ -332,7 +360,7 @@ const SellerProfile = () => {
                             <p className="text-sm text-[#6b7280] font-600">Plots successfully reserved and tokened by other buyers.</p>
                         </div>
                         <div className="text-right bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg px-4 py-2">
-                            <div className="text-xl font-black text-[#dc2626]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                            <div className="text-xl font-black text-[#dc2626]" >
                                 {reservedListings.length}
                             </div>
                             <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Tokened Plots</div>

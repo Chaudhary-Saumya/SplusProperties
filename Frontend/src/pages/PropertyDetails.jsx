@@ -287,7 +287,7 @@ const renderStars = () => {
     return (
         <div style={{ fontFamily: "'Nunito Sans', sans-serif" }} className="bg-[#f8f5ee]">
             <SEO 
-                title={`${listing.title} in ${listing.location}`}
+                title={`${listing.title} in ${listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}${listing.areaName ? `Area: ${listing.areaName}, ` : ''}${listing.location}`}
                 description={`${listing.description?.substring(0, 160)}...`}
                 image={listing.images?.[0] ? getImageUrl(listing.images[0]) : null}
                 type="article"
@@ -304,7 +304,7 @@ const renderStars = () => {
                     "priceCurrency": "INR",
                     "address": {
                         "@type": "PostalAddress",
-                        "addressLocality": listing.location,
+                        "addressLocality": `${listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}${listing.areaName ? `Area: ${listing.areaName}, ` : ''}${listing.location}`,
                         "addressCountry": "IN"
                     },
                     "image": listing.images?.map(img => getImageUrl(img)) || []
@@ -323,7 +323,7 @@ const renderStars = () => {
                         <ArrowLeft size={16} /> Back
                     </button>
                     <span className="text-[#d1d5db]">•</span>
-                    <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">{listing.propertyType || 'Plot'} in {listing.location}</span>
+                    <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">{listing.propertyType || 'Plot'} in {listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}{listing.areaName ? `Area: ${listing.areaName}, ` : ''}{listing.location}</span>
                 </div>
             </div>
 
@@ -371,7 +371,7 @@ const renderStars = () => {
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-[#6b7280] text-sm font-bold">
                             <MapPin size={16} className="text-[#c9a84c]" />
-                            {listing.location}
+                            {listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}{listing.areaName ? `Area: ${listing.areaName}, ` : ''}{listing.location}
                         </div>
                         <button 
                             onClick={handleCopyLink}
@@ -619,7 +619,7 @@ const renderStars = () => {
                 </div>
 
                 {/* ── Map Location Section ── */}
-                {listing.mapCoordinates && listing.mapCoordinates.lat && (
+                {((listing.locationMode === 'map') || (!listing.locationMode && listing.mapCoordinates?.lat)) && (
                     <div className="bg-white border border-[#e2d9c5] rounded-2xl overflow-hidden mb-8 shadow-sm">
                         <div className="p-6 border-b border-[#f8f5ee] flex items-center justify-between">
                             <h3 className="text-lg font-bold text-[#1a2340] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -646,7 +646,7 @@ const renderStars = () => {
                                 <Marker position={[listing.mapCoordinates.lat, listing.mapCoordinates.lng]}>
                                     <Popup>
                                         <div className="font-bold text-[#1a2340]">{listing.title}</div>
-                                        <div className="text-xs text-[#6b7280]">{listing.location}</div>
+                                        <div className="text-xs text-[#6b7280]">{listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}{listing.areaName ? `Area: ${listing.areaName}, ` : ''}{listing.location}</div>
                                     </Popup>
                                 </Marker>
                                 <MapRecenter position={listing.mapCoordinates} />
