@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target } from 'lucide-react';
+import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target, Calculator } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
@@ -30,6 +30,14 @@ const slides = [
     sub: 'Visualize property boundaries and verify land parcels with our advanced mapping tools.',
     cta: 'See Land Map',
     ctaLink: '/boundary-map',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+    tag: 'Convert Area',
+    heading: 'Convert Area of Your Land',
+    sub: 'Convert your land area to different units and calculate the area of your land in different units.',
+    cta: 'Convert Area',
+    ctaLink: '/area-converter',
   },
   {
     image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
@@ -216,9 +224,30 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      {/* Scroll Down Arrow */}
-     
-
+      {/* Area Converter Button */}
+      <Link to="/area-converter" style={{
+        position: 'absolute', bottom: 40, right: 40, zIndex: 10,
+        background: '#c9a84c', color: '#1a1200',
+        fontFamily: "'Nunito Sans', sans-serif",
+        fontWeight: 800, fontSize: 14, letterSpacing: '1px',
+        textTransform: 'uppercase', textDecoration: 'none',
+        padding: '12px 24px', borderRadius: 8,
+        boxShadow: '0 8px 24px rgba(201,168,76,0.4)',
+        display: 'flex', alignItems: 'center', gap: 8,
+        transition: 'transform 0.2s, box-shadow 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 12px 28px rgba(201,168,76,0.5)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(201,168,76,0.4)';
+      }}
+      >
+        <Calculator size={18} />
+       
+      </Link>
 
     </div>
   );

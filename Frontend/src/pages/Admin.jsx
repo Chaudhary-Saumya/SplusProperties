@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall, Settings, Zap, ZapOff } from 'lucide-react';
+import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall, Settings, Zap, ZapOff, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Admin = () => {
@@ -20,6 +20,7 @@ const Admin = () => {
     const [inquiriesPage, setInquiriesPage] = useState(1);
     const [analyticsPage, setAnalyticsPage] = useState(1);
     const ITEMS_PER_PAGE = 8;
+    const [searchQuery, setSearchQuery] = useState('');
     
 
 
@@ -44,17 +45,47 @@ const Admin = () => {
                     >
                         Previous
                     </button>
-                    {[...Array(totalPages)].map((_, i) => (
-                        <button
-                            key={i + 1}
-                            onClick={() => onPageChange(i + 1)}
-                            className={`w-9 h-9 rounded-xl text-xs font-bold border transition-all ${
-                                currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
-                            }`}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
+                    
+                    {(() => {
+                        const pages = [];
+                        const maxVisible = 5;
+                        
+                        if (totalPages <= 7) {
+                            for (let i = 1; i <= totalPages; i++) pages.push(i);
+                        } else {
+                            pages.push(1);
+                            
+                            if (currentPage > 3) pages.push('...');
+                            
+                            const start = Math.max(2, currentPage - 1);
+                            const end = Math.min(totalPages - 1, currentPage + 1);
+                            
+                            for (let i = start; i <= end; i++) {
+                                if (!pages.includes(i)) pages.push(i);
+                            }
+                            
+                            if (currentPage < totalPages - 2) pages.push('...');
+                            
+                            if (!pages.includes(totalPages)) pages.push(totalPages);
+                        }
+
+                        return pages.map((p, i) => (
+                            p === '...' ? (
+                                <span key={`sep-${i}`} className="w-9 h-9 flex items-center justify-center text-slate-400 font-bold">...</span>
+                            ) : (
+                                <button
+                                    key={p}
+                                    onClick={() => onPageChange(p)}
+                                    className={`w-9 h-9 rounded-xl text-xs font-bold border transition-all ${
+                                        currentPage === p ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            )
+                        ));
+                    })()}
+
                     <button
                         disabled={currentPage === totalPages}
                         onClick={() => onPageChange(currentPage + 1)}
@@ -149,7 +180,10 @@ const Admin = () => {
                     {tabs.map(tab => (
                         <button 
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => {
+                                setActiveTab(tab.id);
+                                setSearchQuery(''); // Reset search when changing tabs
+                            }}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all text-left ${activeTab === tab.id ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
                         >
                             {tab.icon} {tab.id}
@@ -246,6 +280,23 @@ const Admin = () => {
                             </div>
                         </div>
 
+                        {/* Search Bar */}
+                        <div className="relative mb-6">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Search size={18} />
+                            </div>
+                            <input 
+                                type="text"
+                                placeholder="Search users by name or email..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setUsersPage(1);
+                                }}
+                                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-semibold text-slate-700"
+                            />
+                        </div>
+
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -260,6 +311,10 @@ const Admin = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {data.users
                                             .filter(u => selectedUserRole === 'All' || u.role === selectedUserRole)
+                                            .filter(u => 
+                                                u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                                u.email.toLowerCase().includes(searchQuery.toLowerCase())
+                                            )
                                             .slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE)
                                             .map(u => (
                                             <tr key={u._id} className="hover:bg-slate-50/50 transition-colors">
@@ -291,7 +346,7 @@ const Admin = () => {
                                 </table>
                             </div>
                             <Pagination 
-                                totalItems={data.users.filter(u => selectedUserRole === 'All' || u.role === selectedUserRole).length} 
+                                totalItems={data.users.filter(u => (selectedUserRole === 'All' || u.role === selectedUserRole) && (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()))).length} 
                                 currentPage={usersPage} 
                                 onPageChange={setUsersPage} 
                             />
@@ -302,7 +357,24 @@ const Admin = () => {
                 {/* LISTINGS TAB */}
                 {activeTab === 'Listings' && data && (
                     <div className="animate-fade-in max-w-6xl mx-auto">
-                        <h1 className="text-3xl font-bold text-slate-900 mb-6">Registered Property Listings</h1>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <h1 className="text-3xl font-bold text-slate-900">Registered Property Listings</h1>
+                            <div className="relative w-full sm:w-80">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <Search size={16} />
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Search by title or location..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setListingsPage(1);
+                                    }}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-blue-400 transition-all text-sm font-semibold"
+                                />
+                            </div>
+                        </div>
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -316,6 +388,10 @@ const Admin = () => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {data.allListings
+                                            .filter(l => 
+                                                l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                                l.location.toLowerCase().includes(searchQuery.toLowerCase())
+                                            )
                                             .slice((listingsPage - 1) * ITEMS_PER_PAGE, listingsPage * ITEMS_PER_PAGE)
                                             .map(l => (
                                             <tr key={l._id} className="hover:bg-slate-50/50">
@@ -340,7 +416,7 @@ const Admin = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <Pagination totalItems={data.allListings.length} currentPage={listingsPage} onPageChange={setListingsPage} />
+                            <Pagination totalItems={data.allListings.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()) || l.location.toLowerCase().includes(searchQuery.toLowerCase())).length} currentPage={listingsPage} onPageChange={setListingsPage} />
                         </div>
                     </div>
                 )}
@@ -348,7 +424,24 @@ const Admin = () => {
                 {/* INQUIRIES TAB */}
                 {activeTab === 'Inquiries' && inquiries && (
                     <div className="animate-fade-in max-w-6xl mx-auto">
-                        <h1 className="text-3xl font-bold text-slate-900 mb-6">Global Site Requests & Leads</h1>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <h1 className="text-3xl font-bold text-slate-900">Global Site Requests & Leads</h1>
+                            <div className="relative w-full sm:w-80">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <Search size={16} />
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Search buyer or listing..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setInquiriesPage(1);
+                                    }}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-blue-400 transition-all text-sm font-semibold"
+                                />
+                            </div>
+                        </div>
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
                             {inquiries.length === 0 ? (
                                 <div className="p-12 text-center text-slate-500 font-medium">No site requests logged globally.</div>
@@ -366,6 +459,10 @@ const Admin = () => {
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {inquiries
+                                                    .filter(inq => 
+                                                        inq.userId?.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                                        inq.listingId?.title.toLowerCase().includes(searchQuery.toLowerCase())
+                                                    )
                                                     .slice((inquiriesPage - 1) * ITEMS_PER_PAGE, inquiriesPage * ITEMS_PER_PAGE)
                                                     .map(inq => (
                                                     <tr key={inq._id} className="hover:bg-slate-50/50 transition-colors">
@@ -401,7 +498,7 @@ const Admin = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <Pagination totalItems={inquiries.length} currentPage={inquiriesPage} onPageChange={setInquiriesPage} />
+                                    <Pagination totalItems={inquiries.filter(inq => inq.userId?.name.toLowerCase().includes(searchQuery.toLowerCase()) || inq.listingId?.title.toLowerCase().includes(searchQuery.toLowerCase())).length} currentPage={inquiriesPage} onPageChange={setInquiriesPage} />
                                 </>
                             )}
                         </div>
@@ -411,7 +508,24 @@ const Admin = () => {
                 {/* ANALYTICS TAB */}
                 {activeTab === 'Analytics' && data && (
                     <div className="animate-fade-in max-w-6xl mx-auto">
-                        <h1 className="text-3xl font-bold text-slate-900 mb-6">Traffic & Page Hits Log</h1>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <h1 className="text-3xl font-bold text-slate-900">Traffic & Page Hits Log</h1>
+                            <div className="relative w-full sm:w-80">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <Search size={16} />
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Search by page path..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setAnalyticsPage(1);
+                                    }}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-blue-400 transition-all text-sm font-semibold"
+                                />
+                            </div>
+                        </div>
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                             {data.pageHits.length === 0 ? (
                                 <p className="text-slate-500 text-center py-10 font-medium">No hit logic recorded yet.</p>
@@ -429,6 +543,7 @@ const Admin = () => {
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {data.pageHits
+                                                    .filter(hit => hit.path.toLowerCase().includes(searchQuery.toLowerCase()))
                                                     .slice((analyticsPage - 1) * ITEMS_PER_PAGE, analyticsPage * ITEMS_PER_PAGE)
                                                     .map(hit => (
                                                     <tr key={hit._id} className="hover:bg-slate-50/50 transition-colors">
@@ -457,7 +572,7 @@ const Admin = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <Pagination totalItems={data.pageHits.length} currentPage={analyticsPage} onPageChange={setAnalyticsPage} />
+                                    <Pagination totalItems={data.pageHits.filter(hit => hit.path.toLowerCase().includes(searchQuery.toLowerCase())).length} currentPage={analyticsPage} onPageChange={setAnalyticsPage} />
                                 </>
                             )}
                         </div>
