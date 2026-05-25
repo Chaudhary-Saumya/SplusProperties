@@ -137,6 +137,7 @@ const AreaConverter = () => {
       clearedValues[u.value] = '';
     });
     setValues(clearedValues);
+    setTopInputs({ hectare: '', aare: '', sqm: '' });
   };
 
   const handleExportPDF = () => {
