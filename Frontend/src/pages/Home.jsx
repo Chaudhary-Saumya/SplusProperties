@@ -108,9 +108,51 @@ const HeroCarousel = () => {
         .carousel-arrow { 
           display: flex !important; 
         }
+        .area-converter-btn {
+          position: absolute;
+          top: 32px;
+          right: 32px;
+          z-index: 10;
+          background: #c9a84c;
+          color: #1a1200;
+          font-family: 'Nunito Sans', sans-serif;
+          font-weight: 800;
+          font-size: 14px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          text-decoration: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          box-shadow: 0 8px 24px rgba(201,168,76,0.4);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .area-converter-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 28px rgba(201,168,76,0.5);
+        }
         @media (max-width: 768px) {
           .carousel-arrow { 
             display: none !important; 
+          }
+          .area-converter-btn {
+            top: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            font-size: 12px;
+          }
+        }
+        @media (max-width: 480px) {
+          .area-converter-btn {
+            top: 16px;
+            right: 16px;
+            padding: 8px 12px;
+            font-size: 11px;
+          }
+          .btn-text {
+             display: none;
           }
         }
       `}</style>
@@ -225,26 +267,7 @@ const HeroCarousel = () => {
       </div>
 
       {/* Area Converter Button */}
-      <Link to="/area-converter" style={{
-        position: 'absolute', bottom: 40, right: 40, zIndex: 10,
-        background: '#c9a84c', color: '#1a1200',
-        fontFamily: "'Nunito Sans', sans-serif",
-        fontWeight: 800, fontSize: 14, letterSpacing: '1px',
-        textTransform: 'uppercase', textDecoration: 'none',
-        padding: '12px 24px', borderRadius: 8,
-        boxShadow: '0 8px 24px rgba(201,168,76,0.4)',
-        display: 'flex', alignItems: 'center', gap: 8,
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 12px 28px rgba(201,168,76,0.5)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(201,168,76,0.4)';
-      }}
-      >
+      <Link to="/area-converter" className="area-converter-btn">
         <Calculator size={18} />
        
       </Link>
@@ -630,6 +653,21 @@ const Home = () => {
       </div>
 
       <style>{`
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 40px;
+          border-bottom: 2px solid #e2d9c5;
+          padding-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+          .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+          }
+        }
         .carousel-container {
           display: flex;
           gap: 24px;
@@ -739,7 +777,7 @@ const Home = () => {
     <div style={{ background: '#f8f5ee', padding: '64px 24px 80px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Section Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, borderBottom: '2px solid #e2d9c5', paddingBottom: 20 }}>
+        <div className="section-header">
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>
               {isAuthenticated ? 'Personalized for You' : 'Most Viewed'}

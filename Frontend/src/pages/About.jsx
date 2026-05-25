@@ -12,18 +12,11 @@ const About = () => {
     { 
       name: 'Kharsan.com', 
       tag: 'Flagship',
-      desc: 'Our central digital identity and corporate headquarters.', 
+      desc: 'Our central digital identity offering premium IT solutions and educational courses.', 
       url: 'https://kharsan.com',
       status: 'active',
+      buttonType: 'visit',
       icon: Globe
-    },
-    { 
-      name: 'technologies.kharsan.com', 
-      tag: 'Innovation',
-      desc: 'A hub for disruptive technologies and digital solutions.', 
-      url: '#',
-      status: 'coming-soon',
-      icon: Lightbulb
     },
     { 
       name: 'properties.kharsan.com', 
@@ -31,6 +24,7 @@ const About = () => {
       desc: 'The premium platform for verified land and property investments.', 
       url: 'https://properties.kharsan.com',
       status: 'active',
+      buttonType: 'here',
       icon: Shield
     }
   ];
@@ -96,7 +90,7 @@ const About = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto"
           >
             {brands.map((brand, idx) => (
               <motion.div 
@@ -119,15 +113,21 @@ const About = () => {
                 </p>
 
                 {brand.status === 'active' ? (
-                  <a 
-                    href={brand.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between w-full py-4 px-6 bg-[#1a2340] text-white rounded-2xl font-bold hover:bg-[#c9a84c] transition-all duration-300 group/btn"
-                  >
-                    <span>Visit Brand</span>
-                    <ExternalLink size={18} className="group-hover/btn:translate-x-1 transition-transform" />
-                  </a>
+                  brand.buttonType === 'here' ? (
+                    <div className="flex items-center justify-center w-full py-4 px-6 bg-[#c9a84c] text-[#1a2340] rounded-2xl font-black text-sm uppercase tracking-widest border-2 border-[#c9a84c]">
+                      You Are Here
+                    </div>
+                  ) : (
+                    <a 
+                      href={brand.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between w-full py-4 px-6 bg-[#1a2340] text-white rounded-2xl font-bold hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all duration-300 group/btn"
+                    >
+                      <span>Visit Brand</span>
+                      <ExternalLink size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </a>
+                  )
                 ) : (
                   <div className="flex items-center justify-center w-full py-4 px-6 bg-[#f3f4f6] text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest border border-slate-200">
                     Coming Soon

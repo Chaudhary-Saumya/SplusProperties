@@ -259,65 +259,65 @@ const AreaConverter = () => {
 
       <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-10">
 
         {/* Back Link */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-[#1a2340] font-bold text-xs uppercase tracking-wider mb-8 hover:text-[#c9a84c] transition-colors"
+          className="inline-flex items-center gap-2 text-[#1a2340] font-bold text-xs uppercase tracking-wider mb-4 sm:mb-8 hover:text-[#c9a84c] transition-colors"
         >
           <ArrowLeft size={16} /> Back to Home
         </Link>
 
         {/* Header */}
-        <div className="text-center mb-10">
-          <span className="inline-block bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-3">
+        <div className="text-center mb-6 sm:mb-10">
+          <span className="inline-block bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-2 sm:mb-3">
             Property Tool
           </span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#1a2340] mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1a2340] mb-1 sm:mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
             Area Converter
           </h1>
-          <p className="text-[#6b7280] text-base font-medium">
+          <p className="text-[#6b7280] text-xs sm:text-base font-medium hidden sm:block">
             Live Converter — Values update instantly as you type
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 justify-center mb-8">
+        <div className="flex flex-wrap gap-2 sm:gap-3 justify-center mb-5 sm:mb-8">
           <button
             onClick={handleReset}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-[#e2d9c5] text-[#1a2340] font-bold rounded-xl hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all shadow-sm text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-white border-2 border-[#e2d9c5] text-[#1a2340] font-bold rounded-lg sm:rounded-xl hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all shadow-sm text-xs sm:text-sm"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={14} />
             Reset All
           </button>
           <button
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1a2340] to-[#2a3454] text-white font-bold rounded-xl hover:from-[#c9a84c] hover:to-[#b8933a] transition-all shadow-md text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#1a2340] to-[#2a3454] text-white font-bold rounded-lg sm:rounded-xl hover:from-[#c9a84c] hover:to-[#b8933a] transition-all shadow-md text-xs sm:text-sm"
           >
-            <Download size={16} />
+            <Download size={14} />
             Export as PDF
           </button>
         </div>
 
         {/* Main Live Converter Section */}
-        <div className="bg-white border border-[#e2d9c5] rounded-2xl shadow-lg p-6 mb-10">
+        <div className="bg-white border border-[#e2d9c5] rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-6 mb-6 sm:mb-10">
 
           {/* Quick Reference Top Bar — Compound Editable Inputs */}
-          <div className="flex justify-end gap-3 mb-5 flex-wrap">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
             {[
               { key: 'hectare', label: 'Hectare' },
               { key: 'aare',    label: 'Aare' },
               { key: 'sqm',     label: 'Sq. Meter' },
             ].map(({ key, label }) => (
-              <div key={key} className="flex flex-col items-center bg-[#faf7f0] border border-[#e2d9c5] rounded-xl py-2 min-w-[100px]">
-                <span className="text-[9px] font-extrabold text-[#b8933a] uppercase tracking-widest mb-1">{label}</span>
+              <div key={key} className="flex flex-col items-center bg-[#faf7f0] border border-[#e2d9c5] rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1">
+                <span className="text-[8px] sm:text-[9px] font-extrabold text-[#b8933a] uppercase tracking-widest mb-0.5 sm:mb-1">{label}</span>
                 <input
                   type="number"
                   step="any"
                   value={topInputs[key]}
                   onChange={(e) => handleTopInputChange(key, e.target.value)}
-                  className="w-full text-center text-sm font-extrabold text-[#1a2340] bg-transparent border-[#e2d9c5] focus:border-[#c9a84c] focus:outline-none transition-colors pb-0.5 placeholder:text-[#d0c5b0]"
+                  className="w-full text-center text-xs sm:text-sm font-extrabold text-[#1a2340] bg-transparent focus:outline-none transition-colors placeholder:text-[#d0c5b0]"
                   placeholder="0"
                 />
               </div>
@@ -336,35 +336,34 @@ const AreaConverter = () => {
             </div>
           )}
 
-          <Reorder.Group axis="y" values={orderedUnits} onReorder={setOrderedUnits} className="space-y-4">
+          <Reorder.Group axis="y" values={orderedUnits} onReorder={setOrderedUnits} className="flex flex-col gap-1 sm:gap-3">
             {orderedUnits.map((unit) => (
               <Reorder.Item 
                 key={unit.value} 
                 value={unit}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 group bg-white rounded-xl p-1"
+                className="flex items-center justify-between group bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-transparent hover:border-[#e2d9c5] transition-colors"
               >
-                <div className="flex items-center gap-3 sm:w-56">
-                  <div className="cursor-grab active:cursor-grabbing text-[#e2d9c5] hover:text-[#c9a84c] transition-colors">
-                    <GripVertical size={18} />
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
+                  <div className="cursor-grab active:cursor-grabbing text-[#e2d9c5] hover:text-[#c9a84c] transition-colors p-1">
+                    <GripVertical size={16} />
                   </div>
-                  <label className="text-base font-bold text-[#1a2340] block">
+                  <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
                     {unit.label}
                   </label>
                 </div>
 
-                <div className="flex-1 relative">
+                <div className="w-[120px] sm:w-48 relative shrink-0 flex items-center gap-2">
                   <input
                     type="number"
                     step="any"
                     value={values[unit.value] || ''}
                     onChange={(e) => handleInputChange(unit.value, e.target.value)}
-                    className="w-full px-5 py-3 border-2 border-[#f0ebe0] rounded-xl text-lg font-bold text-right focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/10 transition-all bg-[#faf9f6]"
+                    className="w-full px-3 py-2 sm:px-5 sm:py-3 border-2 border-[#f0ebe0] rounded-lg sm:rounded-xl text-sm sm:text-lg font-bold text-right focus:outline-none focus:border-[#c9a84c] focus:ring-1 focus:ring-[#c9a84c]/10 transition-all bg-[#faf9f6]"
                     placeholder="0.00"
                   />
-                </div>
-
-                <div className="sm:w-24 text-right text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
-                  {unit.value.replace('vigha_', '').toUpperCase()}
+                  <div className="hidden sm:block w-20 text-right text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider truncate">
+                    {unit.value.replace('vigha_', '').toUpperCase()}
+                  </div>
                 </div>
               </Reorder.Item>
             ))}
