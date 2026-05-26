@@ -5,5 +5,11 @@
   "server": {
     "androidScheme": "http",
     "cleartext": true
+  },
+  "plugins": {
+    "GoogleSignIn": {
+      "serverClientId": "792864567125-qhfbo8i8vibnba1uq1p1tadti5ivvaib.apps.googleusercontent.com",
+      "scopes": ["profile", "email"]
+    }
   }
 }

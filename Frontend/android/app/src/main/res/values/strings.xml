@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Kharsan It Solution</string>
-    <string name="title_activity_main">Kharsan It Solution</string>
+    <string name="app_name">Kharsan Properties</string>
+    <string name="title_activity_main">Kharsan Properties</string>
     <string name="package_name">com.kharsan.itsolution</string>
     <string name="custom_url_scheme">com.kharsan.itsolution</string>
+    <string name="server_client_id">792864567125-qhfbo8i8vibnba1uq1p1tadti5ivvaib.apps.googleusercontent.com</string>
 </resources>

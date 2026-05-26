@@ -109,7 +109,7 @@ const AreaConverter = () => {
     const newValues = {};
     orderedUnits.forEach(u => {
       const converted = convertFromBase(totalGuntha, u.value);
-      newValues[u.value] = converted === 0 ? '' : converted.toFixed(8).replace(/\.?0+$/, '');
+      newValues[u.value] = converted === 0 ? '' : converted.toFixed(3).replace(/\.?0+$/, '');
     });
     setValues(newValues);
   };
@@ -353,7 +353,7 @@ const AreaConverter = () => {
                   </label>
                 </div>
 
-                <div className="w-[120px] sm:w-48 relative shrink-0 flex items-center gap-2">
+                <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
                   <input
                     type="number"
                     step="any"

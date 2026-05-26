@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
+import { Capacitor } from '@capacitor/core';
+import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -453,11 +455,36 @@ const Register = () => {
                     </div>
 
                     <div className="reg-google-wrap">
-                        <GoogleLogin
-                            onSuccess={res => handleGoogleSuccess(res.credential)}
-                            onError={() => setError('Google Registration Failed')}
-                            width="380"
-                        />
+                        {Capacitor.isNativePlatform() ? (
+                            <button
+                                type="button"
+                                className="reg-btn"
+                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
+                                onClick={async () => {
+                                    try {
+                                        await GoogleSignIn.initialize({
+                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
+                                        });
+                                        const result = await GoogleSignIn.signIn();
+                                        if (result.idToken) {
+                                            handleGoogleSuccess(result.idToken);
+                                        }
+                                    } catch (err) {
+                                        console.error('Native Google Error:', err);
+                                        setError('Google Registration Canceled or Failed');
+                                    }
+                                }}
+                            >
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
+                                Sign up with Google
+                            </button>
+                        ) : (
+                            <GoogleLogin
+                                onSuccess={res => handleGoogleSuccess(res.credential)}
+                                onError={() => setError('Google Registration Failed')}
+                                width="380"
+                            />
+                        )}
                     </div>
 
                     <p className="reg-footer">

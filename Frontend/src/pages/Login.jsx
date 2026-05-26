@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
+import { Capacitor } from '@capacitor/core';
+import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ identifier: '', password: '' });
@@ -371,11 +373,36 @@ const Login = () => {
 
                     {/* Google */}
                     <div className="login-google-wrap">
-                        <GoogleLogin
-                            onSuccess={res => handleGoogleSuccess(res.credential)}
-                            onError={() => setError('Google Login Failed')}
-                            width="370"
-                        />
+                        {Capacitor.isNativePlatform() ? (
+                            <button
+                                type="button"
+                                className="login-btn"
+                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
+                                onClick={async () => {
+                                    try {
+                                        await GoogleSignIn.initialize({
+                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
+                                        });
+                                        const result = await GoogleSignIn.signIn();
+                                        if (result.idToken) {
+                                            handleGoogleSuccess(result.idToken);
+                                        }
+                                    } catch (err) {
+                                        console.error('Native Google Error:', err);
+                                        setError('Google Login Canceled or Failed');
+                                    }
+                                }}
+                            >
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
+                                Sign in with Google
+                            </button>
+                        ) : (
+                            <GoogleLogin
+                                onSuccess={res => handleGoogleSuccess(res.credential)}
+                                onError={() => setError('Google Login Failed')}
+                                width="370"
+                            />
+                        )}
                     </div>
 
                     {/* Footer */}

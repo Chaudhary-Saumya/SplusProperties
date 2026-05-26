@@ -140,7 +140,14 @@ const Navbar = () => {
         .mob-quick-link:hover { color: #c9a84c; }
 
         /* ── Mobile Menu ── */
-        .mobile-menu { display: none; background: #fff; border-top: 2px solid #1a2340; }
+        .mobile-menu { 
+          display: none; 
+          background: #fff; 
+          border-top: 2px solid #1a2340; 
+          max-height: calc(100vh - 80px);
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
         .mobile-menu.open { display: block; }
 
         /* Section category label */
