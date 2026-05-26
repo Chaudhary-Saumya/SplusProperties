@@ -41,6 +41,10 @@ app.use(helmet({
 }));
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost",
+  "capacitor://localhost",
+  "http://10.0.2.2:5000",
+  "http://10.0.2.2",
   "https://properties.kharsan.com"
 ];
 

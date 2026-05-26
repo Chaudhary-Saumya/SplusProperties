@@ -282,17 +282,17 @@ const HeroCarousel = () => {
 const Footer = () => {
   const navigate = useNavigate();
   return (
-    <footer style={{ background: '#1a2340', color: '#fff', padding: '80px 24px 40px', borderTop: '5px solid #c9a84c', fontFamily: "'Nunito Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px 60px', marginBottom: 60 }}>
+    <footer className="bg-[#1a2340] text-white pt-16 pb-10 px-6 border-t-[5px] border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-16">
           
-          {/* Left Side: Logo (approx 20%) */}
-          <div style={{ flex: '1 1 280px' }}>
+          {/* Left Side: Logo */}
+          <div className="lg:w-1/3 flex flex-col items-center lg:items-start text-center lg:text-left">
             <div 
               onClick={() => { window.scrollTo(0,0); navigate('/'); }}
-              style={{ cursor: 'pointer', marginBottom: 28, display: 'inline-block', transform: 'scale(0.85)', transformOrigin: 'left' }}
+              className="cursor-pointer mb-6 transform scale-90 md:scale-100 lg:origin-left"
             >
-              <svg viewBox="0 0 500 500" style={{ height: 90, width: 'auto' }} xmlns="http://www.w3.org/2000/svg">
+              <svg viewBox="0 0 500 500" className="h-[70px] md:h-[90px] w-auto mx-auto lg:mx-0" xmlns="http://www.w3.org/2000/svg">
                 <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
                 <g stroke="#fff" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
                   <path d="M25 320 H90 V225 L190 150" />
@@ -304,71 +304,71 @@ const Footer = () => {
                 <text x="250" y="470" textAnchor="middle" fill="#fff" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px' }}>PROPERTIES</text>
               </svg>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 }}>
+            <p className="text-white/50 text-sm leading-relaxed mb-8 max-w-xs md:max-w-sm mx-auto lg:mx-0">
               Leading the digital transformation of real estate. We specialize in verified agricultural, residential, and commercial land management with intelligent mapping technology.
             </p>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="flex gap-4 justify-center lg:justify-start">
+              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
                 <Globe size={18} />
               </a>
-              <a href="mailto:support@kharsan.com" title="Email" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <a href="mailto:support@kharsan.com" title="Email" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
                 <Mail size={18} />
               </a>
-              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
                 <MessageCircle size={18} />
               </a>
             </div>
           </div>
 
-          {/* Right Side: Links (approx 80% on desktop) */}
-          <div style={{ flex: '3 1 600px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 40 }}>
+          {/* Right Side: Links */}
+          <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center md:text-left mt-4 lg:mt-0">
             {/* Quick Links */}
             <div>
-              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Explore</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <Link to="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Home</Link>
-                <Link to="/about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>About Us</Link>
-                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Trending Plots</Link>
-                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Verified Sellers</Link>
-                <Link to="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Market Blogs</Link>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Explore</h4>
+              <div className="flex flex-col gap-3">
+                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Home</Link>
+                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">About Us</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Trending Plots</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Verified Sellers</Link>
+                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Market Blogs</Link>
               </div>
             </div>
 
             {/* Services */}
             <div>
-              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Services</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <Link to="/search?type=buy" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Buy Property</Link>
-                <Link to="/create-listing" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Sell Property</Link>
-                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Land Mapping</Link>
-                <Link to="/brokers" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Broker Connect</Link>
-                <Link to="/search" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Legal Verification</Link>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Services</h4>
+              <div className="flex flex-col gap-3">
+                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Buy Property</Link>
+                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Sell Property</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Land Mapping</Link>
+                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Broker Connect</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Legal Verification</Link>
               </div>
             </div>
 
             {/* Tools */}
             <div>
-              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Smart Tools</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Boundary Map</Link>
-                <Link to="/area-converter" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Area Converter</Link>
-                <Link to="/saved-maps" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>Saved Boundaries</Link>
-                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>KML Exporter</Link>
-                <Link to="/boundary-map" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>PDF Reports</Link>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Smart Tools</h4>
+              <div className="flex flex-col gap-3">
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Boundary Map</Link>
+                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Area Converter</Link>
+                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Saved Boundaries</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">KML Exporter</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">PDF Reports</Link>
               </div>
             </div>
 
             {/* Contact */}
             <div>
-              <h4 style={{ color: '#c9a84c', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 24 }}>Contact</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <a href="mailto:support@kharsan.com" style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
-                  <Mail size={16} style={{ color: '#c9a84c' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>support@kharsan.com</span>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Contact</h4>
+              <div className="flex flex-col gap-4 items-center md:items-start">
+                <a href="mailto:support@kharsan.com" className="flex gap-3 items-center group">
+                  <Mail size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold">support@kharsan.com</span>
                 </a>
-                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
-                  <Globe size={16} style={{ color: '#c9a84c' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>www.properties.kharsan.com</span>
+                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="flex gap-3 items-center group">
+                  <Globe size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold">properties.kharsan.com</span>
                 </a>
               </div>
             </div>
@@ -376,13 +376,13 @@ const Footer = () => {
         </div>
 
         {/* Bottom Strip */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 32, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600 }}>
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+          <p className="text-white/40 text-sm font-semibold">
             © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan Technologies. All rights reserved.
           </p>
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div className="flex flex-wrap justify-center gap-6">
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <a key={item} href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 12, fontWeight: 700 }}>{item}</a>
+              <a key={item} href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{item}</a>
             ))}
           </div>
         </div>

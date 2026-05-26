@@ -41,8 +41,9 @@ const Calculator = () => {
     try {
       const fullFormula = formula + display;
       // Using a safer evaluation method
-      // eslint-disable-next-line no-eval
-      const result = eval(fullFormula.replace('×', '*').replace('÷', '/'));
+      // Using a safer evaluation method
+      // eslint-disable-next-line no-new-func
+      const result = new Function('return ' + fullFormula.replace('×', '*').replace('÷', '/'))();
       const formattedResult = Number.isInteger(result) ? result.toString() : result.toFixed(4).replace(/\.?0+$/, '');
       
       const newEntry = {
