@@ -46,7 +46,7 @@ const About = () => {
     <div className="min-h-screen bg-[#f8f5ee] font-['Nunito_Sans',sans-serif]">
       <SEO 
         title="About Us | The Kharsan Ecosystem"
-        description="Discover the vision behind Kharsan Properties and the Kharsan Technologies ecosystem. Built on trust, innovation, and a legacy of excellence."
+        description="Discover the vision behind Kharsan Properties and the Kharsan IT Solution ecosystem. Built on trust, innovation, and a legacy of excellence."
       />
 
       {/* ── Hero Section ── */}
@@ -245,7 +245,7 @@ const About = () => {
       {/* ── Footer Branding ── */}
       <section className="py-12 border-t border-[#e2d9c5] text-center px-6">
         <p className="text-[#1a2340]/40 text-[10px] font-black tracking-[4px] uppercase">
-          A Legacy Vertical of <span className="text-[#c9a84c]">Kharsan Technologies</span>
+          A Legacy Vertical of <span className="text-[#c9a84c]">Kharsan IT Solution</span>
         </p>
       </section>
     </div>

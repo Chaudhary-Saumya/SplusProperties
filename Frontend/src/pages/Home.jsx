@@ -378,7 +378,7 @@ const Footer = () => {
         {/* Bottom Strip */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <p className="text-white/40 text-sm font-semibold">
-            © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan Technologies. All rights reserved.
+            © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan IT Solution. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-6">
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (

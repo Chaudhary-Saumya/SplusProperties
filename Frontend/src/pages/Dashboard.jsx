@@ -432,6 +432,14 @@ const Dashboard = () => {
           </div>
 
           <div className="flex gap-2">
+            {(user.role === "Seller" || user.role === "Broker") && (
+              <Link
+                to="/create-listing"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white text-sm font-bold rounded-lg transition-all uppercase tracking-wider shadow-sm"
+              >
+                <Plus size={16} /> New Listing
+              </Link>
+            )}
             <button
               onClick={() => {
                 setShowSettings(!showSettings);
