@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.splus.properties"
+    namespace = "com.kharsan.itsolution"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.splus.properties"
+        applicationId "com.kharsan.itsolution"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -24,11 +24,6 @@ android {
     }
 }
 
-repositories {
-    flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-    }
-}
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
