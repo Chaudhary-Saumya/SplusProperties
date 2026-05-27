@@ -45,7 +45,8 @@ const allowedOrigins = [
   "capacitor://localhost",
   "http://10.0.2.2:5000",
   "http://10.0.2.2",
-  "https://properties.kharsan.com"
+  "https://properties.kharsan.com",
+  "https://kharsanproperties.vercel.app"
 ];
 
 app.use(cors({
