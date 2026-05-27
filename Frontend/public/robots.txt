@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /register
+Disallow: /verify-otp
+Disallow: /forgot-password
+Disallow: /create-listing
+Disallow: /edit-listing/
+Disallow: /favorites
+Disallow: /my-visits
+Disallow: /received-inquiries
+Disallow: /saved-maps
+
+Sitemap: https://properties.kharsan.com/sitemap.xml
