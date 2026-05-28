@@ -155,7 +155,16 @@ const EditListing = () => {
         payoutAccountId: '',
         locationMode: 'address',
         mapCoordinates: { lat: null, lng: null },
-        mapBounds: null
+        mapBounds: null,
+        propertyType: 'Plot',
+        plotType: 'None',
+        landType: 'None',
+        isAgricultural: false,
+        roadTouch: false,
+        cornerPlot: false,
+        isFeatured: false,
+        city: '',
+        locality: ''
     });
 
     const [locationMethod, setLocationMethod] = useState('address');
@@ -179,7 +188,7 @@ const EditListing = () => {
                 }
                 setFormData({
                     title: data.title,
-                    description: data.description,
+                    description: data.description || '',
                     price: data.price.toString(),
                     location: data.location,
                     plotNumber: data.plotNumber || '',
@@ -189,7 +198,16 @@ const EditListing = () => {
                     locationMode: data.locationMode || 'address',
                     mapCoordinates: data.mapCoordinates || { lat: null, lng: null },
                     mapBounds: null,
-                    isBookingEnabled: data.isBookingEnabled || false
+                    isBookingEnabled: data.isBookingEnabled || false,
+                    propertyType: data.propertyType || 'Plot',
+                    plotType: data.plotType || 'None',
+                    landType: data.landType || 'None',
+                    isAgricultural: data.isAgricultural || false,
+                    roadTouch: data.roadTouch || false,
+                    cornerPlot: data.cornerPlot || false,
+                    isFeatured: data.isFeatured || false,
+                    city: data.city || '',
+                    locality: data.locality || ''
                 });
                 setLocationMethod(data.locationMode || 'address');
                 const areaParts = data.area ? data.area.split(' ') : [];
@@ -272,13 +290,19 @@ const EditListing = () => {
                     }
                 }
             }
+            const isAgri = formData.propertyType === 'Land' 
+                ? (formData.landType === 'Agricultural')
+                : (formData.plotType === 'Agricultural' || formData.isAgricultural);
+
             const listingPayload = {
                 ...formData,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
                 images: uploadedImagePaths,
                 plotNumber: formData.plotNumber,
-                areaName: formData.areaName
+                areaName: formData.areaName,
+                isAgricultural: isAgri,
+                cornerPlot: formData.propertyType === 'Plot' ? formData.cornerPlot : false
             };
             await axios.put(`/api/listings/${id}`, listingPayload);
             toast.success('Listing successfully updated!');
@@ -370,6 +394,57 @@ const EditListing = () => {
                                     placeholder="e.g. 500 Sq Yd Corner Plot in Sector 14"
                                 />
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                                <div>
+                                    <label className={labelCls}>Property Category</label>
+                                    <select
+                                        name="propertyType"
+                                        value={formData.propertyType}
+                                        onChange={e => setFormData({ ...formData, propertyType: e.target.value, plotType: 'None', landType: 'None' })}
+                                        className={inputCls + ' cursor-pointer'}
+                                    >
+                                        <option value="Plot">Plot</option>
+                                        <option value="Land">Land</option>
+                                    </select>
+                                </div>
+                                {formData.propertyType === 'Plot' && (
+                                    <div>
+                                        <label className={labelCls}>Plot Sub-Type</label>
+                                        <select
+                                            name="plotType"
+                                            value={formData.plotType}
+                                            onChange={e => setFormData({ ...formData, plotType: e.target.value })}
+                                            className={inputCls + ' cursor-pointer'}
+                                        >
+                                            <option value="None">Select Plot Type...</option>
+                                            <option value="Residential">Residential</option>
+                                            <option value="Commercial">Commercial</option>
+                                            <option value="Industrial">Industrial</option>
+                                            <option value="Agricultural">Agricultural</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                )}
+                                {formData.propertyType === 'Land' && (
+                                    <div>
+                                        <label className={labelCls}>Land Sub-Type</label>
+                                        <select
+                                            name="landType"
+                                            value={formData.landType}
+                                            onChange={e => setFormData({ ...formData, landType: e.target.value })}
+                                            className={inputCls + ' cursor-pointer'}
+                                        >
+                                            <option value="None">Select Land Type...</option>
+                                            <option value="Agricultural">Agricultural</option>
+                                            <option value="Non-Agricultural">Non-Agricultural (NA)</option>
+                                            <option value="Industrial">Industrial</option>
+                                            <option value="Commercial">Commercial</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
                                     <label className={labelCls}>Price (INR)</label>
@@ -386,7 +461,7 @@ const EditListing = () => {
                                     <label className={labelCls}>Total Area</label>
                                     <div className="flex gap-3">
                                         <input
-                                            type="number" required min="1"
+                                            type="number" required min="0.001" step="any"
                                             value={areaValue} onChange={(e) => setAreaValue(e.target.value)}
                                             className={inputCls + ' w-2/3'}
                                         />
@@ -403,12 +478,68 @@ const EditListing = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="mt-5">
+                                <label className={labelCls}>Story & Description</label>
+                                <textarea
+                                    name="description" required rows="5"
+                                    value={formData.description} onChange={handleChange}
+                                    className={inputCls + ' resize-none'}
+                                    placeholder="What makes this property special?..."
+                                />
+                            </div>
+
+                            <div className="mt-5">
+                                <label className={labelCls}>Property Attributes</label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-5 p-5 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
+                                    {formData.propertyType === 'Plot' && (
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.cornerPlot}
+                                                onChange={e => setFormData({ ...formData, cornerPlot: e.target.checked })}
+                                                className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                            />
+                                            <span className="text-xs font-bold text-[#1a2340]/70">Corner Plot</span>
+                                        </label>
+                                    )}
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.roadTouch}
+                                            onChange={e => setFormData({ ...formData, roadTouch: e.target.checked })}
+                                            className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                        />
+                                        <span className="text-xs font-bold text-[#1a2340]/70">Road Touch</span>
+                                    </label>
+                                    {formData.propertyType === 'Plot' && (
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.isAgricultural}
+                                                onChange={e => setFormData({ ...formData, isAgricultural: e.target.checked })}
+                                                className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                            />
+                                            <span className="text-xs font-bold text-[#1a2340]/70">Agricultural Plot</span>
+                                        </label>
+                                    )}
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.isFeatured}
+                                            onChange={e => setFormData({ ...formData, isFeatured: e.target.checked })}
+                                            className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                        />
+                                        <span className="text-xs font-bold text-[#1a2340]/70">Featured Listing</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </SectionCard>
 
-                    <SectionCard 
-                        icon={<MapPin />} 
-                        title="Geographic Position" 
+                    <SectionCard
+                        icon={<MapPin />}
+                        title="Geographic Position"
                         subtitle="Pinpoint your property on the map for higher buyer trust"
                         className={showSuggestions ? 'z-[100]' : 'z-10'}
                     >
@@ -452,6 +583,29 @@ const EditListing = () => {
                                             onChange={handleChange}
                                             className={inputCls}
                                             placeholder="e.g. Near Shiv Temple"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className={labelCls}>City / Town</label>
+                                        <input
+                                            type="text" name="city" required
+                                            value={formData.city}
+                                            onChange={handleChange}
+                                            className={inputCls}
+                                            placeholder="e.g. Ahmedabad"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Locality / Sub-Area</label>
+                                        <input
+                                            type="text" name="locality" required
+                                            value={formData.locality}
+                                            onChange={handleChange}
+                                            className={inputCls}
+                                            placeholder="e.g. Bopal"
                                         />
                                     </div>
                                 </div>
@@ -500,9 +654,9 @@ const EditListing = () => {
                                     <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
                                         Drop Pin on Precise Location
                                     </p>
-                                    <button 
-                                        type="button" 
-                                        onClick={detectMyLocation} 
+                                    <button
+                                        type="button"
+                                        onClick={detectMyLocation}
                                         className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all"
                                     >
                                         <Navigation size={12} /> Use My GPS Location

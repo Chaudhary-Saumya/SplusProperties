@@ -70,7 +70,7 @@ const MyVisits = () => {
                         <Building2 size={14} />
                         <span>Kharsan Properties</span>
                         <ChevronRight size={12} />
-                        <span>Visit Requests</span>
+                        <span>My Contact Requests</span>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
@@ -83,9 +83,9 @@ const MyVisits = () => {
                             </button>
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
-                                    Visit <span className="text-[#c9a84c]">Requests</span>
+                                    My <span className="text-[#c9a84c]">Contact Requests</span>
                                 </h1>
-                                <p className="text-white/50 font-medium mt-1 text-sm">Monitor your property tour schedule and status</p>
+                                <p className="text-white/50 font-medium mt-1 text-sm">Track all the contact requests you've sent to property sellers</p>
                             </div>
                         </div>
 
@@ -112,7 +112,7 @@ const MyVisits = () => {
                         </div>
                         <h2 className="text-2xl font-black text-[#1a2340] mb-2">No Requests Yet</h2>
                         <p className="text-[#1a2340]/50 max-w-md mx-auto mb-8 text-sm font-medium leading-relaxed">
-                            Once you request a site visit for a property, it will appear here so you can track its status.
+                            When you contact a seller about a property, your request will appear here so you can track whether the seller has connected with you.
                         </p>
                         <button
                             onClick={() => navigate('/search')}
@@ -125,7 +125,7 @@ const MyVisits = () => {
                     /* Inquiry list */
                     <div className="space-y-4">
                         {inquiries.map(inq => {
-                            const { dot, badge } = statusStyle(inq.status);
+                            const { dot, badge, label } = statusStyle(inq.status);
                             return (
                                 <div
                                     key={inq._id}
@@ -180,7 +180,7 @@ const MyVisits = () => {
                                         {/* Status badge */}
                                         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs border uppercase tracking-widest ${badge}`}>
                                             <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${dot}`}></div>
-                                            {inq.status}
+                                            {label}
                                         </div>
 
                                         {/* Call button (only when Contacted) */}

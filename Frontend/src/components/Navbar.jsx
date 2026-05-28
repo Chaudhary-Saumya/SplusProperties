@@ -131,13 +131,41 @@ const Navbar = () => {
           color: #b91c1c !important;
         }
 
+        /* Small Desktop / Laptop scaling */
+        @media (min-width: 1151px) and (max-width: 1350px) {
+          .nav-link, .nav-dropdown-btn {
+            font-size: 13px;
+            padding: 8px 10px;
+          }
+          .user-dropdown-btn {
+            padding: 6px 10px;
+            gap: 6px;
+          }
+          .user-name {
+            font-size: 14px;
+            max-width: 80px;
+          }
+          .navbar-inner {
+            padding: 0 16px;
+          }
+          .nav-divider {
+            margin: 0 3px;
+          }
+        }
+
         /* Mobile toggle */
         .hamburger { display: none; background: none; border: none; cursor: pointer; color: #1a2340; padding: 4px; }
-        @media (max-width: 900px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
+        @media (max-width: 1150px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
         .mobile-actions { display: none; align-items: center; gap: 16px; }
-        @media (max-width: 900px) { .mobile-actions { display: flex; } }
+        @media (max-width: 1150px) { .mobile-actions { display: flex; } }
         .mob-quick-link { color: #1a2340; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
         .mob-quick-link:hover { color: #c9a84c; }
+
+        @media (max-width: 640px) {
+          .logo-svg { height: 50px; }
+          .navbar-inner { height: 70px; padding: 0 16px; }
+          .mobile-menu { max-height: calc(100vh - 70px); }
+        }
 
         /* ── Mobile Menu ── */
         .mobile-menu { 
@@ -347,7 +375,7 @@ const Navbar = () => {
             {isAuthenticated && (
               <>
                 <Link to="/favorites" className="nav-link">My Favourites</Link>
-                <Link to="/my-visits" className="nav-link">Site Visits</Link>
+                <Link to="/my-visits" className="nav-link">Site Visit Request</Link>
               </>
             )}
 
@@ -439,7 +467,7 @@ const Navbar = () => {
             <>
               <span className="mob-category">My Account</span>
               <Link to="/favorites" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Favourites</Link>
-              <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>Site Visits</Link>
+              <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Contact Requests</Link>
 
               <span className="mob-category">Dashboard</span>
               <Link to="/dashboard?tab=overview" className="mob-sub-item" onClick={() => setIsOpen(false)}>Overview</Link>

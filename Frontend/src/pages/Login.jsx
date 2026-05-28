@@ -286,7 +286,7 @@ const Login = () => {
                         <p className="login-left-sub">
                             Access thousands of verified plots, commercial sites and residential land — all in one place with smart geospatial tools.
                         </p>
-                        <div className="login-trust-row">
+                        {/* <div className="login-trust-row">
                             {[
                                 { num: '2,400+', label: 'Listings' },
                                 { num: '180+', label: 'Cities' },
@@ -297,7 +297,7 @@ const Login = () => {
                                     <div className="login-trust-label">{label}</div>
                                 </div>
                             ))}
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 

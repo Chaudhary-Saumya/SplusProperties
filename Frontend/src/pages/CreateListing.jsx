@@ -3,11 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { 
-  UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2, 
-  IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff, 
-  LayoutDashboard, Eye, Edit3, PanelRightClose, PanelRightOpen, ExternalLink,
-  PlusCircle, Sparkles, Search as SearchIcon
+import {
+    UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2,
+    IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff,
+    LayoutDashboard, Eye, Edit3, PanelRightClose, PanelRightOpen, ExternalLink,
+    PlusCircle, Sparkles, Search as SearchIcon
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { useQuery } from '@tanstack/react-query';
@@ -22,9 +22,9 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
 });
 
 function MapSearch({ onSelect }) {
@@ -118,16 +118,14 @@ function MapRecenter({ position }) {
 
 // Step indicator pill
 const StepPill = ({ number, label, active, done }) => (
-    <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all border ${
-        done ? 'bg-[#c9a84c] text-[#1a2340] border-[#c9a84c]'
-        : active ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-        : 'bg-transparent text-[#1a2340]/40 border-[#1a2340]/20'
-    }`}>
-        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-            done ? 'bg-[#1a2340] text-[#c9a84c]'
-            : active ? 'bg-[#c9a84c] text-[#1a2340]'
-            : 'bg-[#1a2340]/10 text-[#1a2340]/40'
-        }`}>{done ? '✓' : number}</span>
+    <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all border ${done ? 'bg-[#c9a84c] text-[#1a2340] border-[#c9a84c]'
+            : active ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
+                : 'bg-transparent text-[#1a2340]/40 border-[#1a2340]/20'
+        }`}>
+        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${done ? 'bg-[#1a2340] text-[#c9a84c]'
+                : active ? 'bg-[#c9a84c] text-[#1a2340]'
+                    : 'bg-[#1a2340]/10 text-[#1a2340]/40'
+            }`}>{done ? '✓' : number}</span>
         {label}
     </div>
 );
@@ -157,7 +155,7 @@ const CreateListing = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showSidebar, setShowSidebar] = useState(true);
-    
+
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -171,7 +169,16 @@ const CreateListing = () => {
         payoutAccountId: '',
         locationMode: 'address',
         mapCoordinates: { lat: null, lng: null },
-        mapBounds: null
+        mapBounds: null,
+        propertyType: 'Plot',
+        plotType: 'None',
+        landType: 'None',
+        isAgricultural: false,
+        roadTouch: false,
+        cornerPlot: false,
+        isFeatured: false,
+        city: '',
+        locality: ''
     });
     const [payoutAccounts, setPayoutAccounts] = useState([]);
     const [suggestions, setSuggestions] = useState([]);
@@ -273,13 +280,19 @@ const CreateListing = () => {
                     }
                 }
             }
+            const isAgri = formData.propertyType === 'Land' 
+                ? (formData.landType === 'Agricultural')
+                : (formData.plotType === 'Agricultural' || formData.isAgricultural);
+
             const listingPayload = {
                 ...formData,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
                 images: uploadedImagePaths,
                 plotNumber: formData.plotNumber,
-                areaName: formData.areaName
+                areaName: formData.areaName,
+                isAgricultural: isAgri,
+                cornerPlot: formData.propertyType === 'Plot' ? formData.cornerPlot : false
             };
             await axios.post('/api/listings', listingPayload);
             toast.success('Listing successfully created!');
@@ -325,7 +338,7 @@ const CreateListing = () => {
                     </div>
 
                     <div className="hidden lg:flex items-center gap-4">
-                        <button 
+                        <button
                             onClick={() => setShowSidebar(!showSidebar)}
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-3 rounded-2xl transition-all border border-white/10 group"
                         >
@@ -338,14 +351,14 @@ const CreateListing = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
                 <div className="flex flex-col lg:flex-row gap-10 items-start">
-                    
-                    <motion.div 
+
+                    <motion.div
                         layout
                         className={`transition-all duration-500 w-full ${showSidebar ? 'lg:w-[65%]' : 'lg:w-full'}`}
                     >
                         {error && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -10 }} 
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="mb-8 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-3xl font-bold flex items-center gap-3"
                             >
@@ -372,6 +385,57 @@ const CreateListing = () => {
                                         />
                                     </div>
 
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label className={labelCls}>Property Category</label>
+                                            <select
+                                                name="propertyType"
+                                                value={formData.propertyType}
+                                                onChange={e => setFormData({ ...formData, propertyType: e.target.value, plotType: 'None', landType: 'None' })}
+                                                className={inputCls + ' cursor-pointer'}
+                                            >
+                                                <option value="Plot">Plot</option>
+                                                <option value="Land">Land</option>
+                                            </select>
+                                        </div>
+                                        {formData.propertyType === 'Plot' && (
+                                            <div>
+                                                <label className={labelCls}>Plot Sub-Type</label>
+                                                <select
+                                                    name="plotType"
+                                                    value={formData.plotType}
+                                                    onChange={e => setFormData({ ...formData, plotType: e.target.value })}
+                                                    className={inputCls + ' cursor-pointer'}
+                                                >
+                                                    <option value="None">Select Plot Type...</option>
+                                                    <option value="Residential">Residential</option>
+                                                    <option value="Commercial">Commercial</option>
+                                                    <option value="Industrial">Industrial</option>
+                                                    <option value="Agricultural">Agricultural</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                        )}
+                                        {formData.propertyType === 'Land' && (
+                                            <div>
+                                                <label className={labelCls}>Land Sub-Type</label>
+                                                <select
+                                                    name="landType"
+                                                    value={formData.landType}
+                                                    onChange={e => setFormData({ ...formData, landType: e.target.value })}
+                                                    className={inputCls + ' cursor-pointer'}
+                                                >
+                                                    <option value="None">Select Land Type...</option>
+                                                    <option value="Agricultural">Agricultural</option>
+                                                    <option value="Non-Agricultural">Non-Agricultural (NA)</option>
+                                                    <option value="Industrial">Industrial</option>
+                                                    <option value="Commercial">Commercial</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label className={labelCls}>Listing Price</label>
@@ -389,7 +453,7 @@ const CreateListing = () => {
                                             <label className={labelCls}>Total Area</label>
                                             <div className="flex gap-3">
                                                 <input
-                                                    type="number" required min="1"
+                                                    type="number" required min="0.001" step="any"
                                                     value={areaValue} onChange={(e) => setAreaValue(e.target.value)}
                                                     className={inputCls + ' w-2/3'}
                                                     placeholder="500"
@@ -415,12 +479,58 @@ const CreateListing = () => {
                                             placeholder="What makes this property special? Mention proximity to landmarks, soil quality, or future potential..."
                                         />
                                     </div>
+
+                                    <div>
+                                        <label className={labelCls}>Property Attributes</label>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
+                                            {formData.propertyType === 'Plot' && (
+                                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.cornerPlot}
+                                                        onChange={e => setFormData({ ...formData, cornerPlot: e.target.checked })}
+                                                        className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                    />
+                                                    <span className="text-xs font-bold text-[#1a2340]/70">Corner Plot</span>
+                                                </label>
+                                            )}
+                                            <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.roadTouch}
+                                                    onChange={e => setFormData({ ...formData, roadTouch: e.target.checked })}
+                                                    className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                />
+                                                <span className="text-xs font-bold text-[#1a2340]/70">Road Touch</span>
+                                            </label>
+                                            {formData.propertyType === 'Plot' && (
+                                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.isAgricultural}
+                                                        onChange={e => setFormData({ ...formData, isAgricultural: e.target.checked })}
+                                                        className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                    />
+                                                    <span className="text-xs font-bold text-[#1a2340]/70">Agricultural Plot</span>
+                                                </label>
+                                            )}
+                                            <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.isFeatured}
+                                                    onChange={e => setFormData({ ...formData, isFeatured: e.target.checked })}
+                                                    className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                />
+                                                <span className="text-xs font-bold text-[#1a2340]/70">Featured Listing</span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </SectionCard>
 
-                            <SectionCard 
-                                icon={<MapPin />} 
-                                title="Geographic Position" 
+                            <SectionCard
+                                icon={<MapPin />}
+                                title="Geographic Position"
                                 subtitle="Define exactly where your legacy stands"
                             >
                                 <div className="space-y-6">
@@ -429,18 +539,17 @@ const CreateListing = () => {
                                             { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
                                             { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> }
                                         ].map((method) => (
-                                            <button 
+                                            <button
                                                 key={method.id}
                                                 type="button"
                                                 onClick={() => {
                                                     setLocationMethod(method.id);
                                                     setFormData({ ...formData, locationMode: method.id });
                                                 }}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                                    locationMethod === method.id
-                                                    ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg'
-                                                    : 'text-[#1a2340]/50 hover:text-[#1a2340] hover:bg-white'
-                                                }`}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${locationMethod === method.id
+                                                        ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg'
+                                                        : 'text-[#1a2340]/50 hover:text-[#1a2340] hover:bg-white'
+                                                    }`}
                                             >
                                                 {method.icon} {method.label}
                                             </button>
@@ -468,6 +577,29 @@ const CreateListing = () => {
                                                         onChange={handleChange}
                                                         className={inputCls}
                                                         placeholder="e.g. Near Shiv Temple"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className={labelCls}>City / Town</label>
+                                                    <input
+                                                        type="text" name="city" required
+                                                        value={formData.city}
+                                                        onChange={handleChange}
+                                                        className={inputCls}
+                                                        placeholder="e.g. Ahmedabad"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className={labelCls}>Locality / Sub-Area</label>
+                                                    <input
+                                                        type="text" name="locality" required
+                                                        value={formData.locality}
+                                                        onChange={handleChange}
+                                                        className={inputCls}
+                                                        placeholder="e.g. Bopal"
                                                     />
                                                 </div>
                                             </div>
@@ -514,9 +646,9 @@ const CreateListing = () => {
                                                 <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
                                                     Drop Pin on Precise Location
                                                 </p>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={detectMyLocation} 
+                                                <button
+                                                    type="button"
+                                                    onClick={detectMyLocation}
                                                     className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
                                                 >
                                                     <Navigation size={12} /> Use My GPS Location
@@ -618,7 +750,7 @@ const CreateListing = () => {
                     {/* RIGHT COLUMN: My Portfolio Sidebar (30%) - PC Only */}
                     <AnimatePresence>
                         {showSidebar && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, x: 50 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 50 }}
@@ -683,7 +815,7 @@ const CreateListing = () => {
                                             ))}
                                         </div>
                                         <p className="text-[10px] font-bold text-[#1a2340]/40 leading-tight">
-                                            {myListingsData?.length || 0} active listings across <br/> 3 regional tiers.
+                                            {myListingsData?.length || 0} active listings across <br /> 3 regional tiers.
                                         </p>
                                     </div>
                                 </div>

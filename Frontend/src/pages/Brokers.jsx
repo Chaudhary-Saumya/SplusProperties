@@ -132,7 +132,7 @@ const Brokers = () => {
             `}</style>
 
             {/* Premium Navigation Strip */}
-            <div className="bg-[#1a2340] border-b border-[#c9a84c]/20 py-3 sticky top-[68px] z-30 shadow-sm px-6">
+            <div className="bg-[#1a2340] border-b border-[#c9a84c]/20 py-3 sticky top-[80px] z-30 shadow-sm px-6">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-[10px] font-black uppercase tracking-[0.3em]">
                         <Users size={12} /> Our Network <ChevronRight size={10} /> Verified Partners

@@ -72,7 +72,7 @@ const StatCard = ({
     </div>
     <div
       className="text-2xl font-black text-[#1a2340] mb-1"
-    
+
     >
       {value}
     </div>
@@ -88,7 +88,7 @@ const SectionHeader = ({ icon: Icon, title, action }) => (
   <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#f0ebe0]">
     <h2
       className="text-xl font-bold text-[#1a2340] flex items-center gap-2"
-   
+
     >
       <Icon size={20} className="text-[#c9a84c]" /> {title}
     </h2>
@@ -174,7 +174,6 @@ const Dashboard = () => {
   const transactions = transactionsData || [];
 
   /* ── Settings state ── */
-  const [showSettings, setShowSettings] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -338,6 +337,13 @@ const Dashboard = () => {
     try {
       await axios.patch(`/api/inquiries/${id}/status`, { status: newStatus });
       queryClient.invalidateQueries({ queryKey: ["dashboardInquiries"] });
+      if (newStatus === "Contacted") {
+        toast.success("Inquiry marked as Connected!");
+      } else if (newStatus === "Pending") {
+        toast.success("Inquiry status reverted to Pending");
+      } else {
+        toast.success(`Inquiry status updated to ${newStatus}`);
+      }
     } catch {
       toast.error("Failed to update inquiry status");
     }
@@ -348,7 +354,7 @@ const Dashboard = () => {
     if (!user) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfileForm({ name: user.name, email: user.email, phone: user.phone });
-    if (showSettings) fetchSessions();
+    if (activeSection === "settings") fetchSessions();
 
     const inv = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
@@ -377,7 +383,7 @@ const Dashboard = () => {
       socket.off("token_reserved", inv);
       socket.off("connect", inv);
     };
-  }, [user, showSettings, queryClient]);
+  }, [user, activeSection, queryClient]);
 
   if (loading || !user) {
     return (
@@ -395,13 +401,18 @@ const Dashboard = () => {
       label: user.role === "Buyer" ? "My Reserved Plots" : "My Listings",
       icon: List,
     },
-    { id: "transactions", label: "Token History", icon: History },
     ...(user.role === "Seller" || user.role === "Broker"
       ? [
           { id: "inquiries", label: "Received Inquiries", icon: Users },
+        ]
+      : []),
+    { id: "transactions", label: "Token History", icon: History },
+    ...(user.role === "Seller" || user.role === "Broker"
+      ? [
           { id: "payouts", label: "Payout Accounts", icon: Wallet },
         ]
       : []),
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -414,74 +425,102 @@ const Dashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Page Header */}
-        <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
+        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div>
-                <h1
-                  className="text-2xl sm:text-3xl font-bold text-[#1a2340]"
-                  style={{ fontFamily: "'Nunito Sans', serif" }}
-                >
-                  Welcome, {user.name}
-                </h1>
-                <span className="inline-block bg-[#1a2340] text-[#c9a84c] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mt-3">
-                  {user.role} Dashboard
-                </span>
-              </div>
-            </div>
+            <h1
+              className="text-2xl sm:text-3xl font-bold text-[#1a2340]"
+              style={{ fontFamily: "'Nunito Sans', serif" }}
+            >
+              Welcome, {user.name}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              Manage your property listings, buyers' inquiries, token payments, and account profile settings.
+            </p>
           </div>
 
           <div className="flex gap-2">
             {(user.role === "Seller" || user.role === "Broker") && (
               <Link
                 to="/create-listing"
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white text-sm font-bold rounded-lg transition-all uppercase tracking-wider shadow-sm"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white text-sm font-bold rounded-lg transition-all uppercase tracking-wider shadow-sm hover:scale-105"
               >
                 <Plus size={16} /> New Listing
               </Link>
             )}
-            <button
-              onClick={() => {
-                setShowSettings(!showSettings);
-                if (!showSettings) setActiveSection("overview");
-              }}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all border-2 ${
-                showSettings
-                  ? "bg-[#1a2340] text-[#c9a84c] border-[#1a2340]"
-                  : "bg-white text-[#1a2340] border-[#e2d9c5] hover:border-[#1a2340]"
-              }`}
-            >
-              {showSettings ? (
-                <LayoutDashboard size={16} />
-              ) : (
-                <Settings size={16} />
-              )}
-              {showSettings ? "Back to Dashboard" : "Settings"}
-            </button>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        {!showSettings && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSection(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all border-2 ${
-                  activeSection === tab.id
-                    ? "bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-md"
-                    : "bg-white text-[#1a2340] border-[#e2d9c5] hover:border-[#c9a84c]"
-                }`}
-              >
-                <tab.icon size={16} /> {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Sidebar (Desktop only) */}
+          <div className="hidden lg:col-span-3 lg:flex flex-col gap-6 sticky top-[100px]">
+            {/* User profile card */}
+            <div className="bg-white border border-[#e2d9c5] rounded-2xl p-5 shadow-xs flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#1a2340] text-[#c9a84c] font-black text-lg rounded-xl flex items-center justify-center shadow-inner shrink-0">
+                {user.name?.[0]?.toUpperCase() || "U"}
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-sm text-[#1a2340] truncate">{user.name}</h3>
+                <p className="text-[10px] font-extrabold uppercase text-[#c9a84c] tracking-wider">{user.role}</p>
+              </div>
+            </div>
 
-        {/* SETTINGS VIEW */}
-        {showSettings ? (
+            {/* Navigation Links */}
+            <div className="bg-white border border-[#e2d9c5] rounded-2xl p-3 shadow-xs flex flex-col gap-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeSection === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSection(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-left ${
+                      isActive
+                        ? "bg-[#1a2340] text-[#c9a84c]"
+                        : "text-slate-600 hover:bg-[#fdfaf5] hover:text-[#1a2340]"
+                    }`}
+                  >
+                    <Icon size={16} />
+                    <span className="flex-1">{tab.label}</span>
+                    {tab.id === "inquiries" && receivedInquiries.length > 0 && (
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        isActive ? "bg-[#c9a84c] text-[#1a2340]" : "bg-[#eff6ff] text-[#2563eb]"
+                      }`}>
+                        {receivedInquiries.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile Navigation & Main Content */}
+          <div className="col-span-1 lg:col-span-9 flex flex-col gap-6">
+            {/* Mobile Navigation Tabs (visible only on mobile) */}
+            <div className="lg:hidden flex gap-2 overflow-x-auto pb-3 scrollbar-none">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeSection === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSection(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all border-2 ${
+                      isActive
+                        ? "bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-sm"
+                        : "bg-white text-slate-600 border-[#e2d9c5]/60 hover:border-[#c9a84c]"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Section Render Area */}
+            <div className="animate-fade-in">
+              {activeSection === "settings" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Profile Info */}
             <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
@@ -663,11 +702,10 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-        ) : (
-          /* DASHBOARD SECTIONS */
-          <div>
-            {/* Overview */}
-            {activeSection === "overview" && (
+        )}
+
+        {/* DASHBOARD SECTIONS */}
+        {activeSection === "overview" && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
@@ -814,80 +852,80 @@ const Dashboard = () => {
                 ) : user.role === "Buyer" ? (
                   <div className="space-y-6">
                     {systemSettings?.isInstantBookingEnabled === false && listings.length === 0 && (
-                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                <ZapOff size={28} className="text-slate-400" />
-                            </div>
-                            <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">Booking System Disabled</h3>
-                            <p className="text-slate-500 font-medium max-w-sm mx-auto mb-6">
-                                The Instant Token Booking system is currently disabled by the administrator. Any future plots you reserve will appear here once the system is back online.
-                            </p>
-                            <button onClick={() => navigate('/search')} className="bg-[#1a2340] text-[#c9a84c] px-6 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all">
-                                Explore Properties
-                            </button>
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <ZapOff size={28} className="text-slate-400" />
                         </div>
+                        <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">Booking System Disabled</h3>
+                        <p className="text-slate-500 font-medium max-w-sm mx-auto mb-6">
+                          The Instant Token Booking system is currently disabled by the administrator. Any future plots you reserve will appear here once the system is back online.
+                        </p>
+                        <button onClick={() => navigate('/search')} className="bg-[#1a2340] text-[#c9a84c] px-6 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all">
+                          Explore Properties
+                        </button>
+                      </div>
                     )}
 
                     {(systemSettings?.isInstantBookingEnabled !== false || listings.length > 0) && listings.length === 0 ? (
-                        <EmptyState
-                            title="No Reserved Plots"
-                            desc="You haven't reserved any properties yet. Start exploring to find your dream plot."
-                            action={
-                                <Link
-                                    to="/search"
-                                    className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
-                                >
-                                    Explore Properties
-                                </Link>
-                            }
-                        />
+                      <EmptyState
+                        title="No Reserved Plots"
+                        desc="You haven't reserved any properties yet. Start exploring to find your dream plot."
+                        action={
+                          <Link
+                            to="/search"
+                            className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
+                          >
+                            Explore Properties
+                          </Link>
+                        }
+                      />
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {listings.map((l) => (
-                                <div
-                                    key={l._id}
-                                    className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl overflow-hidden shadow-sm group hover:border-[#c9a84c] transition-all hover:shadow-md"
-                                >
-                                    <div className="h-40 bg-[#e5e7eb] relative">
-                                        {l.images?.[0] ? (
-                                            <img
-                                                src={getImageUrl(l.images[0])}
-                                                alt=""
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-[#9ca3af]">
-                                                No image
-                                            </div>
-                                        )}
-                                        <div className="absolute top-3 left-3 bg-[#1a2340]/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-                                            <span className="text-[10px] font-black text-[#c9a84c] uppercase tracking-widest whitespace-nowrap">
-                                                Reserved
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <h3 className="font-bold text-[#1a2340] line-clamp-1 group-hover:text-[#c9a84c] transition-colors">
-                                            {l.title}
-                                        </h3>
-                                        <p className="text-xs text-[#9ca3af] font-600 flex items-center gap-1 mt-1">
-                                            <MapPin size={10} /> {l.plotNumber ? `Plot: ${l.plotNumber}, ` : ''}{l.areaName ? `Area: ${l.areaName}, ` : ''}{l.location}
-                                        </p>
-                                        <div className="flex items-center justify-between mt-4">
-                                            <div className="text-base font-black text-[#1a2340]">
-                                                ₹{l.price?.toLocaleString("en-IN")}
-                                            </div>
-                                            <Link
-                                                to={`/listings/${l._id}`}
-                                                className="text-[10px] font-black bg-[#1a2340] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all uppercase tracking-widest"
-                                            >
-                                                Details
-                                            </Link>
-                                        </div>
-                                    </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {listings.map((l) => (
+                          <div
+                            key={l._id}
+                            className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl overflow-hidden shadow-sm group hover:border-[#c9a84c] transition-all hover:shadow-md"
+                          >
+                            <div className="h-40 bg-[#e5e7eb] relative">
+                              {l.images?.[0] ? (
+                                <img
+                                  src={getImageUrl(l.images[0])}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-[#9ca3af]">
+                                  No image
                                 </div>
-                            ))}
-                        </div>
+                              )}
+                              <div className="absolute top-3 left-3 bg-[#1a2340]/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                <span className="text-[10px] font-black text-[#c9a84c] uppercase tracking-widest whitespace-nowrap">
+                                  Reserved
+                                </span>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-bold text-[#1a2340] line-clamp-1 group-hover:text-[#c9a84c] transition-colors">
+                                {l.title}
+                              </h3>
+                              <p className="text-xs text-[#9ca3af] font-600 flex items-center gap-1 mt-1">
+                                <MapPin size={10} /> {l.plotNumber ? `Plot: ${l.plotNumber}, ` : ''}{l.areaName ? `Area: ${l.areaName}, ` : ''}{l.location}
+                              </p>
+                              <div className="flex items-center justify-between mt-4">
+                                <div className="text-base font-black text-[#1a2340]">
+                                  ₹{l.price?.toLocaleString("en-IN")}
+                                </div>
+                                <Link
+                                  to={`/listings/${l._id}`}
+                                  className="text-[10px] font-black bg-[#1a2340] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all uppercase tracking-widest"
+                                >
+                                  Details
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -995,87 +1033,87 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-6">
                     {systemSettings?.isInstantBookingEnabled === false && transactions.length === 0 && (
-                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                <History size={28} className="text-slate-400" />
-                            </div>
-                            <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">History Unavailable</h3>
-                            <p className="text-slate-500 font-medium max-w-sm mx-auto">
-                                The Token Booking system is disabled. No new records can be created, and you have no previous transaction history.
-                            </p>
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <History size={28} className="text-slate-400" />
                         </div>
+                        <h3 className="text-xl font-black text-[#1a2340] mb-2 font-['Playfair Display']">History Unavailable</h3>
+                        <p className="text-slate-500 font-medium max-w-sm mx-auto">
+                          The Token Booking system is disabled. No new records can be created, and you have no previous transaction history.
+                        </p>
+                      </div>
                     )}
 
                     {(systemSettings?.isInstantBookingEnabled !== false || transactions.length > 0) && transactions.length === 0 ? (
-                        <EmptyState
-                            title="No Transactions"
-                            desc="Your payment history and receipts will appear here after your first reservation."
-                            action={<Link to="/search" className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider">Start Reservation</Link>}
-                        />
+                      <EmptyState
+                        title="No Transactions"
+                        desc="Your payment history and receipts will appear here after your first reservation."
+                        action={<Link to="/search" className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider">Start Reservation</Link>}
+                      />
                     ) : (
-                        <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-[#fdfaf5] border-b border-[#e2d9c5]">
-                                        <tr>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Property</th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Amount</th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Status</th>
-                                            <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[#f0ebe0]">
-                                        {transactions.map((t) => (
-                                          <React.Fragment key={t._id}>
-                                            <tr className="hidden md:table-row hover:bg-[#fdfaf5]/50">
-                                                <td className="p-4 min-w-[200px]">
-                                                    <p className="text-sm font-bold text-[#1a2340]">{t.listingId?.title}</p>
-                                                    <p className="text-[10px] text-[#9ca3af] font-600 mt-0.5">Ref: {t.razorpayOrderId}</p>
-                                                </td>
-                                                <td className="p-4 whitespace-nowrap">
-                                                    <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
-                                                    <p className="text-[10px] text-[#9ca3af] font-600">{new Date(t.createdAt).toLocaleDateString()}</p>
-                                                </td>
-                                                <td className="p-4">
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>
-                                                        {t.status}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg text-xs font-bold hover:bg-[#1a2340] hover:text-white transition-all ml-auto">
-                                                        <Receipt size={14} /> Receipt
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            {/* Mobile card */}
-                                            <tr className="md:hidden">
-                                                <td colSpan="4" className="p-2">
-                                                    <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
-                                                        <div className="flex justify-between items-start mb-3">
-                                                            <div>
-                                                                <p className="text-xs font-bold text-[#1a2340] line-clamp-1">{t.listingId?.title}</p>
-                                                                <p className="text-[9px] text-[#9ca3af] font-bold mt-0.5 uppercase tracking-wider">Ref: {t.razorpayOrderId}</p>
-                                                            </div>
-                                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>{t.status}</span>
-                                                        </div>
-                                                        <div className="flex items-end justify-between">
-                                                            <div>
-                                                                <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
-                                                                <p className="text-[10px] text-[#9ca3af] font-semibold">{new Date(t.createdAt).toLocaleDateString()}</p>
-                                                            </div>
-                                                            <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1 px-3 py-1.5 bg-[#1a2340] text-[#c9a84c] rounded-lg text-[10px] font-black uppercase tracking-widest">
-                                                                <Receipt size={12} /> Receipt
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                          </React.Fragment>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                      <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead className="bg-[#fdfaf5] border-b border-[#e2d9c5]">
+                              <tr>
+                                <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Property</th>
+                                <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Amount</th>
+                                <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell">Status</th>
+                                <th className="p-4 text-[10px] font-bold text-[#1a2340] uppercase tracking-widest hidden md:table-cell text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#f0ebe0]">
+                              {transactions.map((t) => (
+                                <React.Fragment key={t._id}>
+                                  <tr className="hidden md:table-row hover:bg-[#fdfaf5]/50">
+                                    <td className="p-4 min-w-[200px]">
+                                      <p className="text-sm font-bold text-[#1a2340]">{t.listingId?.title}</p>
+                                      <p className="text-[10px] text-[#9ca3af] font-600 mt-0.5">Ref: {t.razorpayOrderId}</p>
+                                    </td>
+                                    <td className="p-4 whitespace-nowrap">
+                                      <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
+                                      <p className="text-[10px] text-[#9ca3af] font-600">{new Date(t.createdAt).toLocaleDateString()}</p>
+                                    </td>
+                                    <td className="p-4">
+                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>
+                                        {t.status}
+                                      </span>
+                                    </td>
+                                    <td className="p-4 text-right">
+                                      <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg text-xs font-bold hover:bg-[#1a2340] hover:text-white transition-all ml-auto">
+                                        <Receipt size={14} /> Receipt
+                                      </button>
+                                    </td>
+                                  </tr>
+                                  {/* Mobile card */}
+                                  <tr className="md:hidden">
+                                    <td colSpan="4" className="p-2">
+                                      <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                          <div>
+                                            <p className="text-xs font-bold text-[#1a2340] line-clamp-1">{t.listingId?.title}</p>
+                                            <p className="text-[9px] text-[#9ca3af] font-bold mt-0.5 uppercase tracking-wider">Ref: {t.razorpayOrderId}</p>
+                                          </div>
+                                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>{t.status}</span>
+                                        </div>
+                                        <div className="flex items-end justify-between">
+                                          <div>
+                                            <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
+                                            <p className="text-[10px] text-[#9ca3af] font-semibold">{new Date(t.createdAt).toLocaleDateString()}</p>
+                                          </div>
+                                          <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1 px-3 py-1.5 bg-[#1a2340] text-[#c9a84c] rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                            <Receipt size={12} /> Receipt
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </React.Fragment>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1101,6 +1139,7 @@ const Dashboard = () => {
                           <tr className="border-b border-[#f0ebe0]">
                             <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Buyer</th>
                             <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Property</th>
+                            <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell">Status</th>
                             <th className="pb-3 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest pr-4 hidden md:table-cell text-right">Actions</th>
                           </tr>
                         </thead>
@@ -1124,9 +1163,25 @@ const Dashboard = () => {
                                     {inq.listingId?.title}
                                   </Link>
                                 </td>
+                                <td className="py-4 pr-4 hidden md:table-cell">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${inq.status === "Contacted" ? "bg-[#eff6ff] text-[#2563eb] border border-[#dbeafe]" :
+                                        "bg-[#fffbeb] text-[#d97706] border border-[#fef3c7]"
+                                    }`}>
+                                    {inq.status === "Contacted" ? "Connected" : inq.status}
+                                  </span>
+                                </td>
                                 <td className="py-4 text-right">
                                   <div className="flex items-center justify-end gap-1">
-                                    <button onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")} className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all" title="Toggle Status"><CheckCircle2 size={15} /></button>
+                                    <button
+                                      onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")}
+                                      className={`p-2 rounded-lg transition-all ${inq.status === "Contacted"
+                                          ? "text-[#2563eb] bg-[#eff6ff] hover:bg-[#dbeafe]"
+                                          : "text-gray-400 hover:bg-gray-100"
+                                        }`}
+                                      title={inq.status === "Contacted" ? "Mark as Pending" : "Mark as Connected"}
+                                    >
+                                      <CheckCircle2 size={15} />
+                                    </button>
                                     {inq.userId?.phone && (
                                       <a href={`tel:${inq.userId.phone}`} className="p-2 text-[#15803d] hover:bg-[#f0fdf4] rounded-lg transition-all" title="Call"><Phone size={15} /></a>
                                     )}
@@ -1146,9 +1201,18 @@ const Dashboard = () => {
                                     </div>
                                     <p className="text-xs font-bold text-[#9ca3af] mb-3 line-clamp-1">Property: {inq.listingId?.title}</p>
                                     <div className="flex items-center justify-between pt-3 border-t border-[#e2d9c5]/50">
-                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inq.status === "Contacted" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fffbeb] text-[#d97706]"}`}>{inq.status}</span>
+                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inq.status === "Contacted" ? "bg-[#eff6ff] text-[#2563eb]" :
+                                            "bg-[#fffbeb] text-[#d97706]"
+                                        }`}>{inq.status === "Contacted" ? "Connected" : inq.status}</span>
                                       <div className="flex gap-2">
-                                        <button onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")} className="p-2 bg-white border border-[#e2d9c5] text-[#2563eb] rounded-lg"><CheckCircle2 size={14} /></button>
+                                        <button
+                                          onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")}
+                                          className={`p-2 bg-white border border-[#e2d9c5] rounded-lg ${inq.status === "Contacted" ? "text-[#2563eb] border-[#dbeafe]" : "text-gray-400"
+                                            }`}
+                                          title={inq.status === "Contacted" ? "Mark as Pending" : "Mark as Connected"}
+                                        >
+                                          <CheckCircle2 size={14} />
+                                        </button>
                                         {inq.userId?.phone && <a href={`tel:${inq.userId.phone}`} className="p-2 bg-white border border-[#e2d9c5] text-[#15803d] rounded-lg"><Phone size={14} /></a>}
                                       </div>
                                     </div>
@@ -1242,8 +1306,9 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Add Payout Account Modal */}

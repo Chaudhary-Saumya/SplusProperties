@@ -124,10 +124,56 @@ const listingSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    reviews: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'Review'
-    }],
+    propertyType: {
+        type: String,
+        enum: ['Plot', 'Land'],
+        default: 'Plot'
+    },
+    plotType: {
+        type: String,
+        enum: ['Residential', 'Commercial', 'Industrial', 'Agricultural', 'Other', 'None'],
+        default: 'None'
+    },
+    landType: {
+        type: String,
+        enum: ['Agricultural', 'Non-Agricultural', 'Industrial', 'Commercial', 'Other', 'None'],
+        default: 'None'
+    },
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
+    roadTouch: {
+        type: Boolean,
+        default: false
+    },
+    cornerPlot: {
+        type: Boolean,
+        default: false
+    },
+    isAgricultural: {
+        type: Boolean,
+        default: false
+    },
+    ownerType: {
+        type: String,
+        enum: ['Owner', 'Broker'],
+        default: 'Owner'
+    },
+    city: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    locality: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    numericArea: {
+        type: Number,
+        default: 0
+    }
 }, {
     timestamps: true
 
@@ -150,17 +196,33 @@ listingSchema.index({ createdAt: -1 }); // Optimized for recency sorting
 listingSchema.index({ isVerified: 1 });
 listingSchema.index({ isTokened: 1 });
 listingSchema.index({ reviews: 1 });
+listingSchema.index({ city: 1, locality: 1 });
+listingSchema.index({ propertyType: 1, plotType: 1, landType: 1 });
+listingSchema.index({ price: 1, numericArea: 1 });
 
-// Generate slug from title before saving
+// Generate slug and extract numeric area before saving
 listingSchema.pre('save', async function() {
-    if (!this.isModified('title')) {
-        return;
+    // Slug generation
+    if (this.isModified('title')) {
+        const baseSlug = slugify(this.title, { lower: true, strict: true });
+        const uniqueId = Math.random().toString(36).substring(2, 6);
+        this.slug = `${baseSlug}-${uniqueId}`;
     }
-    
-    const baseSlug = slugify(this.title, { lower: true, strict: true });
-    // Append a short random string to ensure uniqueness while keeping it friendly
-    const uniqueId = Math.random().toString(36).substring(2, 6);
-    this.slug = `${baseSlug}-${uniqueId}`;
+
+    // Numeric area parsing (e.g. "500 Sq Ft" -> 500)
+    if (this.isModified('area') || this.isNew) {
+        if (this.area) {
+            const match = this.area.match(/([\d.,]+)/);
+            if (match) {
+                // Remove commas and parse
+                this.numericArea = parseFloat(match[1].replace(/,/g, '')) || 0;
+            } else {
+                this.numericArea = 0;
+            }
+        } else {
+            this.numericArea = 0;
+        }
+    }
 });
 
 module.exports = mongoose.model('Listing', listingSchema);

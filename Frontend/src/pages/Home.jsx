@@ -321,7 +321,7 @@ const Footer = () => {
           </div>
 
           {/* Right Side: Links */}
-          <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center md:text-left mt-4 lg:mt-0">
+          <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6 text-center sm:text-left mt-4 lg:mt-0">
             {/* Quick Links */}
             <div>
               <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Explore</h4>
@@ -361,14 +361,14 @@ const Footer = () => {
             {/* Contact */}
             <div>
               <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Contact</h4>
-              <div className="flex flex-col gap-4 items-center md:items-start">
+              <div className="flex flex-col gap-4 items-center sm:items-start">
                 <a href="mailto:support@kharsan.com" className="flex gap-3 items-center group">
                   <Mail size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold">support@kharsan.com</span>
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold break-all">support@kharsan.com</span>
                 </a>
                 <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="flex gap-3 items-center group">
                   <Globe size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold">properties.kharsan.com</span>
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold break-all">properties.kharsan.com</span>
                 </a>
               </div>
             </div>

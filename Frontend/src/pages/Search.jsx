@@ -45,12 +45,27 @@ const Toggle = ({ checked, onChange }) => (
 const Search = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAuthenticated } = useContext(AuthContext);
+    const { isAuthenticated, user } = useContext(AuthContext);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [isVerifiedOnly, setIsVerifiedOnly] = useState(false);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
-    const [filters, setFilters] = useState({ minPrice: '', maxPrice: '', minArea: '', maxArea: '' });
+    const [filters, setFilters] = useState({
+        minPrice: '',
+        maxPrice: '',
+        minArea: '',
+        maxArea: '',
+        city: '',
+        locality: '',
+        propertyType: '',
+        plotType: 'None',
+        landType: 'None',
+        ownerType: '',
+        roadTouch: false,
+        cornerPlot: false,
+        isAgricultural: '', // '', 'true', 'false'
+        isFeatured: false
+    });
     const [debouncedFilters, setDebouncedFilters] = useState(filters);
     const [isGeoMode, setIsGeoMode] = useState(false);
     const [userCoords, setUserCoords] = useState(null);
@@ -60,25 +75,60 @@ const Search = () => {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [wishlist, setWishlist] = useState(new Set());
+    const [accumulatedListings, setAccumulatedListings] = useState([]);
+
+    // ── Hydrate wishlist from authenticated user's saved favorites ──────────
+    useEffect(() => {
+        if (isAuthenticated && user?.favorites) {
+            const ids = user.favorites.map(fav =>
+                typeof fav === 'string' ? fav : (fav?._id || fav?.id)
+            ).filter(Boolean);
+            setWishlist(new Set(ids));
+        } else {
+            setWishlist(new Set());
+        }
+    }, [isAuthenticated, user?.favorites]);
+    const isFirstRender = useRef(true);
 
     const { data: resultData, isLoading, isError, error, refetch, isFetching } = useQuery({
-        queryKey: ['listings', searchTerm, isVerifiedOnly, debouncedFilters.minPrice, debouncedFilters.maxPrice, debouncedFilters.minArea, debouncedFilters.maxArea, sortBy, isGeoMode, userCoords, page],
+        queryKey: ['listings', searchTerm, isVerifiedOnly, debouncedFilters, sortBy, isGeoMode, userCoords, page],
         queryFn: async () => {
             let url = `/api/listings?page=${page}&limit=12&sort=${sortBy}`;
-            if (searchTerm) url += `&search=${searchTerm}`;
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
             if (isVerifiedOnly) url += `&listingType=Verified`;
-            if (debouncedFilters.minPrice) url += `&minPrice=${debouncedFilters.minPrice}`;
-            if (debouncedFilters.maxPrice) url += `&maxPrice=${debouncedFilters.maxPrice}`;
-            if (debouncedFilters.minArea) url += `&minArea=${debouncedFilters.minArea}`;
-            if (debouncedFilters.maxArea) url += `&maxArea=${debouncedFilters.maxArea}`;
-            if (isGeoMode && userCoords) url += `&lat=${userCoords.lat}&lng=${userCoords.lng}&radius=50`;
+
+            // Map active filters dynamically
+            Object.entries(debouncedFilters).forEach(([key, value]) => {
+                if (value !== '' && value !== null && value !== undefined && value !== false) {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+
+            if (isGeoMode && userCoords) {
+                url += `&lat=${userCoords.lat}&lng=${userCoords.lng}&radius=50`;
+            }
+
             const res = await axios.get(url);
             return res.data;
-        },
-        keepPreviousData: true,
+        }
     });
 
-    const listings = resultData?.data || [];
+    // Accumulate listings for infinite scroll
+    useEffect(() => {
+        if (resultData?.data) {
+            if (page === 1) {
+                setAccumulatedListings(resultData.data);
+            } else {
+                setAccumulatedListings(prev => {
+                    const existingIds = new Set(prev.map(item => item._id));
+                    const newItems = resultData.data.filter(item => !existingIds.has(item._id));
+                    return [...prev, ...newItems];
+                });
+            }
+        }
+    }, [resultData, page]);
+
+    const listings = page === 1 ? (resultData?.data || []) : accumulatedListings;
     const totalResults = resultData?.total || 0;
     const hasMore = listings.length < totalResults;
 
@@ -99,8 +149,68 @@ const Search = () => {
     };
 
     useEffect(() => {
-        const q = new URLSearchParams(location.search).get('query');
-        if (q) { setSearchTerm(q); setSearchInput(q); }
+        const params = new URLSearchParams(location.search);
+
+        // Synchronize search term
+        const q = params.get('query') || '';
+        setSearchTerm(q);
+        setSearchInput(q);
+
+        // Synchronize filters from URL parameters or defaults
+        const propType = params.get('propertyType') || '';
+        const plotT = params.get('plotType') || 'None';
+        const landT = params.get('landType') || 'None';
+        const minPrice = params.get('minPrice') || '';
+        const maxPrice = params.get('maxPrice') || '';
+        const minArea = params.get('minArea') || '';
+        const maxArea = params.get('maxArea') || '';
+        const city = params.get('city') || '';
+        const locality = params.get('locality') || '';
+        const ownerType = params.get('ownerType') || '';
+        const roadTouch = params.get('roadTouch') === 'true';
+        const cornerPlot = params.get('cornerPlot') === 'true';
+        const isAgricultural = params.get('isAgricultural') || '';
+        const isFeatured = params.get('isFeatured') === 'true';
+        const listingType = params.get('listingType') || '';
+
+        setFilters(prev => {
+            const hasChanged =
+                prev.minPrice !== minPrice ||
+                prev.maxPrice !== maxPrice ||
+                prev.minArea !== minArea ||
+                prev.maxArea !== maxArea ||
+                prev.city !== city ||
+                prev.locality !== locality ||
+                prev.propertyType !== propType ||
+                prev.plotType !== plotT ||
+                prev.landType !== landT ||
+                prev.ownerType !== ownerType ||
+                prev.roadTouch !== roadTouch ||
+                prev.cornerPlot !== cornerPlot ||
+                prev.isAgricultural !== isAgricultural ||
+                prev.isFeatured !== isFeatured;
+
+            if (!hasChanged) return prev;
+            return {
+                minPrice,
+                maxPrice,
+                minArea,
+                maxArea,
+                city,
+                locality,
+                propertyType: propType,
+                plotType: plotT,
+                landType: landT,
+                ownerType,
+                roadTouch,
+                cornerPlot,
+                isAgricultural,
+                isFeatured
+            };
+        });
+
+        const isVerifiedVal = listingType === 'Verified';
+        setIsVerifiedOnly(prev => prev === isVerifiedVal ? prev : isVerifiedVal);
     }, [location.search]);
 
     useEffect(() => {
@@ -116,7 +226,14 @@ const Search = () => {
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    useEffect(() => { setPage(1); }, [isVerifiedOnly, debouncedFilters, isGeoMode, userCoords, searchTerm]);
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        setPage(1);
+        setAccumulatedListings([]);
+    }, [isVerifiedOnly, debouncedFilters, isGeoMode, userCoords, searchTerm, sortBy]);
 
     const triggerGeoSearch = () => {
         if (isGeoMode) { setIsGeoMode(false); setUserCoords(null); return; }
@@ -136,38 +253,148 @@ const Search = () => {
             navigate('/login');
             return;
         }
+        const wasAdded = !wishlist.has(id);
+        // Optimistic update
+        setWishlist(prev => {
+            const s = new Set(prev);
+            s.has(id) ? s.delete(id) : s.add(id);
+            return s;
+        });
         try {
-            await axios.post(`/api/auth/favorites/${id}`);
+            const res = await axios.post(`/api/auth/favorites/${id}`);
+            // Sync user.favorites in context so page reloads stay consistent
+            if (user && res.data?.data) {
+                user.favorites = res.data.data;
+                // Re-hydrate the wishlist set from authoritative server state
+                const ids = res.data.data.map(fav =>
+                    typeof fav === 'string' ? fav : (fav?._id || fav?.id)
+                ).filter(Boolean);
+                setWishlist(new Set(ids));
+            }
+            toast.success(wasAdded ? 'Added to favorites!' : 'Removed from favorites');
+        } catch (err) {
+            // Revert optimistic update on error
             setWishlist(prev => {
                 const s = new Set(prev);
-                s.has(id) ? s.delete(id) : s.add(id);
+                wasAdded ? s.delete(id) : s.add(id);
                 return s;
             });
-            toast.success(wishlist.has(id) ? 'Removed from favorites' : 'Added to favorites!');
-        } catch (err) {
             toast.error('Failed to update favorites');
         }
     };
 
-    const resetFilters = () => { 
-        setFilters({ minPrice: '', maxPrice: '', minArea: '', maxArea: '' }); 
-        setIsVerifiedOnly(false); 
+    const resetFilters = () => {
+        setFilters({
+            minPrice: '',
+            maxPrice: '',
+            minArea: '',
+            maxArea: '',
+            city: '',
+            locality: '',
+            propertyType: '',
+            plotType: 'None',
+            landType: 'None',
+            ownerType: '',
+            roadTouch: false,
+            cornerPlot: false,
+            isAgricultural: '',
+            isFeatured: false
+        });
+        setIsVerifiedOnly(false);
     };
 
     const inputClass = "w-full px-3 py-2.5 bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg text-sm font-bold text-[#1a2340] placeholder-[#b0a898] focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all";
 
     /* ── Sidebar Filters ── */
     const filtersContent = (
-        <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0ebe0]">
+        <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0ebe0] flex-shrink-0">
                 <h3 className="text-sm font-bold text-[#1a2340] uppercase tracking-widest flex items-center gap-2">
                     <SlidersHorizontal size={15} className="text-[#c9a84c]" /> Filters
                 </h3>
                 <button onClick={resetFilters} className="text-xs font-bold text-[#c9a84c] hover:underline">Reset All</button>
             </div>
 
-            <div className="px-5">
-                <FilterSection title="Budget (₹)">
+            <div className="px-5 divide-y divide-[#f0ebe0] overflow-y-auto scrollbar-thin scrollbar-thumb-[#c9a84c]/20 scrollbar-track-transparent" style={{ flex: 1 }}>
+                <FilterSection title="Property Category" defaultOpen={false}>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Plot' ? '' : 'Plot', plotType: 'None', landType: 'None' }))}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Plot'
+                                    ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
+                                    : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
+                                }`}
+                        >
+                            Plots
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Land' ? '' : 'Land', plotType: 'None', landType: 'None' }))}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Land'
+                                    ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
+                                    : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
+                                }`}
+                        >
+                            Lands
+                        </button>
+                    </div>
+                </FilterSection>
+
+                {filters.propertyType === 'Plot' && (
+                    <FilterSection title="Plot Sub-Type" defaultOpen={false}>
+                        <select
+                            value={filters.plotType}
+                            onChange={e => setFilters(prev => ({ ...prev, plotType: e.target.value }))}
+                            className={inputClass}
+                        >
+                            <option value="None">All Plot Types</option>
+                            <option value="Residential">Residential</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Industrial">Industrial</option>
+                            <option value="Agricultural">Agricultural</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </FilterSection>
+                )}
+
+                {filters.propertyType === 'Land' && (
+                    <FilterSection title="Land Sub-Type" defaultOpen={false}>
+                        <select
+                            value={filters.landType}
+                            onChange={e => setFilters(prev => ({ ...prev, landType: e.target.value }))}
+                            className={inputClass}
+                        >
+                            <option value="None">All Land Types</option>
+                            <option value="Agricultural">Agricultural</option>
+                            <option value="Non-Agricultural">Non-Agricultural (NA)</option>
+                            <option value="Industrial">Industrial</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </FilterSection>
+                )}
+
+                <FilterSection title="Location Tiers" defaultOpen={false}>
+                    <div className="space-y-2">
+                        <input
+                            type="text"
+                            placeholder="City (e.g. Ahmedabad)"
+                            value={filters.city}
+                            onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))}
+                            className={inputClass}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Locality (e.g. Bopal)"
+                            value={filters.locality}
+                            onChange={e => setFilters(prev => ({ ...prev, locality: e.target.value }))}
+                            className={inputClass}
+                        />
+                    </div>
+                </FilterSection>
+
+                <FilterSection title="Budget (₹)" defaultOpen={false}>
                     <div className="space-y-2">
                         <div className="relative">
                             <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
@@ -180,19 +407,56 @@ const Search = () => {
                     </div>
                 </FilterSection>
 
-                {/* <FilterSection title="Area (Sq.Ft)">
+                <FilterSection title="Area (Sq.Ft / Acres)" defaultOpen={false}>
                     <div className="space-y-2">
                         <input type="number" placeholder="Min Area" value={filters.minArea} onChange={e => setFilters(p => ({ ...p, minArea: e.target.value }))} className={inputClass} />
                         <input type="number" placeholder="Max Area" value={filters.maxArea} onChange={e => setFilters(p => ({ ...p, maxArea: e.target.value }))} className={inputClass} />
                     </div>
-                </FilterSection> */}
+                </FilterSection>
 
-                {/* <FilterSection title="Listing Type">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-600 text-[#374151]">Verified Only</span>
-                        <Toggle checked={isVerifiedOnly} onChange={setIsVerifiedOnly} />
+                <FilterSection title="Attributes" defaultOpen={true}>
+                    <div className="space-y-3">
+                        {filters.propertyType === 'Plot' && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-[#1a2340]/75">Corner Plot</span>
+                                <Toggle checked={filters.cornerPlot} onChange={val => setFilters(prev => ({ ...prev, cornerPlot: val }))} />
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#1a2340]/75">Road Touch</span>
+                            <Toggle checked={filters.roadTouch} onChange={val => setFilters(prev => ({ ...prev, roadTouch: val }))} />
+                        </div>
+                        {filters.propertyType === 'Plot' && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-[#1a2340]/75">Agricultural Plot</span>
+                                <Toggle
+                                    checked={filters.isAgricultural === 'true' || filters.isAgricultural === true}
+                                    onChange={val => setFilters(prev => ({ ...prev, isAgricultural: val ? 'true' : '' }))}
+                                />
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#1a2340]/75">Verified Only</span>
+                            <Toggle checked={isVerifiedOnly} onChange={setIsVerifiedOnly} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#1a2340]/75">Featured Only</span>
+                            <Toggle checked={filters.isFeatured} onChange={val => setFilters(prev => ({ ...prev, isFeatured: val }))} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-[#1a2340]/50 uppercase tracking-widest">Creator Type</label>
+                            <select
+                                value={filters.ownerType}
+                                onChange={e => setFilters(prev => ({ ...prev, ownerType: e.target.value }))}
+                                className={inputClass}
+                            >
+                                <option value="">Any Creator</option>
+                                <option value="Owner">Owner</option>
+                                <option value="Broker">Builder/Broker</option>
+                            </select>
+                        </div>
                     </div>
-                </FilterSection> */}
+                </FilterSection>
             </div>
         </div>
     );
@@ -205,7 +469,7 @@ const Search = () => {
             <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
 
             {/* ── Sticky Search Bar ── */}
-            <div className="sticky top-[68px] z-30 bg-white/80 backdrop-blur-md border-b border-[#e2d9c5]/50 shadow-sm transition-all duration-300">
+            <div className="sticky top-[80px] z-30 bg-white/80 backdrop-blur-md border-b border-[#e2d9c5]/50 shadow-sm transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                         {/* Search Input Group */}
@@ -333,9 +597,9 @@ const Search = () => {
                         {/* Cards */}
                         {isError ? (
                             <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
-                        ) : (isLoading && page === 1 && listings.length === 0) ? (
+                        ) : ((isLoading || isFetching) && page === 1 && listings.length === 0) ? (
                             <div className="space-y-4">{[1, 2, 3].map(i => <ListingSkeleton key={i} variant="list" />)}</div>
-                        ) : listings.length === 0 ? (
+                        ) : (listings.length === 0 && (!resultData || (resultData.data && resultData.data.length === 0))) ? (
                             <EmptyState onAction={resetFilters} actionText="Clear All Filters" title="No Properties Found" message="Try adjusting your search criteria or clearing the filters." />
                         ) : (
                             <div className="space-y-4">
@@ -379,7 +643,7 @@ const Search = () => {
                                                 >
                                                     <Heart size={14} className={wishlist.has(listing._id) ? 'fill-red-500 text-red-500' : 'text-[#6b7280]'} />
                                                 </button>
-                                                <button 
+                                                <button
                                                     className="w-8 h-8 bg-[#25d366] rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
                                                     onClick={e => {
                                                         e.stopPropagation();
@@ -481,13 +745,13 @@ const Search = () => {
                                                     >
                                                         <Phone size={12} /> Contact
                                                     </button>
-                                                    <Link
+                                                    {/* <Link
                                                         to={`/listings/${listing._id}`}
                                                         onClick={e => e.stopPropagation()}
                                                         className="flex items-center gap-1.5 px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg text-xs font-bold transition-all"
                                                     >
                                                         View Number
-                                                    </Link>
+                                                    </Link> */}
                                                 </div>
                                             </div>
                                         </div>

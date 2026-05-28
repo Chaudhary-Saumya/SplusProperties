@@ -1,6 +1,7 @@
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const asyncHandler = require('../middlewares/async');
+const searchService = require('../services/searchService');
 
 // Helper to calculate distance in KM between two coordinates
 const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
@@ -18,173 +19,20 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
 // @desc    Get all listings
 // @route   GET /api/listings
 // @access  Public
+// @desc    Get all listings
+// @route   GET /api/listings
+// @access  Public
 exports.getListings = asyncHandler(async (req, res, next) => {
-    let query;
-
-    // Copy req.query
-    const reqQuery = { ...req.query };
-
-    // Fields to exclude
-    const removeFields = ['select', 'sort', 'page', 'limit', 'lat', 'lng', 'radius', 'search'];
-
-    // Loop over removeFields and delete them from reqQuery
-    removeFields.forEach(param => delete reqQuery[param]);
-
-    // Create query string
-    let queryStr = JSON.stringify(reqQuery);
-
-    // Create operators ($gt, $gte, etc)
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
-    
-    let parsedQuery = JSON.parse(queryStr);
-    
-    // Mount GeoSpatial Distance Sorting Algorithm
-    if (req.query.lat && req.query.lng) {
-        parsedQuery.geoSpatialLocation = {
-            $near: {
-                $geometry: {
-                    type: "Point",
-                    coordinates: [ parseFloat(req.query.lng), parseFloat(req.query.lat) ]
-                }
-            }
-        };
-        
-        // Optional bounding (defaults to no limits, returning everything inherently sorted by precise proximity)
-        if (req.query.radius) {
-            parsedQuery.geoSpatialLocation.$near.$maxDistance = parseFloat(req.query.radius) * 1000;
-        }
-    }
-    
-    if (req.query.search) {
-        parsedQuery.$text = { $search: req.query.search };
-    }
-
-    // Filter out tokened/reserved properties by default to keep search inventory fresh
-    if (!parsedQuery.isTokened) {
-        parsedQuery.isTokened = { $ne: true };
-    }
-    if (!parsedQuery.status) {
-        parsedQuery.status = { $ne: 'Reserved' };
-    }
-
-    // Explicitly handle Min/Max Price mapping
-    if (req.query.minPrice || req.query.maxPrice) {
-        parsedQuery.price = {};
-        if (req.query.minPrice) parsedQuery.price.$gte = Number(req.query.minPrice);
-        if (req.query.maxPrice) parsedQuery.price.$lte = Number(req.query.maxPrice);
-        delete parsedQuery.minPrice;
-        delete parsedQuery.maxPrice;
-    }
-
-    // Explicitly handle Min/Max Area mapping
-    if (req.query.minArea || req.query.maxArea) {
-        parsedQuery.numericArea = {};
-        if (req.query.minArea) parsedQuery.numericArea.$gte = Number(req.query.minArea);
-        if (req.query.maxArea) parsedQuery.numericArea.$lte = Number(req.query.maxArea);
-        delete parsedQuery.minArea;
-        delete parsedQuery.maxArea;
-    }
-
-    // Finding resource
-    console.log('Final Search Query:', JSON.stringify(parsedQuery, null, 2));
-    query = Listing.find(parsedQuery).select('-description -videos -documents').populate({
-        path: 'createdBy',
-        select: 'name email phone role'
-    });
-
-    // Sort (Avoid explicit sort overriding if $near geometry ranks by distance natively)
-    if (req.query.sort && !(req.query.lat && req.query.lng) && req.query.sort !== 'trending') {
-        const sortBy = req.query.sort.split(',').join(' ');
-        query = query.sort(sortBy);
-    } else if (!(req.query.lat && req.query.lng) && req.query.sort !== 'trending') {
-        query = query.sort('-createdAt');
-    }
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-
-    // Fix for MongoServerError: $geoNear, $near, and $nearSphere are not allowed in countDocuments
-    let countQuery = { ...parsedQuery };
-    if (countQuery.geoSpatialLocation && countQuery.geoSpatialLocation.$near) {
-        if (req.query.radius) {
-            countQuery.geoSpatialLocation = {
-                $geoWithin: {
-                    $centerSphere: [
-                        [ parseFloat(req.query.lng), parseFloat(req.query.lat) ],
-                        parseFloat(req.query.radius) / 6378.1 // Convert radius in km to radians
-                    ]
-                }
-            };
-        } else {
-            delete countQuery.geoSpatialLocation;
-        }
-    }
-
-    const total = await Listing.countDocuments(countQuery);
-    
-    // Production optimization: If total results are cached or known, we could skip count, 
-    // but for now, we keep it for accurate pagination.
-
-    // Executing query
-    let listings;
-    if (req.query.sort === 'trending') {
-        const trendingListings = await Listing.aggregate([
-            { $match: parsedQuery },
-            { 
-                $addFields: {
-                    trendingScore: {
-                        $add: [
-                            { $multiply: [{ $ifNull: ["$contacts", 0] }, 10] },
-                            { $multiply: [{ $ifNull: ["$favoritesCount", 0] }, 5] },
-                            { $ifNull: ["$views", 0] }
-                        ]
-                    }
-                }
-            },
-            { $sort: { trendingScore: -1 } },
-            { $skip: startIndex },
-            { $limit: limit },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'createdBy',
-                    foreignField: '_id',
-                    as: 'createdBy'
-                }
-            },
-            { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    'createdBy.password': 0,
-                    'createdBy.token': 0
-                }
-            }
-        ]);
-        listings = trendingListings;
-    } else {
-        // If Geospatial $near is active, DO NOT explicit sort as it breaks proximity ranking
-        if (req.query.lat && req.query.lng) {
-            query = query.skip(startIndex).limit(limit).lean();
-        } else {
-            query = query.skip(startIndex).limit(limit).sort('-createdAt').lean();
-        }
-        listings = await query;
-        // Convert to plain objects for distance calc if needed
-        listings = listings.map(l => (l.toObject ? l.toObject() : l));
-    }
-    console.log(`Found ${listings.length} listings for query.`);
+    // Search using Atlas Search (with Mongoose Aggregation fallback)
+    const results = await searchService.searchProperties(req.query);
+    let listings = results.data;
 
     // Attach distance if coordinates were provided
     if (req.query.lat && req.query.lng) {
         const userLat = parseFloat(req.query.lat);
         const userLng = parseFloat(req.query.lng);
-        
         listings = listings.map(listing => {
             if (listing.geoSpatialLocation && listing.geoSpatialLocation.coordinates) {
-                // GeoJSON format is [longitude, latitude]
                 const [lng, lat] = listing.geoSpatialLocation.coordinates;
                 listing.distance = getDistanceInKm(userLat, userLng, lat, lng);
             }
@@ -192,16 +40,20 @@ exports.getListings = asyncHandler(async (req, res, next) => {
         });
     }
 
-    // Pagination result
-    const pagination = {};
+    // Build pagination links for compatibility with old interface
+    const page = results.currentPage;
+    const limit = results.limit;
+    const total = results.total;
+    const endIndex = page * limit;
+    const startIndex = (page - 1) * limit;
 
+    const pagination = {};
     if (endIndex < total) {
         pagination.next = {
             page: page + 1,
             limit
         };
     }
-
     if (startIndex > 0) {
         pagination.prev = {
             page: page - 1,
@@ -213,6 +65,8 @@ exports.getListings = asyncHandler(async (req, res, next) => {
         success: true,
         count: listings.length,
         total,
+        totalPages: results.totalPages,
+        currentPage: page,
         pagination,
         data: listings
     });
@@ -225,29 +79,7 @@ exports.getSearchSuggestions = asyncHandler(async (req, res, next) => {
     const { q } = req.query;
     if (!q || q.length < 2) return res.status(200).json({ success: true, data: [] });
 
-    // Leverage Weighted $text index primarily
-    let results = await Listing.find(
-        { $text: { $search: q }, status: { $ne: 'Inactive' } },
-        { score: { $meta: "textScore" } }
-    )
-    .sort({ score: { $meta: "textScore" } })
-    .limit(8)
-    .select('title location price listingType images area');
-
-    // Fallback: If strict indexing fails, rely on robust multi-node regex engine
-    if (results.length === 0) {
-        results = await Listing.find({
-            status: { $ne: 'Inactive' },
-            $or: [
-                { title: { $regex: q, $options: 'i' } },
-                { location: { $regex: q, $options: 'i' } }
-            ]
-        })
-        .sort('-views')
-        .limit(8)
-        .select('title location price listingType images area');
-    }
-
+    const results = await searchService.getSearchSuggestions(q);
     res.status(200).json({ success: true, data: results });
 });
 
@@ -333,6 +165,9 @@ exports.recordView = asyncHandler(async (req, res, next) => {
 exports.createListing = asyncHandler(async (req, res, next) => {
     req.body.createdBy = req.user.id;
     
+    // Set Owner vs Broker type based on user role
+    req.body.ownerType = req.user.role === 'Broker' ? 'Broker' : 'Owner';
+    
     // Force Active status
     req.body.status = 'Active';
 
@@ -407,10 +242,14 @@ exports.updateListing = asyncHandler(async (req, res, next) => {
         };
     }
 
-    listing = await Listing.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true
-    });
+    // Prevent modifying core fields
+    delete req.body._id;
+    delete req.body.createdBy;
+
+    // Update listing fields
+    Object.assign(listing, req.body);
+
+    await listing.save();
 
     const io = req.app.get('io');
     if (io) {

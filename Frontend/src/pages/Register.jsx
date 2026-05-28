@@ -1,11 +1,12 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, User, Phone } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ const Register = () => {
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const [showManualForm, setShowManualForm] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -315,6 +317,59 @@ const Register = () => {
                     padding: 4px 12px; border-radius: 100px;
                     display: flex; align-items: center; gap: 4px;
                 }
+                .reg-btn-outline {
+                    width: 100%;
+                    padding: 14px;
+                    background: #fff;
+                    color: #1a2340;
+                    border: 1.5px solid #e2d9c5;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    font-family: 'Nunito Sans', sans-serif;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    box-sizing: border-box;
+                }
+                .reg-btn-outline:hover {
+                    background: #fdfaf5;
+                    border-color: #1a2340;
+                }
+                .reg-back-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: none;
+                    border: none;
+                    color: #c9a84c;
+                    font-size: 13px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    cursor: pointer;
+                    padding: 0;
+                    margin-bottom: 24px;
+                    transition: color 0.2s;
+                }
+                .reg-back-link:hover {
+                    color: #1a2340;
+                }
+                .reg-google-container {
+                    background: #fdfaf5;
+                    border: 1.5px dashed #e2d9c5;
+                    border-radius: 12px;
+                    padding: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
             `}</style>
 
             <div className="reg-page">
@@ -327,7 +382,7 @@ const Register = () => {
                         alt="Property"
                     />
                     <div className="reg-left-overlay">
-                        <div className="reg-left-tag">Join 12,000+ Happy Buyers</div>
+                        {/* <div className="reg-left-tag">Join 12,000+ Happy Buyers</div> */}
                         <h2 className="reg-left-heading">
                             Start Your Property<br />Journey Today
                         </h2>
@@ -354,145 +409,197 @@ const Register = () => {
 
                 {/* ── Right Panel ── */}
                 <div className="reg-right">
+                    <AnimatePresence mode="wait">
+                        {!showManualForm ? (
+                            <motion.div
+                                key="choice"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                                style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}
+                            >
+                                <h1 className="reg-title">Create Account</h1>
+                                <p className="reg-subtitle">Join Kharsan Properties — it's free & takes 2 minutes</p>
 
+                                {error && <div className="reg-error">⚠ {error}</div>}
 
-                    <h1 className="reg-title">Create Account</h1>
-                    <p className="reg-subtitle">Join Kharsan Properties — it's free & takes 2 minutes</p>
-
-                    {error && <div className="reg-error">⚠ {error}</div>}
-
-                    <form onSubmit={handleSubmit}>
-
-                        {/* Name + Phone */}
-                        <div className="reg-row">
-                            <div className="reg-field">
-                                <label className="reg-label">Full Name</label>
-                                <input
-                                    type="text" name="name" className="reg-input"
-                                    value={formData.name} onChange={handleChange}
-                                    placeholder="Your full name" required
-                                />
-                            </div>
-                            <div className="reg-field">
-                                <label className="reg-label">Phone Number</label>
-                                <input
-                                    type="tel" name="phone" className="reg-input"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="9876543210" required
-                                    maxLength="10"
-                                    pattern="[0-9]{10}"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Email */}
-                        <div className="reg-field">
-                            <label className="reg-label">Email Address</label>
-                            <input
-                                type="email" name="email" className="reg-input"
-                                value={formData.email} onChange={handleChange}
-                                placeholder="you@email.com" required
-                            />
-                        </div>
-
-                        {/* Role Selector */}
-                        <div className="reg-field">
-                            <label className="reg-label">I am a...</label>
-                            <div className="reg-role-grid">
-                                {roles.map(r => (
-                                    <div
-                                        key={r.value}
-                                        className={`reg-role-card ${formData.role === r.value ? 'selected' : ''}`}
-                                        onClick={() => setFormData(p => ({ ...p, role: r.value }))}
-                                    >
-                                        <div className="reg-role-icon">{r.icon}</div>
-                                        <div className="reg-role-name">{r.label}</div>
-                                        <div className="reg-role-desc">{r.desc}</div>
+                                {/* Google Sign-Up at the Top */}
+                                <div className="reg-google-container" style={{ marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#1a2340', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>
+                                        Quick Sign-Up
+                                    </span>
+                                    <div className="reg-google-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                        {Capacitor.isNativePlatform() ? (
+                                            <button
+                                                type="button"
+                                                className="reg-btn"
+                                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
+                                                onClick={async () => {
+                                                    try {
+                                                        await GoogleSignIn.initialize({
+                                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
+                                                        });
+                                                        const result = await GoogleSignIn.signIn();
+                                                        if (result.idToken) {
+                                                            handleGoogleSuccess(result.idToken);
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('Native Google Error:', err);
+                                                        setError('Google Registration Canceled or Failed');
+                                                    }
+                                                }}
+                                            >
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
+                                                Sign up with Google
+                                            </button>
+                                        ) : (
+                                            <GoogleLogin
+                                                onSuccess={res => handleGoogleSuccess(res.credential)}
+                                                onError={() => setError('Google Registration Failed')}
+                                                width="380"
+                                            />
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
 
-                        <div className="reg-field">
-                            <label className="reg-label">Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    className="reg-input"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Min. 6 characters"
-                                    required
-                                    minLength="6"
-                                    style={{ paddingRight: '45px' }}
-                                />
+                                <div className="reg-divider" style={{ margin: '12px 0 24px' }}>
+                                    <div className="reg-divider-line" />
+                                    <span className="reg-divider-text">Or Register Manually</span>
+                                    <div className="reg-divider-line" />
+                                </div>
+
+                                {/* Manual signup toggle */}
                                 <button
                                     type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    style={{
-                                        position: 'absolute', right: '12px', top: '50%',
-                                        transform: 'translateY(-50%)', background: 'none',
-                                        border: 'none', cursor: 'pointer', color: '#9ca3af',
-                                        display: 'flex', alignItems: 'center'
-                                    }}
+                                    onClick={() => setShowManualForm(true)}
+                                    className="reg-btn-outline"
+                                    style={{ marginBottom: '16px' }}
                                 >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    <Mail size={16} color="#c9a84c" />
+                                    <span>Sign Up with Email / Phone</span>
                                 </button>
-                            </div>
-                        </div>
 
-                        <button type="submit" className="reg-btn" disabled={loading}>
-                            {loading ? 'Creating Account...' : 'Create My Account →'}
-                        </button>
-                    </form>
-
-                    <div className="reg-divider">
-                        <div className="reg-divider-line" />
-                        <span className="reg-divider-text">or sign up with</span>
-                        <div className="reg-divider-line" />
-                    </div>
-
-                    <div className="reg-google-wrap">
-                        {Capacitor.isNativePlatform() ? (
-                            <button
-                                type="button"
-                                className="reg-btn"
-                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
-                                onClick={async () => {
-                                    try {
-                                        await GoogleSignIn.initialize({
-                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
-                                        });
-                                        const result = await GoogleSignIn.signIn();
-                                        if (result.idToken) {
-                                            handleGoogleSuccess(result.idToken);
-                                        }
-                                    } catch (err) {
-                                        console.error('Native Google Error:', err);
-                                        setError('Google Registration Canceled or Failed');
-                                    }
-                                }}
-                            >
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
-                                Sign up with Google
-                            </button>
+                                <p className="reg-footer" style={{ marginTop: '16px' }}>
+                                    Already have an account?
+                                    <Link to="/login">Sign In</Link>
+                                </p>
+                            </motion.div>
                         ) : (
-                            <GoogleLogin
-                                onSuccess={res => handleGoogleSuccess(res.credential)}
-                                onError={() => setError('Google Registration Failed')}
-                                width="380"
-                            />
+                            <motion.div
+                                key="manual"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setShowManualForm(false)}
+                                    className="reg-back-link"
+                                >
+                                    <ArrowLeft size={14} /> Use Google Sign-Up
+                                </button>
+
+                                <h1 className="reg-title">Register Manually</h1>
+                                <p className="reg-subtitle">Enter your profile and contact information</p>
+
+                                {error && <div className="reg-error">⚠ {error}</div>}
+
+                                <form onSubmit={handleSubmit}>
+                                    {/* Name + Phone */}
+                                    <div className="reg-row">
+                                        <div className="reg-field">
+                                            <label className="reg-label">Full Name</label>
+                                            <input
+                                                type="text" name="name" className="reg-input"
+                                                value={formData.name} onChange={handleChange}
+                                                placeholder="Your full name" required
+                                            />
+                                        </div>
+                                        <div className="reg-field">
+                                            <label className="reg-label">Phone Number</label>
+                                            <input
+                                                type="tel" name="phone" className="reg-input"
+                                                value={formData.phone}
+                                                onChange={handleChange}
+                                                placeholder="9876543210" required
+                                                maxLength="10"
+                                                pattern="[0-9]{10}"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="reg-field">
+                                        <label className="reg-label">Email Address</label>
+                                        <input
+                                            type="email" name="email" className="reg-input"
+                                            value={formData.email} onChange={handleChange}
+                                            placeholder="you@email.com" required
+                                        />
+                                    </div>
+
+                                    {/* Role Selector */}
+                                    <div className="reg-field">
+                                        <label className="reg-label">I am a...</label>
+                                        <div className="reg-role-grid">
+                                            {roles.map(r => (
+                                                <div
+                                                    key={r.value}
+                                                    className={`reg-role-card ${formData.role === r.value ? 'selected' : ''}`}
+                                                    onClick={() => setFormData(p => ({ ...p, role: r.value }))}
+                                                >
+                                                    <div className="reg-role-icon">{r.icon}</div>
+                                                    <div className="reg-role-name">{r.label}</div>
+                                                    <div className="reg-role-desc">{r.desc}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Password */}
+                                    <div className="reg-field">
+                                        <label className="reg-label">Password</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                className="reg-input"
+                                                value={formData.password}
+                                                onChange={handleChange}
+                                                placeholder="Min. 6 characters"
+                                                required
+                                                minLength="6"
+                                                style={{ paddingRight: '45px' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                style={{
+                                                    position: 'absolute', right: '12px', top: '50%',
+                                                    transform: 'translateY(-50%)', background: 'none',
+                                                    border: 'none', cursor: 'pointer', color: '#9ca3af',
+                                                    display: 'flex', alignItems: 'center'
+                                                }}
+                                            >
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" className="reg-btn" disabled={loading}>
+                                        {loading ? 'Creating Account...' : 'Create My Account →'}
+                                    </button>
+                                </form>
+
+                                <p className="reg-footer" style={{ marginTop: '24px' }}>
+                                    Already have an account?
+                                    <Link to="/login">Sign In</Link>
+                                </p>
+                            </motion.div>
                         )}
-                    </div>
-
-                    <p className="reg-footer">
-                        Already have an account?
-                        <Link to="/login">Sign In</Link>
-                    </p>
-
-                    
+                    </AnimatePresence>
                 </div>
             </div>
         </>

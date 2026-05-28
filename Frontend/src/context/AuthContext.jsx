@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
 
     // Set baseURL
     axios.defaults.baseURL = import.meta.env.VITE_API_URL;
-    
+
     // IMMEDIATELY set header if token exists to avoid race conditions on reload
     if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
     const login = async (identifier, password) => {
         const res = await axios.post('/api/auth/login', { email: identifier, password });
         const { token: newToken, user: newUser } = res.data;
-        
+
         // Update headers immediately
         axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         setToken(newToken);
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
     const googleLogin = async (credential) => {
         console.log('Sending ID Token to Backend:', credential ? (credential.substring(0, 20) + '...') : 'NULL');
         const res = await axios.post('/api/auth/google', { idToken: credential });
-        
+
         if (res.data.success) {
             const { token: newToken, user: newUser } = res.data;
             // Set token and headers immediately to authorize subsequent calls
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }) => {
             setToken(newToken);
             setUser(newUser);
         }
-        
+
         return res.data;
     };
 

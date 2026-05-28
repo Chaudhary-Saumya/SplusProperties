@@ -66,9 +66,7 @@ const addReview = asyncHandler(async (req, res) => {
     comment
   });
 
-  // Add review to listing
-  listing.reviews.push(review._id);
-  await listing.save();
+
 
   // Populate review
   await review.populate('user', 'name avatar role');
