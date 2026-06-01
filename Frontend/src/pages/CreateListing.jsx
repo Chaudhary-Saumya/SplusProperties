@@ -200,7 +200,7 @@ const CreateListing = () => {
         queryKey: ['myListings', user?._id],
         enabled: !!user,
         queryFn: async () => {
-            const res = await axios.get(`/api/listings?createdBy=${user._id || user.id}`);
+            const res = await axios.get('/api/listings/mine');
             return res.data.data;
         }
     });

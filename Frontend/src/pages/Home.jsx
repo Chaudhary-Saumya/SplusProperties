@@ -413,7 +413,7 @@ const Home = () => {
     queryKey: ['myListings', user?._id],
     enabled: !!user && (user.role === 'Seller' || user.role === 'Broker'),
     queryFn: async () => {
-      const res = await axios.get(`/api/listings?createdBy=${user._id || user.id}`);
+      const res = await axios.get('/api/listings/mine');
       return res.data.data;
     }
   });

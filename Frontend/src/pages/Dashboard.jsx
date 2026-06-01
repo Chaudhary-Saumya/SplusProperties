@@ -915,15 +915,9 @@ const Dashboard = () => {
                     {(systemSettings?.isInstantBookingEnabled !== false || listings.length > 0) && listings.length === 0 ? (
                       <EmptyState
                         title="No Reserved Plots"
-                        desc="You haven't reserved any properties yet. Start exploring to find your dream plot."
-                        action={
-                          <Link
-                            to="/search"
-                            className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider"
-                          >
-                            Explore Properties
-                          </Link>
-                        }
+                        message="You haven't reserved any properties yet. Start exploring to find your dream plot."
+                        actionText="Explore Properties"
+                        actionLink="/search"
                       />
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -974,6 +968,13 @@ const Dashboard = () => {
                       </div>
                     )}
                   </div>
+                ) : listings.length === 0 ? (
+                  <EmptyState
+                    title="Your portfolio is empty"
+                    message="Launch your first legacy property."
+                    actionText="Create Listing"
+                    actionLink="/create-listing"
+                  />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -1093,8 +1094,9 @@ const Dashboard = () => {
                     {(systemSettings?.isInstantBookingEnabled !== false || transactions.length > 0) && transactions.length === 0 ? (
                       <EmptyState
                         title="No Transactions"
-                        desc="Your payment history and receipts will appear here after your first reservation."
-                        action={<Link to="/search" className="px-6 py-2.5 bg-[#1a2340] text-[#c9a84c] font-bold text-sm rounded-lg uppercase tracking-wider">Start Reservation</Link>}
+                        message="Your payment history and receipts will appear here after your first reservation."
+                        actionText="Start Reservation"
+                        actionLink="/search"
                       />
                     ) : (
                       <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden">
