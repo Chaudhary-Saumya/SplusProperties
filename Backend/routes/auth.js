@@ -18,13 +18,40 @@ const {
     verifyOTP,
     resendOTP,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    deleteMyAccount
 } = require('../controllers/authController');
 const { protect } = require('../middlewares/auth');
 
 const { check } = require('express-validator');
 const validate = require('../middlewares/validator');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
+
+// Strict rate limits for OTP/sensitive auth endpoints
+const otpVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { success: false, error: 'Too many OTP attempts. Please wait 15 minutes before trying again.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const otpResendLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+    message: { success: false, error: 'Too many OTP resend requests. Please wait 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { success: false, error: 'Too many password reset requests. Please wait 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 router.post('/register', [
     check('name', 'Name is required').not().isEmpty(),
@@ -40,18 +67,18 @@ router.post('/login', [
     validate
 ], login);
 
-router.post('/verify-otp', [
+router.post('/verify-otp', otpVerifyLimiter, [
     check('email', 'Email is required').isEmail(),
     check('otp', 'OTP must be 6 digits').isLength({ min: 6, max: 6 }),
     validate
 ], verifyOTP);
 
-router.post('/resend-otp', [
+router.post('/resend-otp', otpResendLimiter, [
     check('email', 'Email is required').isEmail(),
     validate
 ], resendOTP);
 
-router.post('/forgot-password', [
+router.post('/forgot-password', forgotPasswordLimiter, [
     check('email', 'Please include a valid email').isEmail(),
     validate
 ], forgotPassword);
@@ -80,5 +107,8 @@ router.get('/logout', protect, logout);
 router.post('/payment-accounts', protect, addPaymentAccount);
 router.put('/payment-accounts/:id', protect, updatePaymentAccount);
 router.delete('/payment-accounts/:id', protect, deletePaymentAccount);
+
+// Account Deletion (user deletes own account)
+router.delete('/delete-account', protect, deleteMyAccount);
 
 module.exports = router;

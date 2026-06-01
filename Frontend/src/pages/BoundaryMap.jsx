@@ -15,6 +15,7 @@ import {
   AreaChart, Navigation, Layers, Plus, Palette, Share2, Copy, Check, ExternalLink, Search, ArrowRight
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import SEO from '../components/SEO';
 
 // ── Leaflet marker fix ───────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -479,6 +480,10 @@ const BoundaryMap = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden relative">
+      <SEO 
+        title="Interactive Boundary Mapping Tool" 
+        description="Draw, map, and export KML/coordinates for your land parcels using high-resolution satellite imagery." 
+      />
       <style>{`
         .gold-marker { pointer-events: auto !important; z-index: 1000 !important; }
         .gold-marker > div { cursor: grab !important; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }

@@ -161,6 +161,7 @@ const HeroCarousel = () => {
         key={current}
         src={slide.image}
         alt=""
+        fetchpriority="high"
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'center',
@@ -865,7 +866,7 @@ const Home = () => {
 
                   <div className="square-card-img-wrap">
                     {listing.images?.length > 0 ? (
-                      <img src={getImageUrl(listing.images[0])} alt={listing.title} className="square-card-img" />
+                      <img src={getImageUrl(listing.images[0])} alt={listing.title} className="square-card-img" loading="lazy" />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontWeight: 800, fontSize: 12 }}>NO IMAGE</div>
                     )}

@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Copy, CopyCheck, History, Zap, ArrowLeftRight, RotateCcw, Download, GripVertical } from 'lucide-react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
+import SEO from '../components/SEO';
 
 const AreaConverter = () => {
   const [values, setValues] = useState({});
   const [history, setHistory] = useState([]);
   const [topInputs, setTopInputs] = useState({ hectare: '', aare: '', sqm: '' });
+  const [reorderEnabled, setReorderEnabled] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const [orderedUnits, setOrderedUnits] = useState([
     { value: 'guntha', label: 'Guntha (Gutha)', type: 'area' },
@@ -256,6 +259,10 @@ const AreaConverter = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+      <SEO 
+        title="Smart Land Area Converter & Calculator" 
+        description="Convert land measurements instantly between Sq. Ft, Sq. Yards, Gaj, Acres, Hectares, and Sq. Meters." 
+      />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
@@ -272,9 +279,34 @@ const AreaConverter = () => {
 
         {/* Header */}
         <div className="text-center mb-6 sm:mb-10">
-          <span className="inline-block bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-2 sm:mb-3">
-            Property Tool
-          </span>
+         <div className="relative inline-block mb-2 sm:mb-3">
+  <button
+    onClick={() => setShowMenu(!showMenu)}
+    className="bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+  >
+    Presented by www.kharsan.com
+  </button>
+
+  {showMenu && (
+    <>
+      <div
+        className="fixed inset-0 z-40"
+        onClick={() => setShowMenu(false)}
+      />
+
+      <div className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white border rounded-lg shadow-lg z-50 min-w-[180px]">
+        <a
+          href="https://www.kharsan.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center px-4 py-3 text-sm font-medium hover:bg-gray-100"
+        >
+          🌐 Visit Website
+        </a>
+      </div>
+    </>
+  )}
+</div>
           <h1 className="text-2xl sm:text-4xl font-bold text-[#1a2340] mb-1 sm:mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
             Area Converter
           </h1>
@@ -292,6 +324,29 @@ const AreaConverter = () => {
             <RotateCcw size={14} />
             Reset All
           </button>
+
+          {/* Reorder Toggle */}
+          <button
+            onClick={() => setReorderEnabled(prev => !prev)}
+            className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 font-bold rounded-lg sm:rounded-xl transition-all shadow-sm text-xs sm:text-sm border-2 ${
+              reorderEnabled
+                ? 'bg-[#c9a84c] border-[#c9a84c] text-white shadow-[0_0_12px_rgba(201,168,76,0.4)]'
+                : 'bg-white border-[#e2d9c5] text-[#1a2340] hover:border-[#c9a84c] hover:text-[#c9a84c]'
+            }`}
+            title={reorderEnabled ? 'Click to lock unit order' : 'Click to enable drag reordering'}
+          >
+            <GripVertical size={14} />
+            <span>Reorder Units</span>
+            {/* Toggle pill */}
+            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-300 ${
+              reorderEnabled ? 'bg-white/30' : 'bg-[#e2d9c5]'
+            }`}>
+              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-300 ${
+                reorderEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+              }`} />
+            </span>
+          </button>
+
           <button
             onClick={handleExportPDF}
             className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#1a2340] to-[#2a3454] text-white font-bold rounded-lg sm:rounded-xl hover:from-[#c9a84c] hover:to-[#b8933a] transition-all shadow-md text-xs sm:text-sm"
@@ -337,38 +392,79 @@ const AreaConverter = () => {
             </div>
           )}
 
-          <Reorder.Group axis="y" values={orderedUnits} onReorder={setOrderedUnits} className="flex flex-col gap-1 sm:gap-3">
-            {orderedUnits.map((unit) => (
-              <Reorder.Item 
-                key={unit.value} 
-                value={unit}
-                className="flex items-center justify-between group bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-transparent hover:border-[#e2d9c5] transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
-                  <div className="cursor-grab active:cursor-grabbing text-[#e2d9c5] hover:text-[#c9a84c] transition-colors p-1">
-                    <GripVertical size={16} />
-                  </div>
-                  <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
-                    {unit.label}
-                  </label>
-                </div>
+          {/* Reorder hint banner */}
+          {reorderEnabled && (
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-xl text-xs font-bold text-[#b8933a]">
+              <GripVertical size={13} />
+              Drag units to reorder. Toggle off to lock the order.
+            </div>
+          )}
 
-                <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="any"
-                    value={values[unit.value] || ''}
-                    onChange={(e) => handleInputChange(unit.value, e.target.value)}
-                    className="w-full px-3 py-2 sm:px-5 sm:py-3 border-2 border-[#f0ebe0] rounded-lg sm:rounded-xl text-sm sm:text-lg font-bold text-right focus:outline-none focus:border-[#c9a84c] focus:ring-1 focus:ring-[#c9a84c]/10 transition-all bg-[#faf9f6]"
-                    placeholder="0.00"
-                  />
-                  <div className="hidden sm:block w-20 text-right text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider truncate">
-                    {unit.value.replace('vigha_', '').toUpperCase()}
+          {reorderEnabled ? (
+            <Reorder.Group axis="y" values={orderedUnits} onReorder={setOrderedUnits} className="flex flex-col gap-1 sm:gap-3">
+              {orderedUnits.map((unit) => (
+                <Reorder.Item
+                  key={unit.value}
+                  value={unit}
+                  className="flex items-center justify-between group bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-[#e2d9c5] hover:border-[#c9a84c] transition-colors cursor-grab active:cursor-grabbing shadow-sm"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
+                    <div className="text-[#c9a84c] p-1">
+                      <GripVertical size={16} />
+                    </div>
+                    <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
+                      {unit.label}
+                    </label>
+                  </div>
+                  <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      value={values[unit.value] || ''}
+                      onChange={(e) => handleInputChange(unit.value, e.target.value)}
+                      className="w-full px-3 py-2 sm:px-5 sm:py-3 border-2 border-[#f0ebe0] rounded-lg sm:rounded-xl text-sm sm:text-lg font-bold text-right focus:outline-none focus:border-[#c9a84c] focus:ring-1 focus:ring-[#c9a84c]/10 transition-all bg-[#faf9f6]"
+                      placeholder="0.00"
+                    />
+                    <div className="hidden sm:block w-20 text-right text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider truncate">
+                      {unit.value.replace('vigha_', '').toUpperCase()}
+                    </div>
+                  </div>
+                </Reorder.Item>
+              ))}
+            </Reorder.Group>
+          ) : (
+            <div className="flex flex-col gap-1 sm:gap-3">
+              {orderedUnits.map((unit) => (
+                <div
+                  key={unit.value}
+                  className="flex items-center justify-between bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-transparent hover:border-[#e2d9c5] transition-colors"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
+                    {/* Locked icon replaces drag handle */}
+                    <div className="text-[#d1d5db] p-1">
+                      <GripVertical size={16} />
+                    </div>
+                    <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
+                      {unit.label}
+                    </label>
+                  </div>
+                  <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      value={values[unit.value] || ''}
+                      onChange={(e) => handleInputChange(unit.value, e.target.value)}
+                      className="w-full px-3 py-2 sm:px-5 sm:py-3 border-2 border-[#f0ebe0] rounded-lg sm:rounded-xl text-sm sm:text-lg font-bold text-right focus:outline-none focus:border-[#c9a84c] focus:ring-1 focus:ring-[#c9a84c]/10 transition-all bg-[#faf9f6]"
+                      placeholder="0.00"
+                    />
+                    <div className="hidden sm:block w-20 text-right text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider truncate">
+                      {unit.value.replace('vigha_', '').toUpperCase()}
+                    </div>
                   </div>
                 </div>
-              </Reorder.Item>
-            ))}
-          </Reorder.Group>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* You can keep your Popular Conversions, History, and Formulas sections here */}

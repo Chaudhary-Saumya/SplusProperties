@@ -29,10 +29,27 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({ success: false, error: 'User no longer exists' });
         }
 
+        if (req.user.accountStatus && req.user.accountStatus !== 'Active') {
+            return res.status(403).json({
+                success: false,
+                error: `Account is ${req.user.accountStatus.toLowerCase()}. Please contact support.`
+            });
+        }
+
         next();
     } catch (err) {
         return res.status(401).json({ success: false, error: 'Not authorized to access this route' });
     }
+};
+
+exports.requireCompleteProfile = (req, res, next) => {
+    if (!req.user?.phone) {
+        return res.status(403).json({
+            success: false,
+            error: 'Please complete your profile with a mobile number before accessing this feature.'
+        });
+    }
+    next();
 };
 
 exports.optionalProtect = async (req, res, next) => {

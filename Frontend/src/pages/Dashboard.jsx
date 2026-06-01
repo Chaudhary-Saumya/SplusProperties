@@ -112,7 +112,7 @@ const Toggle = ({ checked, onChange }) => (
 /* ═══════════════════════════════════════════════════════════════════════════ */
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, deleteAccount } = useContext(AuthContext);
   const [activeSection, setActiveSection] = useState("overview");
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const queryClient = useQueryClient();
@@ -126,9 +126,9 @@ const Dashboard = () => {
         const res = await axios.get("/api/listings/my/tokened");
         return res.data.data;
       } else {
-        const res = await axios.get(
-          "/api/listings?createdBy=" + (user.id || user._id),
-        );
+        // Use the secure /mine endpoint — filtered by JWT identity on the server,
+        // not by an unenforced createdBy query param on the public search route.
+        const res = await axios.get("/api/listings/mine");
         return res.data.data;
       }
     },
@@ -190,6 +190,11 @@ const Dashboard = () => {
     new: false,
     confirm: false,
   });
+
+  /* ── Delete Account State ── */
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmPassword, setDeleteConfirmPassword] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /* ── Payout Account State ── */
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -330,6 +335,22 @@ const Dashboard = () => {
       });
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update password");
+    }
+  };
+
+  const handleDeleteAccountConfirm = async (e) => {
+    e.preventDefault();
+    setIsDeleting(true);
+    try {
+      await deleteAccount(deleteConfirmPassword);
+      toast.success("Account deleted successfully. Goodbye!");
+      navigate("/login");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete account. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeleteConfirmPassword("");
     }
   };
 
@@ -699,6 +720,31 @@ const Dashboard = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Danger Zone (Delete Account) */}
+            <div className="bg-white border border-red-200 rounded-xl p-6 shadow-sm lg:col-span-2">
+              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-red-100">
+                <h2 className="text-xl font-bold text-[#b91c1c] flex items-center gap-2">
+                  <Trash2 size={20} className="text-[#b91c1c]" /> Danger Zone
+                </h2>
+              </div>
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-slate-600">
+                  Once you delete your account, all of your listings, inquiries, token payments, and saved maps will be permanently deleted. This action is irreversible.
+                </p>
+                <div className="bg-[#fef2f2] border border-[#fecaca] rounded-lg p-4 text-xs text-[#b91c1c] font-bold flex flex-col gap-2">
+                  <span>⚠️ Apple App Store & Google Play guidelines require account self-deletion to be fully supported.</span>
+                  <span>Confirming this will purge your data and revoke your login access immediately.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-5 py-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
+                >
+                  Delete My Account
+                </button>
               </div>
             </div>
           </div>
@@ -1385,6 +1431,71 @@ const Dashboard = () => {
                 {editingAccountId ? <Edit size={16} /> : <Plus size={16} />}
                 {editingAccountId ? "Update Account" : "Save Account"}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a2340]/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-red-100">
+            <div className="h-1 w-full bg-linear-to-r from-[#ef4444] via-[#f87171] to-[#ef4444]" />
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0]">
+              <h3 className="text-lg font-bold text-[#b91c1c] flex items-center gap-2">
+                <Trash2 size={18} /> Confirm Account Deletion
+              </h3>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmPassword(""); }}
+                className="text-[#9ca3af] hover:text-[#1a2340] p-1.5 hover:bg-[#f8f5ee] rounded-lg transition-all"
+                disabled={isDeleting}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleDeleteAccountConfirm} className="p-6 space-y-4">
+              <p className="text-xs font-bold text-slate-500">
+                Are you absolutely sure you want to delete your account? All listings, inquiries, token histories, and user profile data will be permanently wiped.
+              </p>
+              
+              {!user?.googleId && (
+                <div>
+                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
+                    Enter Password to Confirm
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    className={inp}
+                    placeholder="Enter your current password"
+                    value={deleteConfirmPassword}
+                    onChange={(e) => setDeleteConfirmPassword(e.target.value)}
+                    disabled={isDeleting}
+                  />
+                </div>
+              )}
+
+              <div className="bg-[#fff5f5] border border-[#fed7d7] rounded-lg p-3 text-xs text-[#c53030] font-bold">
+                ⚠️ This action cannot be undone. Please proceed with caution.
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteModal(false); setDeleteConfirmPassword(""); }}
+                  className="flex-1 py-3 border border-[#e2d9c5] hover:bg-[#f8f5ee] text-[#1a2340] font-bold rounded-lg transition-all uppercase tracking-widest text-xs"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </div>
             </form>
           </div>
         </div>

@@ -338,6 +338,8 @@ const Navbar = () => {
               <button
                 className={`nav-dropdown-btn ${activeDropdown === 'search' ? 'active' : ''}`}
                 onMouseEnter={() => setActiveDropdown('search')}
+                aria-haspopup="true"
+                aria-expanded={activeDropdown === 'search'}
               >
                 Properties <ChevronDown size={14} className={`chevron ${activeDropdown === 'search' ? 'open' : ''}`} />
               </button>
@@ -359,6 +361,8 @@ const Navbar = () => {
               <button
                 className={`nav-dropdown-btn ${activeDropdown === 'tools' ? 'active' : ''}`}
                 onMouseEnter={() => setActiveDropdown('tools')}
+                aria-haspopup="true"
+                aria-expanded={activeDropdown === 'tools'}
               >
                 Tools <ChevronDown size={14} className={`chevron ${activeDropdown === 'tools' ? 'open' : ''}`} />
               </button>
@@ -389,6 +393,8 @@ const Navbar = () => {
                     className="user-dropdown-btn"
                     onMouseEnter={() => setActiveDropdown('user')}
                     onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
+                    aria-haspopup="true"
+                    aria-expanded={activeDropdown === 'user'}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <span className="user-name">{user.name.split(' ')[0]}</span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall, Settings, Zap, ZapOff, Search } from 'lucide-react';
+import { Shield, Home, Users as UsersIcon, FileText, CheckCircle, MapPin, Activity, LayoutDashboard, PhoneCall, Settings, Zap, ZapOff, Search, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Admin = () => {
@@ -13,6 +13,7 @@ const Admin = () => {
     const [settings, setSettings] = useState([]);
     const [updatingSetting, setUpdatingSetting] = useState(null);
     const [selectedUserRole, setSelectedUserRole] = useState('All');
+    const [userActionLoadingId, setUserActionLoadingId] = useState(null);
     
     // Pagination states
     const [usersPage, setUsersPage] = useState(1);
@@ -48,7 +49,6 @@ const Admin = () => {
                     
                     {(() => {
                         const pages = [];
-                        const maxVisible = 5;
                         
                         if (totalPages <= 7) {
                             for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -139,9 +139,69 @@ const Admin = () => {
                 toast.success('Setting updated successfully');
             }
         } catch (err) {
-            toast.error('Failed to update setting');
+            toast.error(err.response?.data?.error || 'Failed to update setting');
         } finally {
             setUpdatingSetting(null);
+        }
+    };
+
+    const updateUserInState = (updatedUser) => {
+        setData((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                users: prev.users.map((u) => (u._id === updatedUser._id ? { ...u, ...updatedUser } : u))
+            };
+        });
+    };
+
+    const removeUserFromState = (userId) => {
+        setData((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                users: prev.users.filter((u) => u._id !== userId)
+            };
+        });
+    };
+
+    const handleUpdateUserStatus = async (targetUser, nextStatus) => {
+        if (!targetUser?._id) return;
+        const confirmed = window.confirm(
+            `Set account status of ${targetUser.name} to ${nextStatus}?`
+        );
+        if (!confirmed) return;
+
+        setUserActionLoadingId(targetUser._id);
+        try {
+            const res = await axios.put(`/api/users/${targetUser._id}`, { accountStatus: nextStatus });
+            if (res.data?.success) {
+                updateUserInState(res.data.data);
+                toast.success(`User status updated to ${nextStatus}`);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to update account status');
+        } finally {
+            setUserActionLoadingId(null);
+        }
+    };
+
+    const handleDeleteUser = async (targetUser) => {
+        if (!targetUser?._id) return;
+        const confirmed = window.confirm(`Delete account for ${targetUser.name}? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        setUserActionLoadingId(targetUser._id);
+        try {
+            const res = await axios.delete(`/api/users/${targetUser._id}`);
+            if (res.data?.success) {
+                removeUserFromState(targetUser._id);
+                toast.success('User account deleted');
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to delete account');
+        } finally {
+            setUserActionLoadingId(null);
         }
     };
 
@@ -171,7 +231,7 @@ const Admin = () => {
     return (
         <div className="animate-fade-in flex h-[calc(100vh-80px)] overflow-hidden bg-slate-50">
             {/* Sidebar */}
-            <div className="w-64 bg-white border-r border-slate-200 flex flex-col p-4 shadow-sm z-10 hidden md:flex">
+            <div className="hidden md:flex md:flex-col w-64 bg-white border-r border-slate-200 p-4 shadow-sm z-10">
                 <h2 className="text-xl font-['Outfit'] font-bold text-slate-800 mb-8 flex items-center gap-2 px-2 pt-4">
                     <Shield className="text-blue-600" /> Admin Station
                 </h2>
@@ -305,6 +365,7 @@ const Admin = () => {
                                             <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name & Email</th>
                                             <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
                                             <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
+                                            <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Account Control</th>
                                             <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Properties Listed</th>
                                         </tr>
                                     </thead>
@@ -332,6 +393,49 @@ const Admin = () => {
                                                     }`}>
                                                         {u.role}
                                                     </span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex flex-col items-start gap-2">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-black whitespace-nowrap ${
+                                                            (u.accountStatus || 'Active') === 'Active'
+                                                                ? 'bg-emerald-100 text-emerald-800'
+                                                                : (u.accountStatus || 'Active') === 'Suspended'
+                                                                    ? 'bg-amber-100 text-amber-800'
+                                                                    : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {u.accountStatus || 'Active'}
+                                                        </span>
+                                                        {u.role !== 'Admin' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <select
+                                                                    value={u.accountStatus || 'Active'}
+                                                                    disabled={userActionLoadingId === u._id}
+                                                                    onChange={(e) => {
+                                                                        const selectedStatus = e.target.value;
+                                                                        const currentStatus = u.accountStatus || 'Active';
+                                                                        if (selectedStatus === currentStatus) return;
+                                                                        handleUpdateUserStatus(u, selectedStatus);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:border-blue-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                                                >
+                                                                    <option value="Active">Active</option>
+                                                                    <option value="Disabled">Disabled</option>
+                                                                    <option value="Suspended">Suspended</option>
+                                                                </select>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={userActionLoadingId === u._id}
+                                                                    onClick={() => handleDeleteUser(u)}
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-red-50 text-red-700 border-red-200 hover:bg-red-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs font-semibold text-slate-400">Protected admin account</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-4 text-center font-black text-slate-700">
                                                     {u.listingCount > 0 ? (
@@ -398,7 +502,7 @@ const Admin = () => {
                                                 <td className="p-4 min-w-[200px]">
                                                     <p className="font-bold text-slate-900 truncate max-w-xs">{l.title}</p>
                                                     <p className="text-sm text-slate-500 flex items-center gap-1 mt-1 truncate max-w-xs">
-                                                        <MapPin size={12} className="text-blue-400 flex-shrink-0" /> {l.location}
+                                                        <MapPin size={12} className="text-blue-400 shrink-0" /> {l.location}
                                                     </p>
                                                 </td>
                                                 <td className="p-4 text-sm font-medium text-slate-700 whitespace-nowrap">{l.createdBy?.name || 'Unknown'}</td>

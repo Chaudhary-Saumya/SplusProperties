@@ -317,8 +317,9 @@ const Login = () => {
                     {/* Form */}
                     <form onSubmit={handleSubmit}>
                         <div className="login-field">
-                            <label className="login-label">Email or Phone Number</label>
+                            <label htmlFor="identifier" className="login-label">Email or Phone Number</label>
                             <input
+                                id="identifier"
                                 type="text"
                                 name="identifier"
                                 className="login-input"
@@ -330,9 +331,10 @@ const Login = () => {
                         </div>
 
                         <div className="login-field">
-                            <label className="login-label">Password</label>
+                            <label htmlFor="password" className="login-label">Password</label>
                             <div style={{ position: 'relative' }}>
                                 <input
+                                    id="password"
                                     type={showPassword ? "text" : "password"}
                                     name="password"
                                     className="login-input"

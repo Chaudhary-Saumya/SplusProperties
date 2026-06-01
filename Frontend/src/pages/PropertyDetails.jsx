@@ -453,6 +453,7 @@ const PropertyDetails = () => {
                                         <img
                                             src={getImageUrl(listing.images[mainImageIndex])}
                                             alt={listing.title}
+                                            fetchpriority="high"
                                             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
                                         />
                                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 flex items-end justify-between">
@@ -490,7 +491,7 @@ const PropertyDetails = () => {
                                                     : 'border-slate-100 opacity-70 hover:opacity-100 hover:scale-98'
                                                 }`}
                                         >
-                                            <img src={getImageUrl(img)} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                                            <img src={getImageUrl(img)} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" loading="lazy" />
                                         </button>
                                     ))}
                                 </div>

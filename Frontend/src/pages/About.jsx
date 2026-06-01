@@ -158,7 +158,7 @@ const About = () => {
               <div className="relative p-10 bg-[#f8f5ee] rounded-[3rem] border border-[#e2d9c5]">
                 <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start text-center sm:text-left">
                   <div className="space-y-4">
-                    <h3 className="text-2xl font-black text-[#1a2340]">Saumya Chaudhary</h3>
+                    <h3 className="text-2xl font-black text-[#1a2340]">Mr. Saumya</h3>
                     <p className="text-[#c9a84c] font-black text-xs tracking-widest uppercase">Founder & Lead Creator</p>
                     <p className="text-slate-600 font-medium italic text-lg leading-relaxed">
                       "We are building a digital legacy where technological precision meets the timeless value of land."
@@ -176,7 +176,7 @@ const About = () => {
               <div className="relative p-10 bg-[#1a2340] rounded-[3rem] text-white">
                 <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start text-center sm:text-left">
                   <div className="space-y-4">
-                    <h3 className="text-2xl font-black">Ashvin Chaudhary</h3>
+                    <h3 className="text-2xl font-black">Mr. Ashvin</h3>
                     <p className="text-[#c9a84c] font-black text-xs tracking-widest uppercase">Visionary Architect</p>
                     <p className="text-slate-300 font-medium text-lg leading-relaxed">
                       The core architect of the Kharsan vision, ensuring strategic direction and operational integrity.
@@ -201,6 +201,7 @@ const About = () => {
               <img 
                 src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200" 
                 alt="Modern Corporate Building" 
+                loading="lazy"
                 className="relative z-10 w-full aspect-[4/5] object-cover rounded-[3rem] shadow-2xl"
               />
               <div className="absolute bottom-10 -left-10 z-20 bg-white p-8 rounded-3xl shadow-xl max-w-xs border border-[#e2d9c5] hidden md:block">

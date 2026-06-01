@@ -6,6 +6,7 @@ import EmptyState from '../components/EmptyState';
 import ErrorBox from '../components/ErrorBox';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEO from '../components/SEO';
 
 /* ─── Broker Card ─────────────────────────────────────────────────────────── */
 const BrokerCard = ({ broker, onClick }) => (
@@ -126,6 +127,10 @@ const Brokers = () => {
 
     return (
         <div className="min-h-screen bg-[#fcfaf5]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+            <SEO 
+                title="Verified Real Estate Brokers & Agents" 
+                description="Connect with authorized real estate agents and land brokers who can assist with physical site visits and registry verification." 
+            />
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
                 .premium-text { font-family: 'Playfair Display', serif; }

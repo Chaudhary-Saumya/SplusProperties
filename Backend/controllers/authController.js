@@ -1,10 +1,12 @@
 const User = require('../models/User');
+const { deleteUserAndRelatedData } = require('../utils/userCleanup');
 const Session = require('../models/Session');
 const asyncHandler = require('../middlewares/async');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const sendEmail = require('../utils/sendEmail');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const ALLOWED_ROLES = ['Buyer', 'Seller', 'Broker'];
 
 // Get token from model, create token and send response
 const sendTokenResponse = async (user, statusCode, res, req) => {
@@ -39,7 +41,15 @@ const sendTokenResponse = async (user, statusCode, res, req) => {
     res.status(statusCode).json({
         success: true,
         token,
-        user: { id: user._id, name: user.name, email: user.email, role: user.role }
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone,
+            accountStatus: user.accountStatus,
+            isVerified: user.isVerified
+        }
     });
 };
 
@@ -50,27 +60,28 @@ exports.register = asyncHandler(async (req, res, next) => {
     const { name, email, password, role, phone } = req.body;
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await User.hashOTP(plainOTP);
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     const user = await User.create({
         name, email, password, role, phone,
-        otp,
+        otp: hashedOTP,
         otpExpire
     });
 
-    // Send OTP via Email
+    // Send OTP via Email (send plain OTP to user, store hashed)
     try {
         await sendEmail({
             email: user.email,
             subject: 'Email Verification OTP - LandSell',
-            message: `Your OTP for account verification is: ${otp}. It will expire in 10 minutes.`,
+            message: `Your OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
                     <h2 style="color: #2563eb; text-align: center;">Welcome to LandSell!</h2>
                     <p>Thank you for registering. Please use the following One-Time Password (OTP) to verify your email address:</p>
                     <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${otp}</h1>
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                     </div>
                     <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
                     <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
@@ -107,11 +118,16 @@ exports.verifyOTP = asyncHandler(async (req, res, next) => {
 
     const user = await User.findOne({ 
         email, 
-        otp,
         otpExpire: { $gt: Date.now() }
     });
 
     if (!user) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
+    }
+
+    // Compare hashed OTP
+    const isOTPValid = await user.matchOTP(otp);
+    if (!isOTPValid) {
         return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
     }
 
@@ -144,10 +160,11 @@ exports.resendOTP = asyncHandler(async (req, res, next) => {
     }
 
     // Generate new OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await User.hashOTP(plainOTP);
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
 
-    user.otp = otp;
+    user.otp = hashedOTP;
     user.otpExpire = otpExpire;
     await user.save();
 
@@ -155,13 +172,13 @@ exports.resendOTP = asyncHandler(async (req, res, next) => {
         await sendEmail({
             email: user.email,
             subject: 'New Email Verification OTP - LandSell',
-            message: `Your new OTP for account verification is: ${otp}. It will expire in 10 minutes.`,
+            message: `Your new OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
                     <h2 style="color: #2563eb; text-align: center;">New Verification OTP</h2>
                     <p>Please use the following new One-Time Password (OTP) to verify your email address:</p>
                     <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${otp}</h1>
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                     </div>
                     <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes.</p>
                     <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
@@ -205,6 +222,17 @@ exports.login = asyncHandler(async (req, res, next) => {
 
     if (!isMatch) {
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+        return res.status(403).json({ success: false, error: 'Please verify OTP before login' });
+    }
+
+    if (user.accountStatus && user.accountStatus !== 'Active') {
+        return res.status(403).json({
+            success: false,
+            error: `Account is ${user.accountStatus.toLowerCase()}. Please contact support.`
+        });
     }
 
     sendTokenResponse(user, 200, res, req);
@@ -377,6 +405,13 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
             await user.save();
         }
 
+        if (user.accountStatus && user.accountStatus !== 'Active') {
+            return res.status(403).json({
+                success: false,
+                error: `Account is ${user.accountStatus.toLowerCase()}. Please contact support.`
+            });
+        }
+
         // Check if profile is complete (needs phone or specific role)
         const needsProfileCompletion = !user.phone || !user.role || user.role === 'Buyer' && !user.googleId; // Adjust logic as needed
         // Actually, let's keep it simple: if it's a new google user, they might need to confirm role/phone.
@@ -403,7 +438,15 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
         res.status(200).json({
             success: true,
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone },
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                phone: user.phone,
+                accountStatus: user.accountStatus,
+                isVerified: user.isVerified
+            },
             needsProfileCompletion: !user.phone || !user.role // We'll show the modal if either is missing
         });
     } catch (error) {
@@ -424,8 +467,24 @@ exports.completeProfile = asyncHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    if (role) user.role = role;
-    if (phone) user.phone = phone;
+    if (role) {
+        if (!ALLOWED_ROLES.includes(role)) {
+            return res.status(400).json({ success: false, error: 'Invalid role selected' });
+        }
+        user.role = role;
+    }
+
+    if (phone) {
+        const normalizedPhone = String(phone).replace(/\D/g, '');
+        if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+            return res.status(400).json({ success: false, error: 'Please provide a valid phone number' });
+        }
+        user.phone = normalizedPhone;
+    }
+
+    if (!user.phone) {
+        return res.status(400).json({ success: false, error: 'Phone number is required to complete profile' });
+    }
 
     await user.save();
 
@@ -519,10 +578,11 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     }
 
     // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await User.hashOTP(plainOTP);
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-    user.otp = otp;
+    user.otp = hashedOTP;
     user.otpExpire = otpExpire;
     await user.save();
 
@@ -530,13 +590,13 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
         await sendEmail({
             email: user.email,
             subject: 'Password Reset OTP - LandSell',
-            message: `Your OTP for password reset is: ${otp}. It will expire in 10 minutes.`,
+            message: `Your OTP for password reset is: ${plainOTP}. It will expire in 10 minutes.`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
                     <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
                     <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
                     <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${otp}</h1>
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                     </div>
                     <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
                     <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
@@ -563,12 +623,17 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
     }
 
     const user = await User.findOne({ 
-        email, 
-        otp,
+        email,
         otpExpire: { $gt: Date.now() }
     });
 
     if (!user) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
+    }
+
+    // Compare hashed OTP
+    const isOTPValid = await user.matchOTP(otp);
+    if (!isOTPValid) {
         return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
     }
 
@@ -580,4 +645,66 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
 
     // Auto-login after reset
     sendTokenResponse(user, 200, res, req);
+});
+
+// @desc    Delete own account
+// @route   DELETE /api/auth/delete-account
+// @access  Private
+exports.deleteMyAccount = asyncHandler(async (req, res, next) => {
+    const { password } = req.body;
+
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Google-only users won't have a password — skip password check
+    if (user.password) {
+        if (!password) {
+            return res.status(400).json({ success: false, error: 'Please provide your password to confirm account deletion' });
+        }
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, error: 'Incorrect password. Account deletion cancelled.' });
+        }
+    }
+
+    // Prevent Admin from self-deleting via this route
+    if (user.role === 'Admin') {
+        return res.status(403).json({ success: false, error: 'Admin accounts cannot be deleted through this route.' });
+    }
+
+    const userName = user.name;
+    const userEmail = user.email;
+
+    // Delete user and all related data
+    await deleteUserAndRelatedData(req.user.id);
+
+    // Send goodbye email (fire-and-forget — don't block response)
+    try {
+        await sendEmail({
+            email: userEmail,
+            subject: 'Account Deleted — LandSell',
+            message: `Your account has been permanently deleted. All your data has been removed.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <h2 style="color: #dc2626; text-align: center;">Account Deleted</h2>
+                    <p>Hi ${userName},</p>
+                    <p>Your LandSell account has been <strong>permanently deleted</strong>. All your listings, inquiries, saved maps, and personal data have been removed from our system.</p>
+                    <p style="color: #64748b; font-size: 14px;">If you did not request this, please contact our support immediately.</p>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+                </div>
+            `
+        });
+    } catch (emailErr) {
+        // Email failure is non-critical — account is already deleted
+        console.error('Goodbye email failed:', emailErr.message);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Your account and all associated data have been permanently deleted.'
+    });
 });

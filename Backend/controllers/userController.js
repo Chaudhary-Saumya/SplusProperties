@@ -1,13 +1,18 @@
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const asyncHandler = require('../middlewares/async');
+const {
+    setUserListingsVisibility,
+    revokeUserSessions,
+    deleteUserAndRelatedData
+} = require('../utils/userCleanup');
 
 // @desc    Get brokers with active listings count
 // @route   GET /api/users/brokers
 // @access  Public
 exports.getBrokers = asyncHandler(async (req, res, next) => {
     const brokers = await User.aggregate([
-        { $match: { role: 'Broker' } },
+        { $match: { role: 'Broker', accountStatus: { $nin: ['Disabled', 'Suspended'] } } },
         {
             $lookup: {
                 from: 'listings',
@@ -70,13 +75,32 @@ exports.getUser = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 exports.updateUser = asyncHandler(async (req, res, next) => {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const allowedFields = ['name', 'email', 'phone', 'role', 'accountStatus', 'isVerified'];
+    const fieldsToUpdate = {};
+    allowedFields.forEach((field) => {
+        if (typeof req.body[field] !== 'undefined') {
+            fieldsToUpdate[field] = req.body[field];
+        }
+    });
+
+    const existingUser = await User.findById(req.params.id);
+    if (!existingUser) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, fieldsToUpdate, {
         new: true,
         runValidators: true
     });
-    if (!user) {
-        return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (fieldsToUpdate.accountStatus) {
+        const isActive = fieldsToUpdate.accountStatus === 'Active';
+        await setUserListingsVisibility(user._id, isActive);
+        if (!isActive) {
+            await revokeUserSessions(user._id);
+        }
     }
+
     res.status(200).json({ success: true, data: user });
 });
 
@@ -84,10 +108,20 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 exports.deleteUser = asyncHandler(async (req, res, next) => {
+    if (req.params.id.toString() === req.user.id.toString()) {
+        return res.status(400).json({ success: false, error: 'Admin cannot delete their own account' });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
-    await User.findByIdAndDelete(req.params.id);
-    res.status(200).json({ success: true, data: {} });
+
+    const { deletedListings } = await deleteUserAndRelatedData(req.params.id);
+
+    res.status(200).json({
+        success: true,
+        message: 'User and related data deleted',
+        data: { deletedListings }
+    });
 });

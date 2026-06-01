@@ -180,8 +180,9 @@ const ForgotPassword = () => {
 
                         <form onSubmit={handleSendOTP}>
                             <div className="forgot-field">
-                                <label className="forgot-label">Email Address</label>
+                                <label htmlFor="email" className="forgot-label">Email Address</label>
                                 <input
+                                    id="email"
                                     type="email"
                                     className="forgot-input"
                                     placeholder="Enter your email"
@@ -213,8 +214,9 @@ const ForgotPassword = () => {
 
                         <form onSubmit={handleVerifyOTP}>
                             <div className="forgot-field">
-                                <label className="forgot-label">6-Digit Code</label>
+                                <label htmlFor="otp" className="forgot-label">6-Digit Code</label>
                                 <input
+                                    id="otp"
                                     type="text"
                                     className="forgot-input"
                                     placeholder="000000"
@@ -248,9 +250,10 @@ const ForgotPassword = () => {
 
                         <form onSubmit={handleResetPassword}>
                             <div className="forgot-field">
-                                <label className="forgot-label">New Password</label>
+                                <label htmlFor="newPassword" className="forgot-label">New Password</label>
                                 <div className="forgot-input-wrap">
                                     <input
+                                        id="newPassword"
                                         type={showPassword ? "text" : "password"}
                                         className="forgot-input"
                                         placeholder="••••••••"
@@ -269,8 +272,9 @@ const ForgotPassword = () => {
                                 </div>
                             </div>
                             <div className="forgot-field">
-                                <label className="forgot-label">Confirm Password</label>
+                                <label htmlFor="confirmPassword" className="forgot-label">Confirm Password</label>
                                 <input
+                                    id="confirmPassword"
                                     type={showPassword ? "text" : "password"}
                                     className="forgot-input"
                                     placeholder="••••••••"

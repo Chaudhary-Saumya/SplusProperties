@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, History, RotateCcw, Delete, Calculator as CalcIcon, X, Percent, Divide, Plus, Minus, Equal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEO from '../components/SEO';
 
 const Calculator = () => {
   const navigate = useNavigate();
@@ -127,6 +128,10 @@ const Calculator = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+      <SEO 
+        title="Land Price & Valuation Calculator" 
+        description="Calculate land rates, total valuation, registry fees, and token booking payments instantly." 
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
         

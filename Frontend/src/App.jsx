@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useContext, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -52,8 +52,9 @@ import VerifyOTP from './pages/VerifyOTP';
 import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
 import Calculator from './pages/Calculator';
+import NotFound from './pages/NotFound';
+import CompleteProfileModal from './components/CompleteProfileModal';
 
-import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
 import socket from './utils/socket';
 
@@ -88,6 +89,64 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const hasPhoneNumber = (user) => {
+  if (!user) return false;
+
+  return Boolean(
+    user.phone ||
+    user.mobileNumber ||
+    user.mobile ||
+    user.phoneNumber
+  );
+};
+
+const needsProfileCompletion = (user) => {
+  if (!user) return false;
+  return !hasPhoneNumber(user);
+};
+
+function ProtectedRoute({ children, requireAdmin = false }) {
+  const { user, loading, isAuthenticated } = useContext(AuthContext);
+
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (needsProfileCompletion(user)) return <Navigate to="/" replace />;
+  if (requireAdmin && user?.role !== 'Admin') return <Navigate to="/" replace />;
+
+  return children;
+}
+
+function GlobalProfileCompletionGate() {
+  const { user, loading, isAuthenticated, completeProfile } = useContext(AuthContext);
+  const location = useLocation();
+  const [error, setError] = useState(null);
+
+  const hiddenPaths = ['/login', '/register', '/verify-otp', '/forgot-password'];
+  const shouldHideModal = hiddenPaths.some(path => location.pathname.startsWith(path));
+  const shouldShowModal = !loading && isAuthenticated && !shouldHideModal && needsProfileCompletion(user);
+
+  const handleProfileComplete = async (profileData) => {
+    try {
+      setError(null);
+      await completeProfile(profileData);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Profile completion failed.');
+      throw err;
+    }
+  };
+
+  if (!shouldShowModal) return null;
+
+  return (
+    <CompleteProfileModal
+      isOpen={shouldShowModal}
+      user={user}
+      onComplete={handleProfileComplete}
+      error={error}
+    />
+  );
+}
 
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
@@ -139,22 +198,24 @@ function AppContent() {
             <Route path="/verify-otp" element={<VerifyOTP />} />
             <Route path="/listings/:id" element={<PropertyDetails />} />
             <Route path="/land/:location/:id" element={<PropertyDetails />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/my-visits" element={<MyVisits />} />
-            <Route path="/received-inquiries" element={<ReceivedInquiries />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/create-listing" element={<CreateListing />} />
-            <Route path="/edit-listing/:id" element={<EditListing />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+            <Route path="/my-visits" element={<ProtectedRoute><MyVisits /></ProtectedRoute>} />
+            <Route path="/received-inquiries" element={<ProtectedRoute><ReceivedInquiries /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
+            <Route path="/create-listing" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
+            <Route path="/edit-listing/:id" element={<ProtectedRoute><EditListing /></ProtectedRoute>} />
             <Route path="/seller/:id" element={<SellerProfile />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
-            <Route path="/saved-maps" element={<SavedMaps />} />
+            <Route path="/saved-maps" element={<ProtectedRoute><SavedMaps /></ProtectedRoute>} />
             <Route path="/m/:shareId" element={<SharedMap />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
             <Route path="/calculator" element={<Calculator />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          <GlobalProfileCompletionGate />
         </motion.div>
       </AnimatePresence>
     </LayoutWrapper>

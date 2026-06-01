@@ -16,6 +16,22 @@ const compression = require('compression');
 // Load env vars
 dotenv.config();
 
+// Critical env validation — fail fast before anything else runs
+const REQUIRED_ENV = ['JWT_SECRET', 'MONGODB_URI'];
+const MISSING_ENV = REQUIRED_ENV.filter(key => !process.env[key]);
+if (MISSING_ENV.length > 0) {
+    console.error(`FATAL ERROR: Missing required environment variables: ${MISSING_ENV.join(', ')}`);
+    console.error('Server cannot start without these. Check your .env file.');
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 16) {
+    console.error('FATAL ERROR: JWT_SECRET must be at least 16 characters long for security.');
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    logger.warn('WARNING: JWT_SECRET is shorter than 32 characters. Consider using a stronger 256-bit secret in production.');
+}
+
 // Connect to database
 connectDB();
 const autoSeed = require('./utils/seeder');
@@ -115,15 +131,15 @@ const io = new Server(server, {
 app.set('io', io);
 
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    logger.info(`Socket connected: ${socket.id}`);
     
     socket.on('join', (userId) => {
         socket.join(userId);
-        console.log(`User ${userId} joined their private room`);
+        logger.info(`User ${userId} joined their private room`);
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+        logger.info(`Socket disconnected: ${socket.id}`);
     });
 });
 

@@ -12,25 +12,42 @@ export const AuthProvider = ({ children }) => {
     // Set baseURL
     axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
+    const clearAuth = () => {
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+    };
+
     // IMMEDIATELY set header if token exists to avoid race conditions on reload
     if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
 
-    // Response Interceptor to handle 401
-    axios.interceptors.response.use(
-        (response) => response,
-        (error) => {
-            if (error.response && error.response.status === 401) {
-                // Stale token or unauthorized
-                setToken(null);
-                setUser(null);
-                localStorage.removeItem('token');
-                delete axios.defaults.headers.common['Authorization'];
+    // Response Interceptor to handle auth/session invalidation
+    useEffect(() => {
+        const interceptorId = axios.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                const status = error?.response?.status;
+                const backendError = error?.response?.data?.error || '';
+                const isAccountBlockedError =
+                    status === 403 &&
+                    typeof backendError === 'string' &&
+                    backendError.toLowerCase().includes('account is');
+
+                if (status === 401 || isAccountBlockedError) {
+                    clearAuth();
+                }
+
+                return Promise.reject(error);
             }
-            return Promise.reject(error);
-        }
-    );
+        );
+
+        return () => {
+            axios.interceptors.response.eject(interceptorId);
+        };
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -78,9 +95,7 @@ export const AuthProvider = ({ children }) => {
             setUser(res.data.data);
         } catch (err) {
             console.error(err);
-            setToken(null);
-            setUser(null);
-            localStorage.removeItem('token');
+            clearAuth();
         } finally {
             setLoading(false);
         }
@@ -98,7 +113,6 @@ export const AuthProvider = ({ children }) => {
     };
 
     const googleLogin = async (credential) => {
-        console.log('Sending ID Token to Backend:', credential ? (credential.substring(0, 20) + '...') : 'NULL');
         const res = await axios.post('/api/auth/google', { idToken: credential });
 
         if (res.data.success) {
@@ -151,9 +165,16 @@ export const AuthProvider = ({ children }) => {
         return res.data;
     };
 
+    const deleteAccount = async (password) => {
+        const res = await axios.delete('/api/auth/delete-account', { data: { password } });
+        if (res.data.success) {
+            clearAuth();
+        }
+        return res.data;
+    };
+
     const logout = () => {
-        setToken(null);
-        setUser(null);
+        clearAuth();
     };
 
     return (
@@ -168,6 +189,7 @@ export const AuthProvider = ({ children }) => {
             resendOTP,
             forgotPassword,
             resetPassword,
+            deleteAccount,
             logout,
             isAuthenticated: !!user
         }}>

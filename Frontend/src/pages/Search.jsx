@@ -11,6 +11,7 @@ import EmptyState from '../components/EmptyState';
 import { getImageUrl } from '../utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
+import SEO from '../components/SEO';
 
 /* ─── Collapsible Filter Section ─────────────────────────────────────────── */
 const FilterSection = ({ title, children, defaultOpen = true }) => {
@@ -463,6 +464,10 @@ const Search = () => {
 
     return (
         <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+            <SEO 
+                title="Search Land & Plots for Sale" 
+                description="Browse all available land listings, agricultural plots, and commercial parcels. Filter by price, size, and location." 
+            />
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
             {/* ── Gold top bar ── */}
@@ -621,6 +626,7 @@ const Search = () => {
                                                 <img
                                                     src={getImageUrl(listing.images[0])}
                                                     alt={listing.title}
+                                                    loading="lazy"
                                                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             ) : (

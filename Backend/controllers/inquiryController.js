@@ -1,6 +1,8 @@
 const Inquiry = require('../models/Inquiry');
 const Listing = require('../models/Listing');
+const User = require('../models/User');
 const asyncHandler = require('../middlewares/async');
+const { isUserAccountActive } = require('../utils/userCleanup');
 
 // @desc    Create an inquiry or site visit request
 // @route   POST /api/inquiries
@@ -11,6 +13,21 @@ exports.createInquiry = asyncHandler(async (req, res, next) => {
     const listing = await Listing.findById(req.body.listingId);
     if (!listing) {
         return res.status(404).json({ success: false, error: 'Listing not found' });
+    }
+
+    if (listing.status !== 'Active') {
+        return res.status(403).json({
+            success: false,
+            error: 'This property is not available for inquiries right now.'
+        });
+    }
+
+    const seller = await User.findById(listing.createdBy).select('accountStatus role');
+    if (!seller || !isUserAccountActive(seller)) {
+        return res.status(403).json({
+            success: false,
+            error: 'Seller is unavailable. You cannot send an inquiry for this property.'
+        });
     }
 
     // Rate limit: max 3 inquiries per user per listing
@@ -88,9 +105,21 @@ exports.getInquiries = asyncHandler(async (req, res, next) => {
 // @route   PATCH /api/inquiries/:id/status
 // @access  Private (Seller/Broker/Admin)
 exports.updateInquiryStatus = asyncHandler(async (req, res, next) => {
+    const allowedStatuses = ['Pending', 'Contacted', 'Resolved'];
+    if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({ success: false, error: 'Invalid inquiry status' });
+    }
+
     const inquiry = await Inquiry.findById(req.params.id);
     if (!inquiry) return res.status(404).json({ success: false, error: 'Inquiry not found' });
-    
+
+    if (req.user.role !== 'Admin') {
+        const listing = await Listing.findById(inquiry.listingId).select('createdBy');
+        if (!listing || listing.createdBy.toString() !== req.user.id.toString()) {
+            return res.status(403).json({ success: false, error: 'Not authorized to update this inquiry' });
+        }
+    }
+
     inquiry.status = req.body.status;
     await inquiry.save();
     

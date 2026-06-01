@@ -145,6 +145,7 @@ const VerifyOTP = () => {
                                             type="text"
                                             inputMode="numeric"
                                             maxLength="1"
+                                            aria-label={`OTP Digit ${index + 1}`}
                                             value={digit}
                                             onChange={(e) => handleChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}

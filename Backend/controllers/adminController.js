@@ -42,6 +42,7 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
                 email: 1,
                 role: 1,
                 phone: 1,
+                accountStatus: 1,
                 createdAt: 1,
                 listingCount: { $size: "$userListings" }
             }

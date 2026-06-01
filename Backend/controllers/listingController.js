@@ -133,6 +133,16 @@ exports.getListing = asyncHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, error: 'Listing not found' });
     }
 
+    const owner = listing.createdBy;
+    const ownerInactive =
+        listing.status !== 'Active' ||
+        !owner ||
+        (owner.accountStatus && owner.accountStatus !== 'Active');
+
+    if (ownerInactive && req.user?.role !== 'Admin') {
+        return res.status(404).json({ success: false, error: 'Listing not found' });
+    }
+
     // Check for associated Boundary Map
     const MapConfig = require('../models/MapConfig');
     const mapConfig = await MapConfig.findOne({ listingId: listing._id });
@@ -147,6 +157,22 @@ exports.getListing = asyncHandler(async (req, res, next) => {
                 polygonsCount: mapConfig.polygons?.length
             } : null
         }
+    });
+});
+
+// @desc    Get current user's own listings (secure — uses token identity, not query param)
+// @route   GET /api/listings/mine
+// @access  Private (Seller/Broker/Admin)
+exports.getMyListings = asyncHandler(async (req, res, next) => {
+    const listings = await Listing.find({ createdBy: req.user.id })
+        .sort('-createdAt')
+        .populate('createdBy', 'name email phone role')
+        .lean();
+
+    res.status(200).json({
+        success: true,
+        count: listings.length,
+        data: listings
     });
 });
 
@@ -414,13 +440,17 @@ exports.getMyTokenedListings = asyncHandler(async (req, res, next) => {
 // @route   GET /api/listings/seller/:id
 // @access  Public
 exports.getSellerProfile = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.id).select('name role email phone createdAt');
+    const user = await User.findById(req.params.id).select('name role email phone createdAt accountStatus');
     
     if (!user) {
         return res.status(404).json({ success: false, error: 'Seller not found' });
     }
 
-    const allListings = await Listing.find({ createdBy: req.params.id })
+    if (user.accountStatus && user.accountStatus !== 'Active') {
+        return res.status(404).json({ success: false, error: 'Seller not found' });
+    }
+
+    const allListings = await Listing.find({ createdBy: req.params.id, status: 'Active' })
         .select('-description -videos -documents')
         .sort('-createdAt')
         .lean();

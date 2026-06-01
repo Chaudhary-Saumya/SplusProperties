@@ -510,16 +510,18 @@ const Register = () => {
                                     {/* Name + Phone */}
                                     <div className="reg-row">
                                         <div className="reg-field">
-                                            <label className="reg-label">Full Name</label>
+                                            <label htmlFor="name" className="reg-label">Full Name</label>
                                             <input
+                                                id="name"
                                                 type="text" name="name" className="reg-input"
                                                 value={formData.name} onChange={handleChange}
                                                 placeholder="Your full name" required
                                             />
                                         </div>
                                         <div className="reg-field">
-                                            <label className="reg-label">Phone Number</label>
+                                            <label htmlFor="phone" className="reg-label">Phone Number</label>
                                             <input
+                                                id="phone"
                                                 type="tel" name="phone" className="reg-input"
                                                 value={formData.phone}
                                                 onChange={handleChange}
@@ -532,8 +534,9 @@ const Register = () => {
 
                                     {/* Email */}
                                     <div className="reg-field">
-                                        <label className="reg-label">Email Address</label>
+                                        <label htmlFor="email" className="reg-label">Email Address</label>
                                         <input
+                                            id="email"
                                             type="email" name="email" className="reg-input"
                                             value={formData.email} onChange={handleChange}
                                             placeholder="you@email.com" required
@@ -560,9 +563,10 @@ const Register = () => {
 
                                     {/* Password */}
                                     <div className="reg-field">
-                                        <label className="reg-label">Password</label>
+                                        <label htmlFor="password" className="reg-label">Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <input
+                                                id="password"
                                                 type={showPassword ? "text" : "password"}
                                                 name="password"
                                                 className="reg-input"
