@@ -126,14 +126,13 @@ const Brokers = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#fcfaf5]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+        <div className="min-h-screen bg-[#fcfaf5]">
             <SEO 
                 title="Verified Real Estate Brokers & Agents" 
                 description="Connect with authorized real estate agents and land brokers who can assist with physical site visits and registry verification." 
             />
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
-                .premium-text { font-family: 'Playfair Display', serif; }
             `}</style>
 
             {/* Premium Navigation Strip */}

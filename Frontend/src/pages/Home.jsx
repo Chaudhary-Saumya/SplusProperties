@@ -331,7 +331,7 @@ const Footer = () => {
                 <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">About Us</Link>
                 <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Trending Plots</Link>
                 <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Verified Sellers</Link>
-                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Market Blogs</Link>
+                {/* <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Market Blogs</Link> */}
               </div>
             </div>
 
@@ -343,7 +343,7 @@ const Footer = () => {
                 <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Sell Property</Link>
                 <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Land Mapping</Link>
                 <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Broker Connect</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Legal Verification</Link>
+                {/* <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Legal Verification</Link> */}
               </div>
             </div>
 
@@ -354,8 +354,8 @@ const Footer = () => {
                 <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Boundary Map</Link>
                 <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Area Converter</Link>
                 <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Saved Boundaries</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">KML Exporter</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">PDF Reports</Link>
+                {/* <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">KML Exporter</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">PDF Reports</Link> */}
               </div>
             </div>
 
@@ -382,9 +382,9 @@ const Footer = () => {
             © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan IT Solution. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-6">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <a key={item} href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{item}</a>
-            ))}
+            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Privacy Policy</Link>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Terms of Service</a>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Cookie Policy</a>
           </div>
         </div>
       </div>

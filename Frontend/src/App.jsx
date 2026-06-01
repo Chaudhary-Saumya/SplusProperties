@@ -53,6 +53,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
 import Calculator from './pages/Calculator';
 import NotFound from './pages/NotFound';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import CompleteProfileModal from './components/CompleteProfileModal';
 
 import { AuthContext } from './context/AuthContext';
@@ -213,6 +214,7 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
             <Route path="/calculator" element={<Calculator />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <GlobalProfileCompletionGate />
