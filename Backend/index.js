@@ -39,6 +39,9 @@ autoSeed();
 
 const app = express();
 
+// Trust proxy (required for express-rate-limit behind reverse proxies like Railway)
+app.set('trust proxy', 1);
+
 // Use compression
 app.use(compression());
 
