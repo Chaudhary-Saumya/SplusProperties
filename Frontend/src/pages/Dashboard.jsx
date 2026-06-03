@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -127,9 +127,13 @@ const Toggle = ({ checked, onChange }) => (
 /* ═══════════════════════════════════════════════════════════════════════════ */
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading, deleteAccount } = useContext(AuthContext);
   const { t } = useLanguage();
-  const [activeSection, setActiveSection] = useState("overview");
+  const [activeSection, setActiveSection] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get("tab") || "overview";
+  });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [openAccordion, setOpenAccordion] = useState("profile");
   const queryClient = useQueryClient();
@@ -386,6 +390,26 @@ const Dashboard = () => {
       toast.error("Failed to update inquiry status");
     }
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveSection(tab);
+      if (tab === "settings") {
+        const action = searchParams.get("action");
+        if (action === "delete") {
+          setOpenAccordion("danger");
+          setTimeout(() => {
+            const dangerZone = document.getElementById("danger-zone");
+            if (dangerZone) {
+              dangerZone.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 200);
+        }
+      }
+    }
+  }, [location.search]);
 
   // Main useEffect
   useEffect(() => {
@@ -771,7 +795,7 @@ const Dashboard = () => {
             </div>
 
             {/* Danger Zone (Delete Account) */}
-            <div className="bg-white border border-red-200 rounded-xl p-5 sm:p-6 shadow-sm lg:col-span-2">
+            <div id="danger-zone" className="bg-white border border-red-200 rounded-xl p-5 sm:p-6 shadow-sm lg:col-span-2">
               <div 
                 onClick={() => { if (window.innerWidth < 1024) setOpenAccordion(openAccordion === "danger" ? null : "danger"); }}
                 className="flex items-center justify-between pb-3 sm:pb-4 border-b border-red-100 cursor-pointer lg:cursor-default"

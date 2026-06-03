@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
@@ -17,6 +17,9 @@ const Login = () => {
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const redirectPath = queryParams.get('redirect') || '/';
 
     const handleChange = (e) => {
         setCredentials(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -29,7 +32,7 @@ const Login = () => {
         try {
             const data = await login(credentials.identifier, credentials.password);
             if (data?.user?.role === 'Admin') navigate('/admin');
-            else navigate('/');
+            else navigate(redirectPath);
         } catch (err) {
             setError(err.response?.data?.error || 'Login failed. Please try again.');
         } finally {
@@ -45,7 +48,7 @@ const Login = () => {
                     setShowCompleteModal(true);
                 } else {
                     if (data?.user?.role === 'Admin') navigate('/admin');
-                    else navigate('/');
+                    else navigate(redirectPath);
                 }
         } catch (err) {
             setError(err.response?.data?.error || 'Google Login failed.');
@@ -57,7 +60,7 @@ const Login = () => {
             const data = await completeProfile(profileData);
             setShowCompleteModal(false);
             if (data?.role === 'Admin' || user?.role === 'Admin') navigate('/admin');
-            else navigate('/');
+            else navigate(redirectPath);
         } catch (err) {
             setError(err.response?.data?.error || 'Profile completion failed.');
         }

@@ -1,6 +1,6 @@
 {
-  "appId": "com.splus.properties",
-  "appName": "Splus Properties",
+  "appId": "com.kharsan.properties",
+  "appName": "Kharsan Properties",
   "webDir": "dist",
   "server": {
     "androidScheme": "http",

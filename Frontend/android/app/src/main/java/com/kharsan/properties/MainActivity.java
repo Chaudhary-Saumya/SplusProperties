@@ -1,4 +1,4 @@
-package com.kharsan.itsolution;
+package com.kharsan.properties;
 
 import android.os.Bundle;
 import androidx.core.splashscreen.SplashScreen;

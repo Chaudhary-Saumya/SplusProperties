@@ -54,6 +54,7 @@ import About from './pages/About';
 import Calculator from './pages/Calculator';
 import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import DeleteAccount from './pages/DeleteAccount';
 import CompleteProfileModal from './components/CompleteProfileModal';
 
 import { AuthContext } from './context/AuthContext';
@@ -215,6 +216,8 @@ function AppContent() {
             <Route path="/about" element={<About />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/delete-account" element={<DeleteAccount />} />
+            <Route path="/account-deletion" element={<DeleteAccount />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <GlobalProfileCompletionGate />
