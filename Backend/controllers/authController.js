@@ -70,40 +70,32 @@ exports.register = asyncHandler(async (req, res, next) => {
         otpExpire
     });
 
-    // Send OTP via Email (send plain OTP to user, store hashed)
-    try {
-        await sendEmail({
-            email: user.email,
-            subject: 'Email Verification OTP - LandSell',
-            message: `Your OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                    <h2 style="color: #2563eb; text-align: center;">Welcome to LandSell!</h2>
-                    <p>Thank you for registering. Please use the following One-Time Password (OTP) to verify your email address:</p>
-                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
-                    </div>
-                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+    // Send OTP via Email (send plain OTP to user, store hashed) - async background task to prevent slow register response
+    sendEmail({
+        email: user.email,
+        subject: 'Email Verification OTP - LandSell',
+        message: `Your OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <h2 style="color: #2563eb; text-align: center;">Welcome to LandSell!</h2>
+                <p>Thank you for registering. Please use the following One-Time Password (OTP) to verify your email address:</p>
+                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                 </div>
-            `
-        });
+                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+            </div>
+        `
+    }).catch(err => {
+        console.error('Background Register Email Send Error:', err);
+    });
 
-        res.status(201).json({
-            success: true,
-            message: 'OTP sent to email. Please verify to complete registration.',
-            email: user.email
-        });
-    } catch (err) {
-        console.error('Email Send Error:', err);
-        // If email fails, we might want to delete user or just let them resend
-        res.status(201).json({
-            success: true,
-            warning: 'User registered but OTP email failed. Please use Resend OTP.',
-            email: user.email
-        });
-    }
+    res.status(201).json({
+        success: true,
+        message: 'OTP sent to email. Please verify to complete registration.',
+        email: user.email
+    });
 });
 
 // @desc    Verify OTP
@@ -168,30 +160,28 @@ exports.resendOTP = asyncHandler(async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    try {
-        await sendEmail({
-            email: user.email,
-            subject: 'New Email Verification OTP - LandSell',
-            message: `Your new OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                    <h2 style="color: #2563eb; text-align: center;">New Verification OTP</h2>
-                    <p>Please use the following new One-Time Password (OTP) to verify your email address:</p>
-                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
-                    </div>
-                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes.</p>
-                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+    // Send OTP via Email asynchronously in the background
+    sendEmail({
+        email: user.email,
+        subject: 'New Email Verification OTP - LandSell',
+        message: `Your new OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <h2 style="color: #2563eb; text-align: center;">New Verification OTP</h2>
+                <p>Please use the following new One-Time Password (OTP) to verify your email address:</p>
+                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                 </div>
-            `
-        });
+                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+            </div>
+        `
+    }).catch(err => {
+        console.error('Background Email Resend Error:', err);
+    });
 
-        res.status(200).json({ success: true, message: 'OTP resent to email' });
-    } catch (err) {
-        console.error('Email Resend Error:', err);
-        res.status(500).json({ success: false, error: 'Failed to send OTP email' });
-    }
+    res.status(200).json({ success: true, message: 'OTP resent to email' });
 });
 
 // @desc    Login user
@@ -586,30 +576,28 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    try {
-        await sendEmail({
-            email: user.email,
-            subject: 'Password Reset OTP - LandSell',
-            message: `Your OTP for password reset is: ${plainOTP}. It will expire in 10 minutes.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                    <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
-                    <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
-                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
-                    </div>
-                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+    // Send password reset OTP via Email asynchronously in the background
+    sendEmail({
+        email: user.email,
+        subject: 'Password Reset OTP - LandSell',
+        message: `Your OTP for password reset is: ${plainOTP}. It will expire in 10 minutes.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
+                <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
+                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
                 </div>
-            `
-        });
+                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+            </div>
+        `
+    }).catch(err => {
+        console.error('Background Forgot Password Email Error:', err);
+    });
 
-        res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
-    } catch (err) {
-        console.error('Forgot Password Email Error:', err);
-        res.status(500).json({ success: false, error: 'Failed to send OTP email' });
-    }
+    res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
 });
 
 // @desc    Reset Password
@@ -681,27 +669,25 @@ exports.deleteMyAccount = asyncHandler(async (req, res, next) => {
     // Delete user and all related data
     await deleteUserAndRelatedData(req.user.id);
 
-    // Send goodbye email (fire-and-forget — don't block response)
-    try {
-        await sendEmail({
-            email: userEmail,
-            subject: 'Account Deleted — LandSell',
-            message: `Your account has been permanently deleted. All your data has been removed.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                    <h2 style="color: #dc2626; text-align: center;">Account Deleted</h2>
-                    <p>Hi ${userName},</p>
-                    <p>Your LandSell account has been <strong>permanently deleted</strong>. All your listings, inquiries, saved maps, and personal data have been removed from our system.</p>
-                    <p style="color: #64748b; font-size: 14px;">If you did not request this, please contact our support immediately.</p>
-                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
-                </div>
-            `
-        });
-    } catch (emailErr) {
+    // Send goodbye email asynchronously in the background
+    sendEmail({
+        email: userEmail,
+        subject: 'Account Deleted — LandSell',
+        message: `Your account has been permanently deleted. All your data has been removed.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <h2 style="color: #dc2626; text-align: center;">Account Deleted</h2>
+                <p>Hi ${userName},</p>
+                <p>Your LandSell account has been <strong>permanently deleted</strong>. All your listings, inquiries, saved maps, and personal data have been removed from our system.</p>
+                <p style="color: #64748b; font-size: 14px;">If you did not request this, please contact our support immediately.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
+            </div>
+        `
+    }).catch(emailErr => {
         // Email failure is non-critical — account is already deleted
         console.error('Goodbye email failed:', emailErr.message);
-    }
+    });
 
     res.status(200).json({
         success: true,

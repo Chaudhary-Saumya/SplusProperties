@@ -122,10 +122,12 @@ exports.verifyPayment = async (req, res) => {
         listing.tokenedAt = Date.now();
         await listing.save();
 
-        // Send Notifications & Receipts
+        // Send Notifications & Receipts asynchronously in the background
         const buyer = await User.findById(transaction.buyerId);
         const seller = await User.findById(transaction.sellerId);
-        await sendPaymentNotification(buyer, seller, listing, transaction);
+        sendPaymentNotification(buyer, seller, listing, transaction).catch(error => {
+            console.error('Background Payment Notification Error:', error);
+        });
 
         // Populate full data for receipt
         await transaction.populate([
