@@ -4,13 +4,42 @@ import { ArrowLeft, Copy, CopyCheck, History, Zap, ArrowLeftRight, RotateCcw, Do
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import SEO from '../components/SEO';
+import { useLanguage } from '../context/LanguageContext';
 
 const AreaConverter = () => {
+  const { language, t } = useLanguage();
   const [values, setValues] = useState({});
   const [history, setHistory] = useState([]);
   const [topInputs, setTopInputs] = useState({ hectare: '', aare: '', sqm: '' });
   const [reorderEnabled, setReorderEnabled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  // Bilingual unit labels mapping
+  // Note: For PDF Export we intentionally use standard English labels as standard jsPDF Helvetica fonts do not support Gujarati Unicode characters.
+  const unitLabels = {
+    en: {
+      guntha: 'Guntha (Gutha)',
+      hectare: 'Hectare (Hector)',
+      aare: 'Aare',
+      vigha_bada: 'Bigha (23.78 Gutha)',
+      vigha_chhota: 'Bigha (16.19 Gutha)',
+      acre: 'Acre',
+      sqm: 'Square Meter (Sq.Mt)',
+      sqft: 'Square Feet (Sqft)',
+      gaj: 'Gaj / Yard / Vaar',
+    },
+    gu: {
+      guntha: 'ગુન્ટા',
+      hectare: 'હેક્ટર',
+      aare: 'આરે',
+      vigha_bada: 'વીઘું (મોટું - ૨૩.૭૮ ગુન્ટા)',
+      vigha_chhota: 'વીઘું (નાનું - ૧૬.૧૯ ગુન્ટા)',
+      acre: 'એકર',
+      sqm: 'ચોરસ મીટર',
+      sqft: 'ચોરસ ફૂટ',
+      gaj: 'ગજ / વાર',
+    }
+  };
 
   const [orderedUnits, setOrderedUnits] = useState([
     { value: 'guntha', label: 'Guntha (Gutha)', type: 'area' },
@@ -260,7 +289,7 @@ const AreaConverter = () => {
   return (
     <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
       <SEO 
-        title="Smart Land Area Converter & Calculator" 
+        title={language === 'en' ? "Smart Land Area Converter & Calculator" : "સ્માર્ટ જમીન ક્ષેત્રફળ કન્વર્ટર અને કેલ્ક્યુલેટર"} 
         description="Convert land measurements instantly between Sq. Ft, Sq. Yards, Gaj, Acres, Hectares, and Sq. Meters." 
       />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
@@ -274,7 +303,7 @@ const AreaConverter = () => {
           to="/"
           className="inline-flex items-center gap-2 text-[#1a2340] font-bold text-xs uppercase tracking-wider mb-4 sm:mb-8 hover:text-[#c9a84c] transition-colors"
         >
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> {language === 'en' ? 'Back to Home' : 'હોમ પેજ પર પાછા'}
         </Link>
 
         {/* Header */}
@@ -284,7 +313,7 @@ const AreaConverter = () => {
     onClick={() => setShowMenu(!showMenu)}
     className="bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
   >
-    Presented by www.kharsan.com
+    {language === 'en' ? 'Presented by www.kharsan.com' : 'ખારસણ ડોટ કોમ દ્વારા પ્રસ્તુત'}
   </button>
 
   {showMenu && (
@@ -301,17 +330,17 @@ const AreaConverter = () => {
           rel="noopener noreferrer"
           className="block text-center px-4 py-3 text-sm font-medium hover:bg-gray-100"
         >
-          🌐 Visit Website
+          {language === 'en' ? '🌐 Visit Website' : '🌐 વેબસાઇટની મુલાકાત લો'}
         </a>
       </div>
     </>
   )}
 </div>
           <h1 className="text-2xl sm:text-4xl font-bold text-[#1a2340] mb-1 sm:mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            Area Converter
+            {t('tools_page.converter_title')}
           </h1>
           <p className="text-[#6b7280] text-xs sm:text-base font-medium hidden sm:block">
-            Live Converter — Values update instantly as you type
+            {t('tools_page.converter_desc')}
           </p>
         </div>
 
@@ -322,7 +351,7 @@ const AreaConverter = () => {
             className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-white border-2 border-[#e2d9c5] text-[#1a2340] font-bold rounded-lg sm:rounded-xl hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all shadow-sm text-xs sm:text-sm"
           >
             <RotateCcw size={14} />
-            Reset All
+            {language === 'en' ? 'Reset All' : 'બધું ફરીથી સેટ કરો'}
           </button>
 
           {/* Reorder Toggle */}
@@ -336,7 +365,7 @@ const AreaConverter = () => {
             title={reorderEnabled ? 'Click to lock unit order' : 'Click to enable drag reordering'}
           >
             <GripVertical size={14} />
-            <span>Reorder Units</span>
+            <span>{language === 'en' ? 'Reorder Units' : 'એકમોનો ક્રમ બદલો'}</span>
             {/* Toggle pill */}
             <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-300 ${
               reorderEnabled ? 'bg-white/30' : 'bg-[#e2d9c5]'
@@ -352,7 +381,7 @@ const AreaConverter = () => {
             className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#1a2340] to-[#2a3454] text-white font-bold rounded-lg sm:rounded-xl hover:from-[#c9a84c] hover:to-[#b8933a] transition-all shadow-md text-xs sm:text-sm"
           >
             <Download size={14} />
-            Export as PDF
+            {language === 'en' ? 'Export as PDF' : 'PDF તરીકે ડાઉનલોડ કરો'}
           </button>
         </div>
 
@@ -362,9 +391,9 @@ const AreaConverter = () => {
           {/* Quick Reference Top Bar — Compound Editable Inputs */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
             {[
-              { key: 'hectare', label: 'Hectare' },
-              { key: 'aare',    label: 'Aare' },
-              { key: 'sqm',     label: 'Sq. Meter' },
+              { key: 'hectare', label: language === 'en' ? 'Hectare' : 'હેક્ટર' },
+              { key: 'aare',    label: language === 'en' ? 'Aare' : 'આરે' },
+              { key: 'sqm',     label: language === 'en' ? 'Sq. Meter' : 'ચોરસ મીટર' },
             ].map(({ key, label }) => (
               <div key={key} className="flex flex-col items-center bg-[#faf7f0] border border-[#e2d9c5] rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1">
                 <span className="text-[8px] sm:text-[9px] font-extrabold text-[#b8933a] uppercase tracking-widest mb-0.5 sm:mb-1">{label}</span>
@@ -383,11 +412,11 @@ const AreaConverter = () => {
           {Object.values(topInputs).filter(v => v !== '' && parseFloat(v) > 0).length > 1 && (
             <div className="flex justify-end mb-4">
               <span className="text-[10px] font-bold text-[#b8933a] bg-[#fdf8ee] border border-[#e2d9c5] rounded-lg px-3 py-1">
-                ∑ Combined = {(
+                ∑ {language === 'en' ? 'Combined =' : 'સંયુક્ત ='} {(
                   (parseFloat(topInputs.hectare) || 0) * toBase.hectare +
                   (parseFloat(topInputs.aare)    || 0) * toBase.aare +
                   (parseFloat(topInputs.sqm)     || 0) * toBase.sqm
-                ).toFixed(3).replace(/\.?0+$/, '')} Guntha
+                ).toFixed(3).replace(/\.?0+$/, '')} {language === 'en' ? 'Guntha' : 'ગુન્ટા'}
               </span>
             </div>
           )}
@@ -396,7 +425,7 @@ const AreaConverter = () => {
           {reorderEnabled && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-xl text-xs font-bold text-[#b8933a]">
               <GripVertical size={13} />
-              Drag units to reorder. Toggle off to lock the order.
+              {language === 'en' ? 'Drag units to reorder. Toggle off to lock the order.' : 'એકમોનો ક્રમ બદલવા માટે ખેંચો. લોક કરવા માટે બંધ કરો.'}
             </div>
           )}
 
@@ -413,7 +442,7 @@ const AreaConverter = () => {
                       <GripVertical size={16} />
                     </div>
                     <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
-                      {unit.label}
+                      {unitLabels[language]?.[unit.value] || unit.label}
                     </label>
                   </div>
                   <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
@@ -445,7 +474,7 @@ const AreaConverter = () => {
                       <GripVertical size={16} />
                     </div>
                     <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
-                      {unit.label}
+                      {unitLabels[language]?.[unit.value] || unit.label}
                     </label>
                   </div>
                   <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
@@ -473,7 +502,7 @@ const AreaConverter = () => {
         {history.length > 0 && (
           <section className="mb-10">
             <h3 className="text-lg font-bold text-[#1a2340] mb-4 flex items-center gap-2">
-              <History size={18} className="text-[#c9a84c]" /> Recent Conversions
+              <History size={18} className="text-[#c9a84c]" /> {language === 'en' ? 'Recent Conversions' : 'તાજેતરના રૂપાંતરણો'}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {history.slice(0, 6).map((h, i) => (

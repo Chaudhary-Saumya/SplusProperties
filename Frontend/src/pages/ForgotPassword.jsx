@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, KeyRound, Lock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const ForgotPassword = () => {
     const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
@@ -13,6 +14,7 @@ const ForgotPassword = () => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const { forgotPassword, resetPassword } = useContext(AuthContext);
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     const handleSendOTP = async (e) => {
@@ -32,7 +34,7 @@ const ForgotPassword = () => {
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
         if (otp.length !== 6) {
-            setError('Please enter a valid 6-digit OTP');
+            setError(t('forgot_password.valid_otp_error'));
             return;
         }
         setStep(3);
@@ -41,11 +43,11 @@ const ForgotPassword = () => {
     const handleResetPassword = async (e) => {
         e.preventDefault();
         if (newPassword !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('forgot_password.password_mismatch_error'));
             return;
         }
         if (newPassword.length < 6) {
-            setError('Password must be at least 6 characters');
+            setError(t('forgot_password.password_length_error'));
             return;
         }
         setError(null);
@@ -172,32 +174,32 @@ const ForgotPassword = () => {
                     <div className="forgot-step">
                         <div className="forgot-header">
                             <div className="forgot-icon-wrap"><Mail size={28} /></div>
-                            <h1 className="forgot-title">Forgot Password?</h1>
-                            <p className="forgot-subtitle">No worries, enter your email and we'll send you an OTP to reset it.</p>
+                            <h1 className="forgot-title">{t('forgot_password.forgot_title')}</h1>
+                            <p className="forgot-subtitle">{t('forgot_password.forgot_subtitle')}</p>
                         </div>
 
                         {error && <div className="forgot-error">⚠ {error}</div>}
 
                         <form onSubmit={handleSendOTP}>
                             <div className="forgot-field">
-                                <label htmlFor="email" className="forgot-label">Email Address</label>
+                                <label htmlFor="email" className="forgot-label">{t('forgot_password.email_label')}</label>
                                 <input
                                     id="email"
                                     type="email"
                                     className="forgot-input"
-                                    placeholder="Enter your email"
+                                    placeholder={t('forgot_password.email_placeholder')}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                 />
                             </div>
                             <button type="submit" className="forgot-btn" disabled={loading}>
-                                {loading ? 'Sending...' : 'Send OTP'} <ArrowRight size={18} />
+                                {loading ? t('forgot_password.send_otp') : t('forgot_password.send_otp')} <ArrowRight size={18} />
                             </button>
                         </form>
 
                         <Link to="/login" className="forgot-back">
-                            <ArrowLeft size={16} /> Back to Login
+                            <ArrowLeft size={16} /> {t('forgot_password.back_to_login')}
                         </Link>
                     </div>
                 )}
@@ -206,15 +208,15 @@ const ForgotPassword = () => {
                     <div className="forgot-step">
                         <div className="forgot-header">
                             <div className="forgot-icon-wrap"><KeyRound size={28} /></div>
-                            <h1 className="forgot-title">Enter OTP</h1>
-                            <p className="forgot-subtitle">We've sent a 6-digit code to <strong>{email}</strong></p>
+                            <h1 className="forgot-title">{t('forgot_password.enter_otp_title')}</h1>
+                            <p className="forgot-subtitle">{t('forgot_password.enter_otp_subtitle')} <strong>{email}</strong></p>
                         </div>
 
                         {error && <div className="forgot-error">⚠ {error}</div>}
 
                         <form onSubmit={handleVerifyOTP}>
                             <div className="forgot-field">
-                                <label htmlFor="otp" className="forgot-label">6-Digit Code</label>
+                                <label htmlFor="otp" className="forgot-label">{t('forgot_password.otp_label')}</label>
                                 <input
                                     id="otp"
                                     type="text"
@@ -228,12 +230,12 @@ const ForgotPassword = () => {
                                 />
                             </div>
                             <button type="submit" className="forgot-btn">
-                                Verify & Continue <ArrowRight size={18} />
+                                {t('forgot_password.verify_continue')} <ArrowRight size={18} />
                             </button>
                         </form>
 
                         <div className="forgot-back" onClick={() => setStep(1)}>
-                            <ArrowLeft size={16} /> Use a different email
+                            <ArrowLeft size={16} /> {t('forgot_password.different_email')}
                         </div>
                     </div>
                 )}
@@ -242,15 +244,15 @@ const ForgotPassword = () => {
                     <div className="forgot-step">
                         <div className="forgot-header">
                             <div className="forgot-icon-wrap"><Lock size={28} /></div>
-                            <h1 className="forgot-title">Reset Password</h1>
-                            <p className="forgot-subtitle">Create a strong password to secure your account.</p>
+                            <h1 className="forgot-title">{t('forgot_password.reset_title')}</h1>
+                            <p className="forgot-subtitle">{t('forgot_password.reset_subtitle')}</p>
                         </div>
 
                         {error && <div className="forgot-error">⚠ {error}</div>}
 
                         <form onSubmit={handleResetPassword}>
                             <div className="forgot-field">
-                                <label htmlFor="newPassword" className="forgot-label">New Password</label>
+                                <label htmlFor="newPassword" className="forgot-label">{t('forgot_password.new_password')}</label>
                                 <div className="forgot-input-wrap">
                                     <input
                                         id="newPassword"
@@ -272,7 +274,7 @@ const ForgotPassword = () => {
                                 </div>
                             </div>
                             <div className="forgot-field">
-                                <label htmlFor="confirmPassword" className="forgot-label">Confirm Password</label>
+                                <label htmlFor="confirmPassword" className="forgot-label">{t('forgot_password.confirm_password')}</label>
                                 <input
                                     id="confirmPassword"
                                     type={showPassword ? "text" : "password"}
@@ -284,7 +286,7 @@ const ForgotPassword = () => {
                                 />
                             </div>
                             <button type="submit" className="forgot-btn" disabled={loading}>
-                                {loading ? 'Resetting...' : 'Update Password'}
+                                {loading ? t('forgot_password.updating') : t('forgot_password.update_password')}
                             </button>
                         </form>
                     </div>
@@ -295,13 +297,12 @@ const ForgotPassword = () => {
                         <div className="success-check">
                             <CheckCircle2 size={48} />
                         </div>
-                        <h1 className="forgot-title">Password Reset!</h1>
+                        <h1 className="forgot-title">{t('forgot_password.success_title')}</h1>
                         <p className="forgot-subtitle" style={{ marginBottom: '32px' }}>
-                            Your password has been successfully updated. <br />
-                            <strong>Logging you in automatically...</strong>
+                            {t('forgot_password.success_subtitle')}
                         </p>
                         <button onClick={() => navigate('/search')} className="forgot-btn">
-                            Go to Dashboard
+                            {t('forgot_password.go_to_dashboard')}
                         </button>
                     </div>
                 )}

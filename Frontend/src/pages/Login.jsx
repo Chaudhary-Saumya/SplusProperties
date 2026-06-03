@@ -6,8 +6,10 @@ import { Eye, EyeOff } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+import { useLanguage } from '../context/LanguageContext';
 
 const Login = () => {
+    const { language, t } = useLanguage();
     const [credentials, setCredentials] = useState({ identifier: '', password: '' });
     const { login, googleLogin, completeProfile, user } = useContext(AuthContext);
     const [error, setError] = useState(null);
@@ -279,33 +281,27 @@ const Login = () => {
                         alt="Property"
                     />
                     <div className="login-left-overlay">
-                        <div className="login-left-tag">Trusted Property Platform</div>
+                        <div className="login-left-tag">{language === 'en' ? 'Trusted Property Platform' : 'ભરોસાપાત્ર પ્રોપર્ટી પ્લેટફોર્મ'}</div>
                         <h2 className="login-left-heading">
-                            Your Dream Property<br />Awaits You
+                            {language === 'en' ? (
+                                <>Your Dream Property<br />Awaits You</>
+                            ) : (
+                                <>તમારી સપનાની પ્રોપર્ટી<br />અહીં છે</>
+                            )}
                         </h2>
                         <p className="login-left-sub">
-                            Access thousands of verified plots, commercial sites and residential land — all in one place with smart geospatial tools.
+                            {language === 'en'
+                                ? "Access thousands of verified plots, commercial sites and residential land — all in one place with smart geospatial tools."
+                                : "હજારો વેરિફાઇડ પ્લોટ્સ, કોમર્શિયલ સાઇટ્સ અને રહેણાંક જમીન એક જ જગ્યાએ સ્માર્ટ મેપિંગ સાથે મેળવો."}
                         </p>
-                        {/* <div className="login-trust-row">
-                            {[
-                                { num: '2,400+', label: 'Listings' },
-                                { num: '180+', label: 'Cities' },
-                                { num: '12K+', label: 'Happy Buyers' },
-                            ].map(({ num, label }) => (
-                                <div className="login-trust-item" key={label}>
-                                    <div className="login-trust-num">{num}</div>
-                                    <div className="login-trust-label">{label}</div>
-                                </div>
-                            ))}
-                        </div> */}
                     </div>
                 </div>
 
                 {/* ── Right: Form Panel ── */}
                 <div className="login-right">
 
-                    <h1 className="login-title">Welcome Back</h1>
-                    <p className="login-subtitle">Sign in to your account to continue</p>
+                    <h1 className="login-title">{t('auth.login_title')}</h1>
+                    <p className="login-subtitle">{t('auth.login_subtitle')}</p>
 
                     {/* Error */}
                     {error && (
@@ -317,7 +313,7 @@ const Login = () => {
                     {/* Form */}
                     <form onSubmit={handleSubmit}>
                         <div className="login-field">
-                            <label htmlFor="identifier" className="login-label">Email or Phone Number</label>
+                            <label htmlFor="identifier" className="login-label">{language === 'en' ? 'Email or Phone Number' : 'ઇમેઇલ અથવા ફોન નંબર'}</label>
                             <input
                                 id="identifier"
                                 type="text"
@@ -325,13 +321,13 @@ const Login = () => {
                                 className="login-input"
                                 value={credentials.identifier}
                                 onChange={handleChange}
-                                placeholder="Enter your email or phone"
+                                placeholder={language === 'en' ? 'Enter your email or phone' : 'ઇમેઇલ અથવા ફોન દાખલ કરો'}
                                 required
                             />
                         </div>
 
                         <div className="login-field">
-                            <label htmlFor="password" className="login-label">Password</label>
+                            <label htmlFor="password" className="login-label">{t('auth.password')}</label>
                             <div style={{ position: 'relative' }}>
                                 <input
                                     id="password"
@@ -359,17 +355,17 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <Link to="/forgot-password" className="login-forgot">Forgot password?</Link>
+                        <Link to="/forgot-password" className="login-forgot">{t('auth.forgot_password')}</Link>
 
                         <button type="submit" className="login-btn" disabled={loading}>
-                            {loading ? 'Signing In...' : 'Sign In'}
+                            {loading ? (language === 'en' ? 'Signing In...' : 'સાઇન ઇન થઈ રહ્યું છે...') : t('auth.btn_login')}
                         </button>
                     </form>
 
                     {/* Divider */}
                     <div className="login-divider">
                         <div className="login-divider-line" />
-                        <span className="login-divider-text">or continue with</span>
+                        <span className="login-divider-text">{language === 'en' ? 'or continue with' : 'અથવા આગળ વધો'}</span>
                         <div className="login-divider-line" />
                     </div>
 
@@ -396,7 +392,7 @@ const Login = () => {
                                 }}
                             >
                                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
-                                Sign in with Google
+                                {language === 'en' ? 'Sign in with Google' : 'Google સાથે સાઇન ઇન કરો'}
                             </button>
                         ) : (
                             <GoogleLogin
@@ -409,8 +405,8 @@ const Login = () => {
 
                     {/* Footer */}
                     <p className="login-footer">
-                        Don't have an account?
-                        <Link to="/register">Create one free</Link>
+                        {language === 'en' ? "Don't have an account?" : "એકાઉન્ટ નથી?"}
+                        <Link to="/register">{language === 'en' ? 'Create one free' : 'નવું બનાવો'}</Link>
                     </p>
 
                     

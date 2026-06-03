@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import axios from "axios";
 import {
   Edit,
@@ -37,7 +38,13 @@ import {
   ToggleLeft,
   ToggleRight,
   ArrowUpRight,
-  ZapOff
+  ZapOff,
+  Compass,
+  Map,
+  Heart,
+  KeyRound,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import ReceiptModal from "../components/ReceiptModal";
 import socket from "../utils/socket";
@@ -62,24 +69,32 @@ const StatCard = ({
 }) => (
   <div
     onClick={onClick}
-    className={`bg-white border border-[#e2d9c5] rounded-xl p-5 shadow-sm transition-all ${onClick ? "cursor-pointer hover:border-[#c9a84c] hover:shadow-md" : ""}`}
+    className={`bg-white border border-[#e2d9c5]/80 rounded-xl p-4 sm:p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 active:scale-98 ${
+      onClick ? "cursor-pointer hover:border-[#c9a84c] hover:shadow-md hover:-translate-y-0.5 group" : ""
+    }`}
   >
-    <div className="flex items-start justify-between mb-3">
-      <div className="w-10 h-10 rounded-lg bg-[#1a2340] flex items-center justify-center">
-        <Icon size={18} className="text-[#c9a84c]" />
+    <div className="flex items-center justify-between mb-2">
+      <div className="w-9 h-9 rounded-lg bg-[#1a2340] flex items-center justify-center shadow-xs">
+        <Icon size={16} className="text-[#c9a84c]" />
       </div>
-      {onClick && <ChevronRight size={16} className="text-[#d1c9b8] mt-1" />}
+      {onClick && (
+        <ChevronRight 
+          size={14} 
+          className="text-[#d1c9b8] transition-transform duration-200 group-hover:translate-x-0.5" 
+        />
+      )}
     </div>
-    <div
-      className="text-2xl font-black text-[#1a2340] mb-1"
-
-    >
+    <div className="text-xl sm:text-2xl font-black text-[#1a2340] tracking-tight leading-none mb-1">
       {value}
     </div>
-    <div className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1">
+    <div className="text-[9px] sm:text-xs font-black text-[#9ca3af] uppercase tracking-widest mt-0.5">
       {label}
     </div>
-    {sub && <div className={`text-xs font-bold ${subColor}`}>{sub}</div>}
+    {sub && (
+      <div className={`text-[10px] font-bold mt-1.5 flex items-center gap-0.5 ${subColor}`}>
+        {sub}
+      </div>
+    )}
   </div>
 );
 
@@ -113,8 +128,10 @@ const Toggle = ({ checked, onChange }) => (
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, deleteAccount } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [activeSection, setActiveSection] = useState("overview");
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [openAccordion, setOpenAccordion] = useState("profile");
   const queryClient = useQueryClient();
 
   /* ── Queries ── */
@@ -416,24 +433,24 @@ const Dashboard = () => {
 
   /* ── Tab config ── */
   const tabs = [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "overview", label: t("dashboard.overview_tab"), icon: LayoutDashboard },
     {
       id: "listings",
-      label: user.role === "Buyer" ? "My Reserved Plots" : "My Listings",
+      label: user.role === "Buyer" ? t("dashboard.reserved_plots_tab") : t("dashboard.listings_tab"),
       icon: List,
     },
     ...(user.role === "Seller" || user.role === "Broker"
       ? [
-          { id: "inquiries", label: "Received Inquiries", icon: Users },
+          { id: "inquiries", label: t("dashboard.inquiries_tab"), icon: Users },
         ]
       : []),
-    { id: "transactions", label: "Token History", icon: History },
+    { id: "transactions", label: t("dashboard.history_tab"), icon: History },
     ...(user.role === "Seller" || user.role === "Broker"
       ? [
-          { id: "payouts", label: "Payout Accounts", icon: Wallet },
+          { id: "payouts", label: t("dashboard.payouts_tab"), icon: Wallet },
         ]
       : []),
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "settings", label: t("dashboard.settings_tab"), icon: Settings },
   ];
 
   return (
@@ -444,18 +461,18 @@ const Dashboard = () => {
       {/* Gold top bar */}
       <div className="h-1 w-full bg-linear-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Page Header */}
-        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
+        {/* Page Header (Desktop only) */}
+        <div className="hidden lg:flex items-center justify-between gap-4 mb-8 flex-wrap">
           <div>
             <h1
               className="text-2xl sm:text-3xl font-bold text-[#1a2340]"
               style={{ fontFamily: "'Nunito Sans', serif" }}
             >
-              Welcome, {user.name}
+              {t("dashboard.welcome")} {user.name}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Manage your property listings, buyers' inquiries, token payments, and account profile settings.
+              {t("dashboard.subtitle")}
             </p>
           </div>
 
@@ -465,7 +482,7 @@ const Dashboard = () => {
                 to="/create-listing"
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white text-sm font-bold rounded-lg transition-all uppercase tracking-wider shadow-sm hover:scale-105"
               >
-                <Plus size={16} /> New Listing
+                <Plus size={16} /> {t("dashboard.new_listing_btn")}
               </Link>
             )}
           </div>
@@ -517,233 +534,272 @@ const Dashboard = () => {
 
           {/* Mobile Navigation & Main Content */}
           <div className="col-span-1 lg:col-span-9 flex flex-col gap-6">
-            {/* Mobile Navigation Tabs (visible only on mobile) */}
-            <div className="lg:hidden flex gap-2 overflow-x-auto pb-3 scrollbar-none">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeSection === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveSection(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all border-2 ${
-                      isActive
-                        ? "bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-sm"
-                        : "bg-white text-slate-600 border-[#e2d9c5]/60 hover:border-[#c9a84c]"
-                    }`}
-                  >
-                    <Icon size={14} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
 
             {/* Section Render Area */}
             <div className="animate-fade-in">
               {activeSection === "settings" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Profile Info */}
-            <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
-              <SectionHeader icon={UserCheck} title="Profile Information" />
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      className={inp}
-                      value={profileForm.name}
-                      onChange={(e) =>
-                        setProfileForm({ ...profileForm, name: e.target.value })
-                      }
-                    />
+            <div className="bg-white border border-[#e2d9c5] rounded-xl p-5 sm:p-6 shadow-sm">
+              <div 
+                onClick={() => { if (window.innerWidth < 1024) setOpenAccordion(openAccordion === "profile" ? null : "profile"); }}
+                className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#f0ebe0] cursor-pointer lg:cursor-default"
+              >
+                <h2 className="text-base sm:text-lg font-bold text-[#1a2340] flex items-center gap-2">
+                  <UserCheck size={18} className="text-[#c9a84c]" /> {t("dashboard.profile_info")}
+                </h2>
+                <ChevronDown 
+                  size={16} 
+                  className={`text-[#c9a84c] transition-transform duration-300 lg:hidden ${
+                    openAccordion === "profile" ? "rotate-180" : ""
+                  }`} 
+                />
+              </div>
+
+              <div className={`mt-4 ${openAccordion === "profile" ? "block animate-fade-in" : "hidden lg:block"}`}>
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
+                        {t("dashboard.full_name")}
+                      </label>
+                      <input
+                        type="text"
+                        className={inp}
+                        value={profileForm.name}
+                        onChange={(e) =>
+                          setProfileForm({ ...profileForm, name: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
+                        {t("dashboard.phone_readonly")}
+                      </label>
+                      <input
+                        type="text"
+                        className={`${inp} bg-[#f0ebe0] cursor-not-allowed opacity-60`}
+                        value={profileForm.phone}
+                        disabled
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                      Phone{" "}
-                      <span className="text-[#c9a84c] normal-case text-[9px]">
-                        (Read-only)
-                      </span>
+                      {t("dashboard.email_readonly")}
                     </label>
                     <input
-                      type="text"
+                      type="email"
                       className={`${inp} bg-[#f0ebe0] cursor-not-allowed opacity-60`}
-                      value={profileForm.phone}
+                      value={profileForm.email}
                       disabled
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                    Email{" "}
-                    <span className="text-[#c9a84c] normal-case text-[9px]">
-                      (Read-only)
-                    </span>
-                  </label>
-                  <input
-                    type="email"
-                    className={`${inp} bg-[#f0ebe0] cursor-not-allowed opacity-60`}
-                    value={profileForm.email}
-                    disabled
-                  />
-                </div>
-                <div className="bg-[#fffbf0] border border-[#e2d9c5] rounded-lg p-3 text-xs text-[#b8933a] font-600">
-                  ⚠️ Email and phone cannot be changed for security reasons.
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
-                >
-                  Save Changes
-                </button>
-              </form>
+                  <div className="bg-[#fffbf0] border border-[#e2d9c5] rounded-lg p-3 text-xs text-[#b8933a] font-600">
+                    {t("dashboard.security_note")}
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
+                  >
+                    {t("dashboard.save_changes")}
+                  </button>
+                </form>
+              </div>
             </div>
 
             {/* Password */}
-            <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
-              <SectionHeader icon={Shield} title="Change Password" />
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
-                {[
-                  {
-                    key: "currentPassword",
-                    label: "Current Password",
-                    field: "current",
-                  },
-                  { key: "newPassword", label: "New Password", field: "new" },
-                  {
-                    key: "confirmPassword",
-                    label: "Confirm New Password",
-                    field: "confirm",
-                  },
-                ].map(({ key, label, field }) => (
-                  <div key={key}>
-                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                      {label}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPasswords[field] ? "text" : "password"}
-                        className={inp}
-                        placeholder="••••••••"
-                        value={passwordForm[key]}
-                        onChange={(e) =>
-                          setPasswordForm({
-                            ...passwordForm,
-                            [key]: e.target.value,
-                          })
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPasswords({
-                            ...showPasswords,
-                            [field]: !showPasswords[field],
-                          })
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#1a2340]"
-                      >
-                        {showPasswords[field] ? (
-                          <EyeOff size={16} />
-                        ) : (
-                          <Eye size={16} />
-                        )}
-                      </button>
+            <div className="bg-white border border-[#e2d9c5] rounded-xl p-5 sm:p-6 shadow-sm">
+              <div 
+                onClick={() => { if (window.innerWidth < 1024) setOpenAccordion(openAccordion === "security" ? null : "security"); }}
+                className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#f0ebe0] cursor-pointer lg:cursor-default"
+              >
+                <h2 className="text-base sm:text-lg font-bold text-[#1a2340] flex items-center gap-2">
+                  <Shield size={18} className="text-[#c9a84c]" /> {t("dashboard.change_password")}
+                </h2>
+                <ChevronDown 
+                  size={16} 
+                  className={`text-[#c9a84c] transition-transform duration-300 lg:hidden ${
+                    openAccordion === "security" ? "rotate-180" : ""
+                  }`} 
+                />
+              </div>
+
+              <div className={`mt-4 ${openAccordion === "security" ? "block animate-fade-in" : "hidden lg:block"}`}>
+                <form onSubmit={handleUpdatePassword} className="space-y-4">
+                  {[
+                    {
+                      key: "currentPassword",
+                      label: "Current Password",
+                      field: "current",
+                    },
+                    { key: "newPassword", label: "New Password", field: "new" },
+                    {
+                      key: "confirmPassword",
+                      label: "Confirm New Password",
+                      field: "confirm",
+                    },
+                  ].map(({ key, label, field }) => (
+                    <div key={key}>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
+                        {label}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPasswords[field] ? "text" : "password"}
+                          className={inp}
+                          placeholder="••••••••"
+                          value={passwordForm[key]}
+                          onChange={(e) =>
+                            setPasswordForm({
+                              ...passwordForm,
+                              [key]: e.target.value,
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPasswords({
+                              ...showPasswords,
+                              [field]: !showPasswords[field],
+                            })
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#1a2340]"
+                        >
+                          {showPasswords[field] ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#c9a84c] hover:bg-[#b8933a] text-[#1a1200] font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
-                >
-                  Update Password
-                </button>
-              </form>
+                  ))}
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-[#c9a84c] hover:bg-[#b8933a] text-[#1a1200] font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
+                  >
+                    {t("dashboard.update_password_btn")}
+                  </button>
+                </form>
+              </div>
             </div>
 
             {/* Active Sessions */}
-            <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm lg:col-span-2">
-              <SectionHeader
-                icon={Users}
-                title="Active Logins"
-                action={
+            <div className="bg-white border border-[#e2d9c5] rounded-xl p-5 sm:p-6 shadow-sm lg:col-span-2">
+              <div 
+                onClick={() => { if (window.innerWidth < 1024) setOpenAccordion(openAccordion === "sessions" ? null : "sessions"); }}
+                className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#f0ebe0] cursor-pointer lg:cursor-default"
+              >
+                <h2 className="text-base sm:text-lg font-bold text-[#1a2340] flex items-center gap-2">
+                  <Users size={18} className="text-[#c9a84c]" /> {t("dashboard.active_logins")}
+                </h2>
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (window.confirm("Log out from all other devices?")) {
                         await axios.delete("/api/auth/sessions");
                         fetchSessions();
                       }
                     }}
-                    className="text-xs font-bold text-[#dc2626] bg-[#fff0f0] border border-[#fecaca] px-3 py-1.5 rounded-lg uppercase tracking-wider"
+                    className="hidden sm:inline-block text-[10px] font-bold text-[#dc2626] bg-[#fff0f0] border border-[#fecaca] px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all active:scale-95"
                   >
-                    Log out all others
+                    {t("dashboard.logout_others_btn")}
                   </button>
-                }
-              />
-              <div className="space-y-3">
-                {sessions.map((session) => (
-                  <div
-                    key={session._id}
-                    className="flex items-center justify-between bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-[#1a2340] flex items-center justify-center">
-                        <Shield size={15} className="text-[#c9a84c]" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-[#1a2340] flex items-center gap-2">
-                          {session.deviceInfo?.os} ·{" "}
-                          {session.deviceInfo?.browser}
-                          {session.token === localStorage.getItem("token") && (
-                            <span className="text-[9px] font-bold bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                              Current
-                            </span>
-                          )}
+                  <ChevronDown 
+                    size={16} 
+                    className={`text-[#c9a84c] transition-transform duration-300 lg:hidden ${
+                      openAccordion === "sessions" ? "rotate-180" : ""
+                    }`} 
+                  />
+                </div>
+              </div>
+
+              <div className={`mt-4 ${openAccordion === "sessions" ? "block animate-fade-in" : "hidden lg:block"}`}>
+                <button
+                  onClick={async () => {
+                    if (window.confirm("Log out from all other devices?")) {
+                      await axios.delete("/api/auth/sessions");
+                      fetchSessions();
+                    }
+                  }}
+                  className="sm:hidden w-full mb-4 text-center text-xs font-bold text-[#dc2626] bg-[#fff0f0] border border-[#fecaca] py-2.5 rounded-lg uppercase tracking-wider"
+                >
+                  {t("dashboard.logout_others_btn")}
+                </button>
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <div
+                      key={session._id}
+                      className="flex items-center justify-between bg-white border border-[#e2d9c5]/60 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#1a2340] flex items-center justify-center">
+                          <Shield size={15} className="text-[#c9a84c]" />
                         </div>
-                        <div className="text-[10px] text-[#9ca3af] font-600">
-                          IP: {session.ipAddress} · Last active{" "}
-                          {new Date(session.lastActive).toLocaleString()}
+                        <div>
+                          <div className="text-sm font-bold text-[#1a2340] flex items-center gap-2">
+                            {session.deviceInfo?.os} ·{" "}
+                            {session.deviceInfo?.browser}
+                            {session.token === localStorage.getItem("token") && (
+                              <span className="text-[9px] font-bold bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                {t("dashboard.current_badge")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-[#9ca3af] font-600">
+                            IP: {session.ipAddress} · Last active{" "}
+                            {new Date(session.lastActive).toLocaleString()}
+                          </div>
                         </div>
                       </div>
+                      {session.token !== localStorage.getItem("token") && (
+                        <button
+                          onClick={() => handleRevokeSession(session._id)}
+                          className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all"
+                          title="Revoke"
+                        >
+                          <LogOut size={15} />
+                        </button>
+                      )}
                     </div>
-                    {session.token !== localStorage.getItem("token") && (
-                      <button
-                        onClick={() => handleRevokeSession(session._id)}
-                        className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all"
-                        title="Revoke"
-                      >
-                        <LogOut size={15} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Danger Zone (Delete Account) */}
-            <div className="bg-white border border-red-200 rounded-xl p-6 shadow-sm lg:col-span-2">
-              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-red-100">
-                <h2 className="text-xl font-bold text-[#b91c1c] flex items-center gap-2">
-                  <Trash2 size={20} className="text-[#b91c1c]" /> Danger Zone
+            <div className="bg-white border border-red-200 rounded-xl p-5 sm:p-6 shadow-sm lg:col-span-2">
+              <div 
+                onClick={() => { if (window.innerWidth < 1024) setOpenAccordion(openAccordion === "danger" ? null : "danger"); }}
+                className="flex items-center justify-between pb-3 sm:pb-4 border-b border-red-100 cursor-pointer lg:cursor-default"
+              >
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c] flex items-center gap-2">
+                  <Trash2 size={18} className="text-[#b91c1c]" /> {t("dashboard.danger_zone")}
                 </h2>
+                <ChevronDown 
+                  size={16} 
+                  className={`text-red-500 transition-transform duration-300 lg:hidden ${
+                    openAccordion === "danger" ? "rotate-180" : ""
+                  }`} 
+                />
               </div>
-              <div className="space-y-4">
+
+              <div className={`mt-4 space-y-4 ${openAccordion === "danger" ? "block animate-fade-in" : "hidden lg:block"}`}>
                 <p className="text-sm font-semibold text-slate-600">
-                  Once you delete your account, all of your listings, inquiries, token payments, and saved maps will be permanently deleted. This action is irreversible.
+                  {t("dashboard.delete_account_desc")}
                 </p>
                 <div className="bg-[#fef2f2] border border-[#fecaca] rounded-lg p-4 text-xs text-[#b91c1c] font-bold flex flex-col gap-2">
-                  <span>⚠️ Apple App Store & Google Play guidelines require account self-deletion to be fully supported.</span>
-                  <span>Confirming this will purge your data and revoke your login access immediately.</span>
+                  <span>{t("dashboard.app_guidelines_note")}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowDeleteModal(true)}
                   className="px-5 py-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm"
                 >
-                  Delete My Account
+                  {t("dashboard.delete_account_btn")}
                 </button>
               </div>
             </div>
@@ -753,38 +809,171 @@ const Dashboard = () => {
         {/* DASHBOARD SECTIONS */}
         {activeSection === "overview" && (
               <div className="space-y-6">
+                {/* Mobile Profile Banner */}
+                <div className="lg:hidden bg-gradient-to-br from-[#1a2340] via-[#24315c] to-[#1a2340] text-white rounded-2xl p-5 shadow-md border border-[#c9a84c]/20 relative overflow-hidden">
+                  <div className="absolute top-[-50px] right-[-50px] w-36 h-36 rounded-full bg-[#c9a84c]/10 blur-xl animate-pulse" />
+                  <div className="absolute bottom-[-30px] left-[-30px] w-28 h-28 rounded-full bg-blue-500/10 blur-xl" />
+                  
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#c9a84c] to-[#e5c158] text-[#1a2340] font-black text-xl flex items-center justify-center shadow-inner border-2 border-white/20">
+                      {user.name?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg font-black tracking-tight text-white leading-tight">
+                        {user.name}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${
+                          user.role === "Buyer" 
+                            ? "bg-blue-500/20 text-blue-300 border-blue-500/30" 
+                            : "bg-[#c9a84c]/20 text-[#e5c158] border-[#c9a84c]/30"
+                        }`}>
+                          {user.role}
+                        </span>
+                        <span className="text-[10px] text-slate-300 font-semibold flex items-center gap-0.5">
+                          <CheckCircle2 size={10} className="text-[#c9a84c]" /> Verified
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Quick Actions Grid */}
+                <div className="lg:hidden bg-white border border-[#e2d9c5]/80 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                  <h3 className="text-[10px] font-black text-[#1a2340] uppercase tracking-widest mb-3">
+                    {t("dashboard.quick_actions")}
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {user.role === "Buyer" ? (
+                      <>
+                        <button
+                          onClick={() => navigate("/search")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#c9a84c] border border-amber-100 flex items-center justify-center transition-all active:scale-90">
+                            <Compass size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.explore_plots")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => navigate("/boundary-map")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center transition-all active:scale-90">
+                            <Map size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.draw_boundary")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => navigate("/saved-maps")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center transition-all active:scale-90">
+                            <FileText size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.saved_maps")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => navigate("/favorites")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-red-50 text-red-500 border border-red-100 flex items-center justify-center transition-all active:scale-90">
+                            <Heart size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.my_favorites")}
+                          </span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => navigate("/create-listing")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#c9a84c] border border-amber-100 flex items-center justify-center transition-all active:scale-90">
+                            <Plus size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.new_listing_btn")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => setActiveSection("payouts")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center transition-all active:scale-90">
+                            <Wallet size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.link_bank")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => setActiveSection("inquiries")}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center transition-all active:scale-90">
+                            <Users size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.inquiries_tab")}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => { setActiveSection("settings"); setOpenAccordion("security"); }}
+                          className="flex flex-col items-center gap-1.5 py-1"
+                        >
+                          <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-500 border border-purple-100 flex items-center justify-center transition-all active:scale-90">
+                            <KeyRound size={18} />
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600 text-center leading-tight">
+                            {t("dashboard.change_password")}
+                          </span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
                     icon={History}
-                    label="Total Reservations"
+                    label={t("dashboard.total_reservations")}
                     value={transactions.length}
-                    sub="View all →"
+                    sub={t("dashboard.view_all")}
                     onClick={() => setActiveSection("transactions")}
                   />
                   {(user.role === "Seller" || user.role === "Broker") && (
                     <>
                       <StatCard
                         icon={List}
-                        label="Active Listings"
+                        label={t("dashboard.active_listings")}
                         value={
                           listings.filter((l) => l.status === "Active").length
                         }
-                        sub="Manage →"
+                        sub={t("dashboard.manage")}
                         onClick={() => setActiveSection("listings")}
                       />
                       <StatCard
                         icon={Users}
-                        label="Received Inquiries"
+                        label={t("dashboard.received_inquiries")}
                         value={receivedInquiries.length}
-                        sub="View all →"
+                        sub={t("dashboard.view_all")}
                         onClick={() => setActiveSection("inquiries")}
                         subColor="text-[#2563eb]"
                       />
                       <StatCard
                         icon={Wallet}
-                        label="Payout Accounts"
+                        label={t("dashboard.payout_accounts")}
                         value={`${user.paymentAccounts?.length || 0}/3`}
-                        sub="Manage →"
+                        sub={t("dashboard.manage")}
                         onClick={() => setActiveSection("payouts")}
                       />
                     </>
@@ -793,21 +982,20 @@ const Dashboard = () => {
                     <>
                       <StatCard
                         icon={List}
-                        label="Reserved Plots"
+                        label={t("dashboard.reserved_plots")}
                         value={listings.length}
-                        sub="View all →"
+                        sub={t("dashboard.view_all")}
                         onClick={() => setActiveSection("listings")}
                       />
                       <StatCard
                         icon={Users}
-                        label="Inquiries Sent"
+                        label={t("dashboard.received_inquiries")}
                         value={sentInquiries.length}
                       />
                       <StatCard
                         icon={Award}
-                        label="Account Role"
+                        label={t("dashboard.role")}
                         value={user.role}
-                        sub="Verified Profile"
                       />
                     </>
                   )}
@@ -815,7 +1003,7 @@ const Dashboard = () => {
 
                 {/* Recent Listings */}
                 {listings.length > 0 && (
-                  <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
+                  <div className="bg-white border border-[#e2d9c5] rounded-xl p-5 sm:p-6 shadow-sm">
                     <SectionHeader
                       icon={TrendingUp}
                       title="Recent Properties"
@@ -833,14 +1021,14 @@ const Dashboard = () => {
                         <div
                           key={l._id}
                           onClick={() => navigate(`/listings/${l._id}`)}
-                          className="flex items-center gap-3 bg-[#fdfaf5] border border-[#e2d9c5] hover:border-[#c9a84c] rounded-lg p-3 cursor-pointer transition-all group"
+                          className="flex items-center gap-3.5 bg-white border border-[#e2d9c5]/80 hover:border-[#c9a84c] rounded-xl p-3 cursor-pointer transition-all duration-300 active:scale-98 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-md group"
                         >
                           <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0">
                             {l.images?.[0] ? (
                               <img
                                 src={getImageUrl(l.images[0])}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover animate-fade-in"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[#9ca3af] text-xs">
@@ -874,8 +1062,8 @@ const Dashboard = () => {
                   icon={List}
                   title={
                     user.role === "Buyer"
-                      ? "My Reserved Plots"
-                      : "My Property Listings"
+                      ? t("dashboard.reserved_plots_tab")
+                      : t("dashboard.listings_tab")
                   }
                   action={
                     (user.role === "Seller" || user.role === "Broker") && (
@@ -883,7 +1071,7 @@ const Dashboard = () => {
                         to="/create-listing"
                         className="flex items-center gap-1.5 px-4 py-2 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white text-sm font-bold rounded-lg transition-all uppercase tracking-wider"
                       >
-                        <Plus size={14} /> New Listing
+                        <Plus size={14} /> {t("dashboard.new_listing_btn")}
                       </Link>
                     )
                   }
@@ -1027,33 +1215,36 @@ const Dashboard = () => {
                               </td>
                             </tr>
                             <tr className="md:hidden">
-                              <td colSpan="4" className="py-2">
-                                <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
-                                  <div className="flex items-start gap-3 mb-4">
-                                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#e5e7eb] shrink-0">
+                              <td colSpan="4" className="py-2.5">
+                                <div className="bg-white border border-[#e2d9c5]/80 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                                  <div className="flex items-start gap-3.5 mb-3">
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#e5e7eb] shrink-0 border border-slate-100">
                                       {l.images?.[0] ? (
                                         <img src={getImageUrl(l.images[0])} alt="" className="w-full h-full object-cover" />
                                       ) : (
-                                        <div className="w-full h-full bg-[#f0ebe0]" />
+                                        <div className="w-full h-full bg-[#f8f5ee] flex items-center justify-center text-slate-300"><LayoutDashboard size={18} /></div>
                                       )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <Link to={`/listings/${l._id}`} className="text-sm font-bold text-[#1a2340] line-clamp-2 leading-tight">{l.title}</Link>
+                                      <Link to={`/listings/${l._id}`} className="text-sm font-bold text-[#1a2340] line-clamp-2 leading-snug hover:text-[#c9a84c] transition-colors">{l.title}</Link>
+                                      <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-0.5">
+                                        <MapPin size={10} /> {l.plotNumber ? `Plot: ${l.plotNumber}, ` : ''}{l.areaName ? `Area: ${l.areaName}` : l.location}
+                                      </p>
                                       <p className="text-sm font-black text-[#c9a84c] mt-1">₹{l.price?.toLocaleString("en-IN")}</p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center justify-between pt-3 border-t border-[#e2d9c5]/50">
+                                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                                     <div className="flex items-center gap-2">
                                       <Toggle
                                         checked={l.status === "Active"}
                                         onChange={() => toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
                                       />
-                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${l.status === "Active" ? "text-[#15803d]" : "text-[#9ca3af]"}`}>{l.status}</span>
+                                      <span className={`text-[10px] font-black uppercase tracking-wider ${l.status === "Active" ? "text-emerald-600" : "text-slate-400"}`}>{l.status}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                      <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 bg-white border border-[#e2d9c5] text-[#1a2340] rounded-lg"><Eye size={14} /></button>
-                                      <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 bg-white border border-[#e2d9c5] text-[#2563eb] rounded-lg"><Edit size={14} /></button>
-                                      <button onClick={() => handleDelete(l._id)} className="p-2 bg-white border border-[#e2d9c5] text-[#dc2626] rounded-lg"><Trash2 size={14} /></button>
+                                      <button onClick={() => navigate(`/listings/${l._id}`)} className="w-8 h-8 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="View"><Eye size={14} /></button>
+                                      <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="w-8 h-8 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="Edit"><Edit size={14} /></button>
+                                      <button onClick={() => handleDelete(l._id)} className="w-8 h-8 bg-red-50 border border-red-100 text-red-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="Delete"><Trash2 size={14} /></button>
                                     </div>
                                   </div>
                                 </div>
@@ -1071,7 +1262,7 @@ const Dashboard = () => {
             {/* Transactions Section */}
             {activeSection === "transactions" && (
               <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
-                <SectionHeader icon={History} title="Token Transaction History" />
+                <SectionHeader icon={History} title={t("dashboard.history_tab")} />
 
                 {transactionsLoading ? (
                   <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
@@ -1135,22 +1326,31 @@ const Dashboard = () => {
                                   </tr>
                                   {/* Mobile card */}
                                   <tr className="md:hidden">
-                                    <td colSpan="4" className="p-2">
-                                      <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
+                                    <td colSpan="4" className="py-2.5">
+                                      <div className="bg-white border border-[#e2d9c5]/80 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                                         <div className="flex justify-between items-start mb-3">
-                                          <div>
-                                            <p className="text-xs font-bold text-[#1a2340] line-clamp-1">{t.listingId?.title}</p>
-                                            <p className="text-[9px] text-[#9ca3af] font-bold mt-0.5 uppercase tracking-wider">Ref: {t.razorpayOrderId}</p>
+                                          <div className="min-w-0 flex-1 pr-2">
+                                            <p className="text-sm font-bold text-[#1a2340] line-clamp-1">{t.listingId?.title}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Ref: {t.razorpayOrderId}</p>
                                           </div>
-                                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.status === "Success" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#fff0f0] text-[#dc2626]"}`}>{t.status}</span>
+                                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                            t.status === "Success" 
+                                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
+                                              : "bg-red-50 text-red-600 border border-red-100"
+                                          }`}>
+                                            {t.status}
+                                          </span>
                                         </div>
-                                        <div className="flex items-end justify-between">
+                                        <div className="flex items-end justify-between pt-3 border-t border-slate-50">
                                           <div>
-                                            <p className="text-sm font-black text-[#1a2340]">₹{t.amount?.toLocaleString("en-IN")}</p>
-                                            <p className="text-[10px] text-[#9ca3af] font-semibold">{new Date(t.createdAt).toLocaleDateString()}</p>
+                                            <p className="text-xs text-slate-400 font-semibold">{new Date(t.createdAt).toLocaleDateString()}</p>
+                                            <p className="text-base font-black text-[#1a2340] mt-0.5">₹{t.amount?.toLocaleString("en-IN")}</p>
                                           </div>
-                                          <button onClick={() => setSelectedTransaction(t)} className="flex items-center gap-1 px-3 py-1.5 bg-[#1a2340] text-[#c9a84c] rounded-lg text-[10px] font-black uppercase tracking-widest">
-                                            <Receipt size={12} /> Receipt
+                                          <button 
+                                            onClick={() => setSelectedTransaction(t)} 
+                                            className="flex items-center gap-1 px-3 py-2 bg-[#1a2340] text-[#c9a84c] hover:bg-[#c9a84c] hover:text-[#1a1200] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                                          >
+                                            <Receipt size={12} /> {t("dashboard.view_receipt")}
                                           </button>
                                         </div>
                                       </div>
@@ -1172,7 +1372,7 @@ const Dashboard = () => {
             {activeSection === "inquiries" &&
               (user.role === "Seller" || user.role === "Broker") && (
                 <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
-                  <SectionHeader icon={Users} title="Received Inquiries" />
+                  <SectionHeader icon={Users} title={t("dashboard.inquiries_tab")} />
 
                   {inquiriesLoading ? (
                     <div className="space-y-3">
@@ -1238,30 +1438,49 @@ const Dashboard = () => {
                               </tr>
                               {/* Mobile card */}
                               <tr className="md:hidden">
-                                <td colSpan="3" className="py-2">
-                                  <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-4">
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <div className="w-10 h-10 bg-[#1a2340] rounded-full flex items-center justify-center text-[#c9a84c] font-black text-sm">{inq.userId?.name?.[0]?.toUpperCase()}</div>
+                                <td colSpan="3" className="py-2.5">
+                                  <div className="bg-white border border-[#e2d9c5]/80 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                                    <div className="flex items-center gap-3.5 mb-3">
+                                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-[#1a2340] font-black text-sm border border-slate-200">
+                                        {inq.userId?.name?.[0]?.toUpperCase() || "B"}
+                                      </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-[#1a2340]">{inq.userId?.name}</p>
-                                        <p className="text-xs text-[#6b7280]">{inq.userId?.phone}</p>
+                                        <p className="text-sm font-bold text-[#1a2340] truncate">{inq.userId?.name}</p>
+                                        <p className="text-xs text-slate-400 font-medium flex items-center gap-0.5 mt-0.5">
+                                          <Phone size={10} /> {inq.userId?.phone}
+                                        </p>
                                       </div>
                                     </div>
-                                    <p className="text-xs font-bold text-[#9ca3af] mb-3 line-clamp-1">Property: {inq.listingId?.title}</p>
-                                    <div className="flex items-center justify-between pt-3 border-t border-[#e2d9c5]/50">
-                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inq.status === "Contacted" ? "bg-[#eff6ff] text-[#2563eb]" :
-                                            "bg-[#fffbeb] text-[#d97706]"
-                                        }`}>{inq.status === "Contacted" ? "Connected" : inq.status}</span>
+                                    <p className="text-xs font-semibold text-slate-500 mb-3 bg-[#f8f5ee] px-2.5 py-1.5 rounded-lg line-clamp-1 border border-[#e2d9c5]/40">
+                                      <span className="font-extrabold text-[#1a2340]">Property:</span> {inq.listingId?.title}
+                                    </p>
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                        inq.status === "Contacted" 
+                                          ? "bg-blue-50 text-blue-700 border border-blue-100" 
+                                          : "bg-amber-50 text-amber-700 border border-amber-100"
+                                      }`}>{inq.status === "Contacted" ? "Connected" : inq.status}</span>
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() => updateInquiryStatus(inq._id, inq.status === "Pending" ? "Contacted" : "Pending")}
-                                          className={`p-2 bg-white border border-[#e2d9c5] rounded-lg ${inq.status === "Contacted" ? "text-[#2563eb] border-[#dbeafe]" : "text-gray-400"
-                                            }`}
+                                          className={`w-8 h-8 border rounded-lg flex items-center justify-center transition-all active:scale-90 ${
+                                            inq.status === "Contacted" 
+                                              ? "bg-blue-50 border-blue-100 text-blue-600" 
+                                              : "bg-slate-50 border-slate-100 text-slate-400 hover:text-slate-600"
+                                          }`}
                                           title={inq.status === "Contacted" ? "Mark as Pending" : "Mark as Connected"}
                                         >
                                           <CheckCircle2 size={14} />
                                         </button>
-                                        {inq.userId?.phone && <a href={`tel:${inq.userId.phone}`} className="p-2 bg-white border border-[#e2d9c5] text-[#15803d] rounded-lg"><Phone size={14} /></a>}
+                                        {inq.userId?.phone && (
+                                          <a 
+                                            href={`tel:${inq.userId.phone}`} 
+                                            className="w-8 h-8 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                                            title="Call"
+                                          >
+                                            <Phone size={14} />
+                                          </a>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -1282,12 +1501,12 @@ const Dashboard = () => {
                 <div className="bg-white border border-[#e2d9c5] rounded-xl p-6 shadow-sm">
                   <SectionHeader
                     icon={Wallet}
-                    title="Payout Accounts"
+                    title={t("dashboard.payout_accounts")}
                     action={
                       <span
                         className={`text-xs font-bold px-3 py-1.5 rounded-lg ${user.paymentAccounts?.length >= 3 ? "bg-[#fff0f0] text-[#dc2626] border border-[#fecaca]" : "bg-[#fffbf0] text-[#b8933a] border border-[#e2d9c5]"}`}
                       >
-                        {user.paymentAccounts?.length || 0}/3 Accounts
+                        {user.paymentAccounts?.length || 0}/3
                       </span>
                     }
                   />
@@ -1344,7 +1563,7 @@ const Dashboard = () => {
                         <div className="w-10 h-10 border-2 border-dashed border-current rounded-lg flex items-center justify-center">
                           <Plus size={18} />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider">Add Account</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">{t("dashboard.add_bank_btn")}</span>
                       </button>
                     )}
                   </div>
@@ -1366,7 +1585,7 @@ const Dashboard = () => {
             <div className="h-1 w-full bg-linear-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0]">
               <h3 className="text-lg font-bold text-[#1a2340]">
-                {editingAccountId ? "Edit Account" : "Add Payout Account"}
+                {t("dashboard.add_account_modal_title")}
               </h3>
               <button
                 onClick={() => { setShowAddAccountModal(false); setEditingAccountId(null); }}
@@ -1388,7 +1607,7 @@ const Dashboard = () => {
                 ))}
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Account Holder Name</label>
+                <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">{t("dashboard.holder_name")}</label>
                 <input
                   type="text" required className={inp} placeholder="Name as per bank"
                   value={newAccount.holderName} onChange={(e) => setNewAccount({ ...newAccount, holderName: e.target.value })}
@@ -1397,7 +1616,7 @@ const Dashboard = () => {
               {newAccount.accountType === "Bank" ? (
                 <>
                   <div>
-                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Bank Name</label>
+                    <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">{t("dashboard.bank_name")}</label>
                     <input
                       type="text" required className={inp} placeholder="e.g. HDFC Bank"
                       value={newAccount.bankName} onChange={(e) => setNewAccount({ ...newAccount, bankName: e.target.value })}
@@ -1405,14 +1624,14 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">Account Number</label>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">{t("dashboard.account_number")}</label>
                       <input
                         type="text" required className={inp} placeholder="1234..."
                         value={newAccount.accountNumber} onChange={(e) => setNewAccount({ ...newAccount, accountNumber: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">IFSC Code</label>
+                      <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">{t("dashboard.ifsc_code")}</label>
                       <input
                         type="text" required className={inp} placeholder="HDFC0..."
                         value={newAccount.ifscCode} onChange={(e) => setNewAccount({ ...newAccount, ifscCode: e.target.value })}
@@ -1422,7 +1641,7 @@ const Dashboard = () => {
                 </>
               ) : (
                 <div>
-                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">UPI ID</label>
+                  <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">{t("dashboard.upi_id")}</label>
                   <input
                     type="text" required className={inp} placeholder="username@bank"
                     value={newAccount.upiId} onChange={(e) => setNewAccount({ ...newAccount, upiId: e.target.value })}
@@ -1431,7 +1650,7 @@ const Dashboard = () => {
               )}
               <button type="submit" className="w-full py-3 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2">
                 {editingAccountId ? <Edit size={16} /> : <Plus size={16} />}
-                {editingAccountId ? "Update Account" : "Save Account"}
+                {t("dashboard.save_account_btn")}
               </button>
             </form>
           </div>
@@ -1445,7 +1664,7 @@ const Dashboard = () => {
             <div className="h-1 w-full bg-linear-to-r from-[#ef4444] via-[#f87171] to-[#ef4444]" />
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0ebe0]">
               <h3 className="text-lg font-bold text-[#b91c1c] flex items-center gap-2">
-                <Trash2 size={18} /> Confirm Account Deletion
+                <Trash2 size={18} /> {t("dashboard.confirm_delete_title")}
               </h3>
               <button
                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmPassword(""); }}
@@ -1463,7 +1682,7 @@ const Dashboard = () => {
               {!user?.googleId && (
                 <div>
                   <label className="block text-[10px] font-bold text-[#1a2340] uppercase tracking-widest mb-2">
-                    Enter Password to Confirm
+                    {t("dashboard.delete_confirm_prompt")}
                   </label>
                   <input
                     type="password"
@@ -1488,14 +1707,14 @@ const Dashboard = () => {
                   className="flex-1 py-3 border border-[#e2d9c5] hover:bg-[#f8f5ee] text-[#1a2340] font-bold rounded-lg transition-all uppercase tracking-widest text-xs"
                   disabled={isDeleting}
                 >
-                  Cancel
+                  {t("dashboard.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 py-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white font-bold rounded-lg transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
                   disabled={isDeleting}
                 >
-                  {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  {isDeleting ? t("dashboard.deleting_processing") : t("dashboard.delete_account_btn")}
                 </button>
               </div>
             </form>
@@ -1511,6 +1730,47 @@ const Dashboard = () => {
           onClose={() => setSelectedTransaction(null)}
         />
       )}
+
+      {/* Mobile Sticky Bottom Nav Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e2d9c5]/60 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom,12px)] pt-2">
+        <div className="flex justify-around items-center px-2">
+          {tabs.filter(t => t.id !== "payouts").map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSection === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSection(tab.id)}
+                className="flex flex-col items-center gap-1 py-1 px-3 relative transition-all active:scale-95"
+              >
+                <div className={`p-1.5 rounded-xl transition-all ${
+                  isActive 
+                    ? "bg-[#1a2340] text-[#c9a84c] scale-105 shadow-xs" 
+                    : "text-slate-500 hover:text-[#1a2340]"
+                }`}>
+                  <Icon size={18} />
+                </div>
+                <span className={`text-[9px] font-bold tracking-tight transition-colors ${
+                  isActive ? "text-[#1a2340] font-extrabold" : "text-slate-400"
+                }`}>
+                  {tab.label.split(" ")[0]}
+                </span>
+                {/* Active Underline Dot */}
+                {isActive && (
+                  <span className="absolute bottom-0 w-1.5 h-1.5 rounded-full bg-[#c9a84c]" />
+                )}
+                
+                {/* Notification Badge for Inquiries */}
+                {tab.id === "inquiries" && receivedInquiries.length > 0 && (
+                  <span className="absolute top-0 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-black text-white ring-2 ring-white">
+                    {receivedInquiries.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

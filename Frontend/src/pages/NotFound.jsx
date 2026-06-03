@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Compass, ArrowLeft, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SEO from '../components/SEO';
+import { useLanguage } from '../context/LanguageContext';
 
 const NotFound = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-[85vh] bg-[#1a2340] flex items-center justify-center px-6 relative overflow-hidden font-['Nunito_Sans',sans-serif]">
@@ -50,7 +52,7 @@ const NotFound = () => {
         </h1>
         
         <p className="text-slate-300 font-medium text-base sm:text-lg leading-relaxed mb-10 max-w-md mx-auto">
-          The land parcel or page you are searching for does not exist, has been sold, or has been moved to a new coordinate.
+          {t('not_found.desc')}
         </p>
 
         {/* CTA Buttons */}
@@ -60,7 +62,7 @@ const NotFound = () => {
             className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 bg-[#c9a84c] hover:bg-[#b8933a] text-[#1a2340] font-black text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-[#c9a84c]/15 hover:-translate-y-0.5"
           >
             <ArrowLeft size={16} strokeWidth={2.5} />
-            <span>Back to Home</span>
+            <span>{t('not_found.back_home')}</span>
           </button>
           
           <button
@@ -68,7 +70,7 @@ const NotFound = () => {
             className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 bg-transparent hover:bg-white/[0.04] text-white font-black text-sm uppercase tracking-widest rounded-xl border-2 border-white/25 hover:border-white transition-all hover:-translate-y-0.5"
           >
             <Search size={16} strokeWidth={2.5} />
-            <span>Search Plots</span>
+            <span>{t('not_found.search_plots')}</span>
           </button>
         </div>
 

@@ -6,12 +6,14 @@ import { AuthContext } from '../context/AuthContext';
 import { Mail, Phone, Calendar, ArrowLeft, MapPin, CheckCircle, Clock, User, UserCheck } from 'lucide-react';
 import socket from '../utils/socket';
 import { getImageUrl } from '../utils/imageUrl';
+import { useLanguage } from '../context/LanguageContext';
 
 const ReceivedInquiries = () => {
     const [inquiries, setInquiries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('All');
     const { user } = useContext(AuthContext);
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     const fetchInquiries = async (isSilent = false) => {
@@ -103,14 +105,14 @@ const ReceivedInquiries = () => {
                         <ArrowLeft size={24} />
                     </button>
                     <div className="flex flex-col">
-                        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 font-['Outfit'] tracking-tight">Buyer Inquiries</h1>
-                        <p className="text-sm md:text-base text-slate-500 font-medium">Requests sent by buyers to contact you about your properties</p>
+                        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 font-['Outfit'] tracking-tight">{t('received_inquiries.title')}</h1>
+                        <p className="text-sm md:text-base text-slate-500 font-medium">{t('received_inquiries.subtitle')}</p>
                     </div>
                 </div>
                 {inquiries.length > 0 && (
                     <div className="bg-blue-50 px-4 py-2 rounded-2xl border border-blue-100 flex items-center gap-2 w-fit">
                         <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                        <span className="text-sm font-bold text-blue-700">{inquiries.length} Total Inquiries</span>
+                        <span className="text-sm font-bold text-blue-700">{inquiries.length} {t('received_inquiries.title')}</span>
                     </div>
                 )}
             </div>
@@ -119,9 +121,9 @@ const ReceivedInquiries = () => {
             {inquiries.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-4 mb-8 border-b border-slate-100 scrollbar-none">
                     {[
-                        { id: 'All', label: 'All Inquiries', count: counts.All, color: 'bg-slate-100 text-slate-700' },
-                        { id: 'Pending', label: 'Pending', count: counts.Pending, color: 'bg-amber-100 text-amber-700' },
-                        { id: 'Connected', label: 'Connected', count: counts.Connected, color: 'bg-blue-100 text-blue-700' }
+                        { id: 'All', label: t('received_inquiries.title'), count: counts.All, color: 'bg-slate-100 text-slate-700' },
+                        { id: 'Pending', label: t('received_inquiries.pending'), count: counts.Pending, color: 'bg-amber-100 text-amber-700' },
+                        { id: 'Connected', label: t('received_inquiries.contacted'), count: counts.Connected, color: 'bg-blue-100 text-blue-700' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -232,7 +234,7 @@ const ReceivedInquiries = () => {
                                 </div>
                                 
                                 <div className="flex flex-col gap-3 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 shrink-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center md:text-right">Actions</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center md:text-right">{t('received_inquiries.actions')}</p>
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={() => updateInquiryStatus(inq._id, inq.status === 'Contacted' ? 'Pending' : 'Contacted')}
@@ -244,7 +246,7 @@ const ReceivedInquiries = () => {
                                             title={inq.status === 'Contacted' ? 'Click to revert to Pending' : 'Mark as Connected'}
                                         >
                                             <UserCheck size={14} />
-                                            {inq.status === 'Contacted' ? 'Connected' : 'Connect'}
+                                            {inq.status === 'Contacted' ? t('received_inquiries.contacted') : t('received_inquiries.mark_contacted')}
                                         </button>
                                     </div>
                                 </div>

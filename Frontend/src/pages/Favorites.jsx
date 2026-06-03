@@ -5,11 +5,13 @@ import { Heart, MapPin, ArrowLeft, ChevronRight, Building2 } from 'lucide-react'
 import { AuthContext } from '../context/AuthContext';
 import ListingSkeleton from '../components/ListingSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
+import { useLanguage } from '../context/LanguageContext';
 
 const Favorites = () => {
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -54,7 +56,7 @@ const Favorites = () => {
                         <Building2 size={14} />
                         <span>Kharsan Properties</span>
                         <ChevronRight size={12} />
-                        <span>My Favourites</span>
+                        <span>{t('favorites.breadcrumb')}</span>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
@@ -67,9 +69,9 @@ const Favorites = () => {
                             </button>
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
-                                    My <span className="text-[#c9a84c]">Favourites</span>
+                                    {t('favorites.title')}
                                 </h1>
-                                <p className="text-white/50 font-medium mt-1 text-sm">Quickly access properties you've saved</p>
+                                <p className="text-white/50 font-medium mt-1 text-sm">{t('favorites.subtitle')}</p>
                             </div>
                         </div>
 
@@ -77,7 +79,7 @@ const Favorites = () => {
                             <div className="flex items-center gap-2 bg-[#c9a84c]/15 border border-[#c9a84c]/30 px-4 py-2 rounded-xl w-fit">
                                 <div className="w-2 h-2 rounded-full bg-[#c9a84c] animate-pulse"></div>
                                 <span className="text-sm font-black text-[#c9a84c] uppercase tracking-widest">
-                                    {favorites.length} Saved {favorites.length === 1 ? 'Property' : 'Properties'}
+                                    {favorites.length} {t('favorites.saved_count')} {favorites.length === 1 ? t('favorites.property') : t('favorites.properties')}
                                 </span>
                             </div>
                         )}
@@ -94,15 +96,15 @@ const Favorites = () => {
                         <div className="w-24 h-24 rounded-2xl bg-[#1a2340] flex items-center justify-center mb-6 shadow-lg">
                             <Heart size={40} className="text-[#c9a84c]" />
                         </div>
-                        <h2 className="text-2xl font-black text-[#1a2340] mb-2">No Saved Properties</h2>
+                        <h2 className="text-2xl font-black text-[#1a2340] mb-2">{t('favorites.no_saved')}</h2>
                         <p className="text-[#1a2340]/50 max-w-sm mx-auto mb-8 text-sm font-medium leading-relaxed">
-                            Your favourites list is empty. Start exploring listings to find your dream property and save the ones you love.
+                            {t('favorites.no_saved_desc')}
                         </p>
                         <button
                             onClick={() => navigate('/search')}
                             className="bg-[#1a2340] hover:bg-[#243060] text-[#c9a84c] px-8 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg hover:-translate-y-0.5"
                         >
-                            Explore Listings
+                            {t('favorites.explore_listings')}
                         </button>
                     </div>
                 ) : (
@@ -124,7 +126,7 @@ const Favorites = () => {
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-[#1a2340]/30 font-bold italic text-sm bg-[#f8f5ee]">
-                                            No Image Available
+                                            {t('favorites.no_image')}
                                         </div>
                                     )}
 
@@ -156,7 +158,7 @@ const Favorites = () => {
                                     {/* View CTA */}
                                     <div className="mt-4 pt-4 border-t border-[#f8f5ee]">
                                         <span className="text-xs font-black text-[#c9a84c] uppercase tracking-widest group-hover:gap-2 flex items-center gap-1 transition-all">
-                                            View Property <ChevronRight size={12} />
+                                            {t('favorites.view_property')} <ChevronRight size={12} />
                                         </span>
                                     </div>
                                 </div>

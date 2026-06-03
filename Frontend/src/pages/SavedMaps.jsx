@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const SavedMaps = () => {
   const { user, loading: authLoading, isAuthenticated } = React.useContext(AuthContext);
@@ -15,6 +16,7 @@ const SavedMaps = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [renameModal, setRenameModal] = useState({ open: false, mapId: null, currentLabel: '', newLabel: '' });
@@ -116,10 +118,10 @@ const SavedMaps = () => {
                 <span className="text-[10px] font-black text-[#c9a84c] uppercase tracking-widest">Property Intelligence</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                My Saved <span className="text-[#c9a84c]">Boundaries</span>
+                {t('saved_maps.title')}
               </h1>
               <p className="text-white/40 max-w-lg font-medium leading-relaxed">
-                Manage and share your custom land mappings. All boundaries are stored permanently in your account.
+                {t('saved_maps.subtitle')}
               </p>
             </div>
             
@@ -128,7 +130,7 @@ const SavedMaps = () => {
               className="group flex items-center gap-4 px-8 py-4 bg-[#c9a84c] hover:bg-[#b8943e] text-[#1a2340] rounded-3xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-2xl"
             >
               <Plus size={20} />
-              Create New Map
+              {t('saved_maps.open_map_tool')}
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -142,7 +144,7 @@ const SavedMaps = () => {
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#1a2340]/20" size={18} />
             <input 
               type="text"
-              placeholder="Search property name or ID..."
+              placeholder={t('saved_maps.subtitle')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-[#f8f5ee]/50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-[#c9a84c]/30 text-[#1a2340] font-bold placeholder:text-[#1a2340]/20 text-sm"
@@ -174,8 +176,8 @@ const SavedMaps = () => {
               <MapIcon size={40} />
             </div>
             <div className="max-w-sm mx-auto space-y-2">
-              <h3 className="text-xl font-black text-[#1a2340]">No maps found</h3>
-              <p className="text-[#1a2340]/40 font-medium text-sm">Start by creating your first property boundary mapping.</p>
+              <h3 className="text-xl font-black text-[#1a2340]">{t('saved_maps.no_maps')}</h3>
+              <p className="text-[#1a2340]/40 font-medium text-sm">{t('saved_maps.no_maps_desc')}</p>
             </div>
             <Link 
               to="/boundary-map"
@@ -261,7 +263,7 @@ const SavedMaps = () => {
                           <Ruler size={16} />
                         </div>
                         <div>
-                          <div className="text-[9px] font-black text-[#1a2340]/30 uppercase tracking-widest leading-none mb-1">Area</div>
+                          <div className="text-[9px] font-black text-[#1a2340]/30 uppercase tracking-widest leading-none mb-1">{t('saved_maps.coordinates')}</div>
                           <div className="text-sm font-black text-[#1a2340]">{totalAcres} <span className="text-[10px] opacity-40">ac</span></div>
                         </div>
                       </div>
@@ -270,7 +272,7 @@ const SavedMaps = () => {
                           <Calendar size={16} />
                         </div>
                         <div>
-                          <div className="text-[9px] font-black text-[#1a2340]/30 uppercase tracking-widest leading-none mb-1">Created</div>
+                          <div className="text-[9px] font-black text-[#1a2340]/30 uppercase tracking-widest leading-none mb-1">{t('saved_maps.created_on')}</div>
                           <div className="text-sm font-black text-[#1a2340] truncate">{formatDate(map.createdAt)}</div>
                         </div>
                       </div>
@@ -282,13 +284,13 @@ const SavedMaps = () => {
                          target="_blank"
                          className="flex-1 h-12 flex items-center justify-center gap-2 bg-[#1a2340] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
                        >
-                         <ExternalLink size={14} /> Open Link
+                         <ExternalLink size={14} /> {t('saved_maps.view_map')}
                        </Link>
                        <Link 
                          to={`/boundary-map?edit=${map.shareId}`}
                          className="flex-1 h-12 flex items-center justify-center gap-2 bg-[#f8f5ee] text-[#1a2340] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#1a2340]/10 transition-all border border-[#1a2340]/5"
                        >
-                         <Layers size={14} /> Edit Map
+                         <Layers size={14} /> {t('saved_maps.edit_map')}
                        </Link>
                     </div>
                   </div>
@@ -394,7 +396,7 @@ const SavedMaps = () => {
                   onClick={handleRename}
                   className="flex-[2] py-4 bg-[#1a2340] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all shadow-xl shadow-[#1a2340]/20"
                 >
-                  Save New Name
+                  {t('saved_maps.open_map_tool')}
                 </button>
               </div>
             </div>

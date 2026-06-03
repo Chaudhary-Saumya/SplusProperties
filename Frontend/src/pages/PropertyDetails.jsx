@@ -16,6 +16,7 @@ import ErrorBox from '../components/ErrorBox';
 import DetailSkeleton from '../components/DetailSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
 import SEO from '../components/SEO';
+import { useLanguage } from '../context/LanguageContext';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -43,6 +44,7 @@ function MapRecenter({ position }) {
 }
 
 const PropertyDetails = () => {
+    const { t } = useLanguage();
     const { id } = useParams();
     const [mainImageIndex, setMainImageIndex] = useState(0);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -83,17 +85,34 @@ const PropertyDetails = () => {
     });
 
     const getFormattedType = () => {
-        if (!listing) return 'Plot / Land';
-        if (listing.propertyType === 'Plot') {
-            return listing.plotType && listing.plotType !== 'None'
-                ? `${listing.plotType} Plot`
-                : 'Plot';
-        } else if (listing.propertyType === 'Land') {
-            return listing.landType && listing.landType !== 'None'
-                ? `${listing.landType} Land`
-                : 'Land';
+        if (!listing) return t('property_details.category_label');
+        const typeLabel = listing.propertyType === 'Plot' ? t('search_page.plots') : t('search_page.lands');
+        const subTypeValue = listing.propertyType === 'Plot' ? listing.plotType : listing.landType;
+        
+        if (subTypeValue && subTypeValue !== 'None') {
+            const subTypeKey = subTypeValue.toLowerCase().replace('-', '_');
+            const subTypeTrans = t(`search_page.${subTypeKey}`);
+            return `${subTypeTrans} ${typeLabel}`;
         }
-        return 'Plot / Land';
+        return typeLabel;
+    };
+
+    const getUnitLabel = (u) => {
+        switch (u) {
+            case 'Sq. Ft': return t('tools_page.sqft') || u;
+            case 'Sq. Mtr': return t('tools_page.sqmt') || u;
+            case 'Sq. Yard': return t('tools_page.sqyrd') || u;
+            case 'Hectare': return t('tools_page.hectare') || u;
+            case 'Acre': return t('tools_page.acre') || u;
+            default: return u;
+        }
+    };
+
+    const getRoleLabel = (role) => {
+        if (role === 'Broker') return t('auth.role_broker').split(' ')[0];
+        if (role === 'Seller') return t('auth.role_seller').split(' ')[0];
+        if (role === 'Buyer') return t('auth.role_buyer').split(' ')[0];
+        return role;
     };
 
     const { data: systemSettings } = useQuery({
@@ -174,10 +193,10 @@ const PropertyDetails = () => {
             }
             const nextState = !isFavorite;
             setIsFavorite(nextState);
-            toast.success(nextState ? 'Added to favorites!' : 'Removed from favorites');
+            toast.success(nextState ? t('property_details.add_to_fav_success') : t('property_details.remove_from_fav_success'));
             // eslint-disable-next-line no-unused-vars
         } catch (err) {
-            toast.error('Failed to update favorites');
+            toast.error(t('property_details.failed_favorites'));
         }
     };
 
@@ -190,10 +209,10 @@ const PropertyDetails = () => {
                 type: 'SiteVisit',
                 message: 'I would like to schedule a site visit for this property. Please suggest available dates and contact me to arrange.'
             });
-            toast.success('Site visit request sent to seller! They will contact you soon.');
+            toast.success(t('property_details.site_visit_success'));
             // eslint-disable-next-line no-unused-vars
         } catch (err) {
-            toast.error('Failed to send site visit request. Please try again.');
+            toast.error(t('property_details.failed_site_visit'));
         } finally {
             setRequestingVisit(false);
         }
@@ -220,7 +239,7 @@ const PropertyDetails = () => {
                     // 3. Verify payment on backend
                     const verifyRes = await axios.post('/api/payments/verify', response);
                     if (verifyRes.data.success) {
-                        toast.success('Property reserved successfully! Receipt: ' + verifyRes.data.receiptNumber);
+                        toast.success(t('property_details.reserved_success') + '! Receipt: ' + verifyRes.data.receiptNumber);
                         setReceiptData(verifyRes.data.transaction || verifyRes.data);
                         setShowReceipt(true);
                         refetch(); // Refresh listing
@@ -236,7 +255,7 @@ const PropertyDetails = () => {
                 },
                 modal: {
                     ondismiss: function () {
-                        toast.info('Payment cancelled');
+                        toast.info(t('property_details.payment_cancelled'));
                     }
                 }
             };
@@ -259,29 +278,29 @@ const PropertyDetails = () => {
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
-        toast.info('Link copied to clipboard!');
+        toast.info(t('property_details.link_copied'));
     };
 
     if (isLoading) return <DetailSkeleton />;
     if (isError) return <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />;
-    if (!listing) return <div className="py-20 text-center"><p className="text-gray-500">Property not found</p></div>;
+    if (!listing) return <div className="py-20 text-center"><p className="text-gray-500">{t('property_details.property_not_found')}</p></div>;
 
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         if (!isAuthenticated) {
-            toast.error('Please login to add a review');
+            toast.error(t('property_details.login_to_add_review'));
             navigate('/login');
             return;
         }
         if (!newReview.comment.trim()) {
-            toast.error('Please add a comment');
+            toast.error(t('property_details.write_comment_error'));
             return;
         }
 
         setSubmittingReview(true);
         try {
             await axios.post(`/api/listings/${id}/reviews`, newReview);
-            toast.success('Review added successfully!');
+            toast.success(t('property_details.review_success'));
             setNewReview({ rating: 5, comment: '' });
             refetchReviews();
             refetch();
@@ -294,11 +313,11 @@ const PropertyDetails = () => {
 
     const renderStars = () => {
         const ratingLabels = {
-            1: 'Poor',
-            2: 'Fair',
-            3: 'Average',
-            4: 'Good',
-            5: 'Excellent'
+            1: t('property_details.poor'),
+            2: t('property_details.fair'),
+            3: t('property_details.average'),
+            4: t('property_details.good'),
+            5: t('property_details.excellent')
         };
         const currentRating = hoverRating || newReview.rating;
 
@@ -367,11 +386,11 @@ const PropertyDetails = () => {
             <div className="h-1.5 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c] shadow-xs" />
 
             {/* ── Breadcrumb & Navigation ── */}
-            <div className="bg-white border-b border-slate-100 sticky top-[80px] z-20 shadow-xs">
+            <div className="hidden sm:block bg-white border-b border-slate-100 sticky z-20 shadow-xs" style={{ top: 'var(--navbar-height)' }}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                         <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-slate-700 hover:text-[#c9a84c] font-bold text-sm transition-all py-1 px-2.5 rounded-lg hover:bg-slate-50">
-                            <ArrowLeft size={16} /> Back
+                            <ArrowLeft size={16} /> {t('property_details.back')}
                         </button>
                         <span className="text-slate-300">|</span>
                         <span className="text-xs font-bold text-[#c9a84c] uppercase tracking-widest">{getFormattedType()}</span>
@@ -382,41 +401,41 @@ const PropertyDetails = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
 
                 {/* ── Hero Info Section: Title, Badges, Price ── */}
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs mb-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        <div className="space-y-3 max-w-3xl">
-                            <div className="flex flex-wrap items-center gap-2">
+                <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 p-4 sm:p-8 shadow-xs mb-5 sm:mb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+                        <div className="space-y-2 sm:space-y-3 max-w-3xl">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                 {listing.status === 'Available' && (
-                                    <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                        <Check size={12} className="stroke-[3px]" /> Available
+                                    <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
+                                        <Check size={10} className="stroke-[3px]" /> {t('property_details.available')}
                                     </span>
                                 )}
                                 {listing.listingType === 'Verified' && (
-                                    <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                        <CheckCircle2 size={12} className="stroke-[2.5px]" /> Verified
+                                    <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
+                                        <CheckCircle2 size={10} className="stroke-[2.5px]" /> {t('property_details.verified')}
                                     </span>
                                 )}
                                 {listing.isBookingEnabled && (
-                                    <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                        <Zap size={12} className="fill-current stroke-[2px]" /> Token Enabled
+                                    <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
+                                        <Zap size={10} className="fill-current stroke-[2px]" /> {t('property_details.token_enabled')}
                                     </span>
                                 )}
                                 {listing.isFeatured && (
-                                    <span className="inline-flex items-center gap-1 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                        ★ Featured Listing
+                                    <span className="inline-flex items-center gap-1 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
+                                        ★ {t('property_details.featured')}
                                     </span>
                                 )}
                             </div>
 
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
+                            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
                                 {listing.title}
                             </h1>
 
-                            <div className="flex items-center gap-1.5 text-slate-500 text-sm font-semibold">
-                                <MapPin size={16} className="text-[#c9a84c] shrink-0" />
+                            <div className="flex items-center gap-1.5 text-slate-500 text-xs sm:text-sm font-semibold">
+                                <MapPin size={14} className="text-[#c9a84c] shrink-0 sm:w-4 sm:h-4" />
                                 <span className="hover:text-slate-800 transition-colors">
                                     {listing.plotNumber ? `Plot ${listing.plotNumber}, ` : ''}
                                     {listing.areaName ? `${listing.areaName}, ` : ''}
@@ -426,14 +445,14 @@ const PropertyDetails = () => {
                         </div>
 
                         {/* Large Beautiful Price Display */}
-                        <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 min-w-[240px] flex flex-col justify-center">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Valuation</span>
-                            <div className="text-3xl sm:text-4xl font-black text-slate-950 flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-[#c9a84c]">₹</span>
+                        <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-100 min-w-[200px] sm:min-w-[240px] flex flex-col justify-center mt-2 lg:mt-0">
+                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 sm:mb-1">{t('property_details.total_valuation')}</span>
+                            <div className="text-2xl sm:text-4xl font-black text-slate-950 flex items-baseline gap-1">
+                                <span className="text-xl sm:text-2xl font-bold text-[#c9a84c]">₹</span>
                                 {listing.price?.toLocaleString('en-IN')}
                             </div>
-                            <div className="text-xs text-slate-500 font-bold mt-1 bg-white/70 py-1 px-2.5 rounded-lg border border-slate-100 inline-block self-start">
-                                @ ₹{Math.round(listing.price / originalAreaValue).toLocaleString('en-IN')} / sq. {originalUnit}
+                            <div className="text-[10px] sm:text-xs text-slate-500 font-bold mt-1 bg-white/70 py-1 px-2.5 rounded-lg border border-slate-100 inline-block self-start">
+                                @ ₹{Math.round(listing.price / originalAreaValue).toLocaleString('en-IN')} / {getUnitLabel(originalUnit)}
                             </div>
                         </div>
                     </div>
@@ -446,8 +465,8 @@ const PropertyDetails = () => {
                     <div className="lg:col-span-2 space-y-8">
 
                         {/* 1. Gallery Section */}
-                        <div className="bg-white rounded-3xl border border-slate-100 p-4 sm:p-5 shadow-xs">
-                            <div className="relative rounded-2xl overflow-hidden bg-slate-950 aspect-video group shadow-inner">
+                        <div className="bg-white sm:rounded-3xl border-y sm:border border-slate-100 p-0 sm:p-5 shadow-none sm:shadow-xs -mx-4 sm:mx-0 overflow-hidden">
+                            <div className="relative rounded-none sm:rounded-2xl overflow-hidden bg-slate-950 aspect-video group shadow-none sm:shadow-inner">
                                 {listing.images?.length > 0 ? (
                                     <>
                                         <img
@@ -456,9 +475,40 @@ const PropertyDetails = () => {
                                             fetchpriority="high"
                                             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
                                         />
-                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 flex items-end justify-between">
+                                        
+                                        {/* Floating Overlays for Mobile Only */}
+                                        <div className="sm:hidden absolute top-4 left-4 z-30">
+                                            <button
+                                                onClick={() => navigate(-1)}
+                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
+                                            >
+                                                <ArrowLeft size={16} strokeWidth={2.5} />
+                                            </button>
+                                        </div>
+                                        <div className="sm:hidden absolute top-4 right-4 z-30 flex gap-2">
+                                            <button
+                                                onClick={handleFavorite}
+                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
+                                            >
+                                                <Heart size={16} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-700'} strokeWidth={2} />
+                                            </button>
+                                            <button
+                                                onClick={handleCopyLink}
+                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-[#c9a84c] active:scale-90 transition-all"
+                                            >
+                                                <Share2 size={16} strokeWidth={2} />
+                                            </button>
+                                        </div>
+
+                                        {/* Mobile Page indicator */}
+                                        <span className="sm:hidden absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider z-20">
+                                            {mainImageIndex + 1} / {listing.images.length}
+                                        </span>
+
+                                        {/* Desktop Overlay gradient */}
+                                        <div className="hidden sm:flex absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 items-end justify-between">
                                             <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                                                Image {mainImageIndex + 1} of {listing.images.length}
+                                                {t('property_details.image')} {mainImageIndex + 1} / {listing.images.length}
                                             </span>
 
                                             <button
@@ -467,26 +517,26 @@ const PropertyDetails = () => {
                                                 title="Copy Share Link"
                                             >
                                                 <Share2 size={14} className="text-[#c9a84c]" />
-                                                <span className="hidden sm:inline">Share Listing</span>
+                                                <span>{t('property_details.share_listing')}</span>
                                             </button>
                                         </div>
                                     </>
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-3">
                                         <Image size={56} strokeWidth={1} className="text-slate-300" />
-                                        <span className="text-xs font-bold uppercase tracking-wider">No photos uploaded for this plot</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">{t('property_details.no_photos')}</span>
                                     </div>
                                 )}
                             </div>
 
                             {/* Thumbnails Container */}
                             {listing.images?.length > 1 && (
-                                <div className="flex gap-2.5 overflow-x-auto pb-1 mt-4 scrollbar-thin scrollbar-thumb-slate-200">
+                                <div className="flex gap-2.5 overflow-x-auto px-4 sm:px-0 mt-3 sm:mt-4 pb-2 scrollbar-thin scrollbar-thumb-slate-200">
                                     {listing.images.map((img, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setMainImageIndex(idx)}
-                                            className={`shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all relative ${mainImageIndex === idx
+                                            className={`shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all relative ${mainImageIndex === idx
                                                     ? 'border-[#c9a84c] scale-98 shadow-sm ring-2 ring-[#c9a84c]/20'
                                                     : 'border-slate-100 opacity-70 hover:opacity-100 hover:scale-98'
                                                 }`}
@@ -499,55 +549,55 @@ const PropertyDetails = () => {
                         </div>
 
                         {/* 2. Simplified Core Overview Specs */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                             {/* Spec 1: Plot Area */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Plot Size</span>
+                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
+                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.plot_size')}</span>
                                 <div className="flex flex-col gap-1.5">
-                                    <span className="text-xl font-extrabold text-slate-900 tracking-tight">{getConvertedArea()}</span>
+                                    <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">{getConvertedArea()}</span>
                                     <select
                                         value={displayUnit}
                                         onChange={e => setDisplayUnit(e.target.value)}
-                                        className="text-[10px] font-black bg-slate-50 border border-slate-100 text-slate-600 px-2 py-1 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#c9a84c] w-full"
+                                        className="text-[9px] sm:text-[10px] font-black bg-slate-50 border border-slate-100 text-slate-600 px-2 py-0.5 sm:py-1 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#c9a84c] w-full"
                                     >
                                         {Object.keys(conversionFactors).map(u => (
-                                            <option key={u} value={u}>{u}</option>
+                                            <option key={u} value={u}>{getUnitLabel(u)}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
 
                             {/* Spec 2: Property Type */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category</span>
+                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
+                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.category')}</span>
                                 <div className="mt-auto">
-                                    <span className="text-lg font-extrabold text-slate-900 block truncate">{getFormattedType()}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">{listing.propertyType}</span>
+                                    <span className="text-sm sm:text-lg font-extrabold text-slate-900 block truncate">{getFormattedType()}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">{listing.propertyType === 'Plot' ? t('search_page.plots') : t('search_page.lands')}</span>
                                 </div>
                             </div>
 
                             {/* Spec 3: Listed Date */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Listed On</span>
+                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
+                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.listed_on')}</span>
                                 <div className="mt-auto">
-                                    <span className="text-lg font-extrabold text-slate-900 block truncate">
+                                    <span className="text-sm sm:text-lg font-extrabold text-slate-900 block truncate">
                                         {new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">
                                         {new Date(listing.createdAt).getFullYear()}
                                     </span>
                                 </div>
                             </div>
 
                             {/* Spec 4: Land Touch */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Status</span>
+                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
+                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.status')}</span>
                                 <div className="mt-auto">
-                                    <span className={`inline-flex text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${listing.status === 'Available' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                                    <span className={`inline-flex text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${listing.status === 'Available' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
                                         }`}>
-                                        {listing.status}
+                                        {listing.status === 'Available' ? t('property_details.available') : listing.status}
                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">Ready for sale</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">{t('property_details.ready_for_sale')}</span>
                                 </div>
                             </div>
                         </div>
@@ -555,18 +605,18 @@ const PropertyDetails = () => {
                         {/* 3. About Section */}
                         <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
                             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <FileText size={20} className="text-[#c9a84c]" /> About This Property
+                                <FileText size={20} className="text-[#c9a84c]" /> {t('property_details.about_this_property')}
                             </h3>
                             <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-5" />
                             <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium">
-                                {listing.description || 'No description has been provided by the seller for this premium land listing.'}
+                                {listing.description || t('property_details.no_desc')}
                             </p>
                         </div>
 
                         {/* 4. Redesigned Detailed Specifications (Jargon-free) */}
                         <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
                             <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2" >
-                                <SlidersHorizontal size={20} className="text-[#c9a84c]" /> Property Specifications
+                                <SlidersHorizontal size={20} className="text-[#c9a84c]" /> {t('property_details.specifications')}
                             </h3>
                             <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-6" />
 
@@ -575,8 +625,10 @@ const PropertyDetails = () => {
                                 <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                                     <Layers className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                     <div>
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Property Category</span>
-                                        <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">{listing.propertyType || 'Plot / Land'}</span>
+                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.category_label')}</span>
+                                        <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
+                                            {listing.propertyType === 'Plot' ? t('search_page.plots') : (listing.propertyType === 'Land' ? t('search_page.lands') : t('property_details.plot_or_land', 'Plot / Land'))}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -585,8 +637,10 @@ const PropertyDetails = () => {
                                     <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                                         <LandPlot className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                         <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Plot Classification</span>
-                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">{listing.plotType}</span>
+                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.plot_classification')}</span>
+                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
+                                                {t(`search_page.${listing.plotType.toLowerCase().replace('-', '_')}`, listing.plotType)}
+                                            </span>
                                         </div>
                                     </div>
                                 )}
@@ -594,8 +648,10 @@ const PropertyDetails = () => {
                                     <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                                         <LandPlot className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                         <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Land Classification</span>
-                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">{listing.landType}</span>
+                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.land_classification')}</span>
+                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
+                                                {t(`search_page.${listing.landType.toLowerCase().replace('-', '_')}`, listing.landType)}
+                                            </span>
                                         </div>
                                     </div>
                                 )}
@@ -605,7 +661,7 @@ const PropertyDetails = () => {
                                     <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                                         <MapPin className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                         <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">City & Locality</span>
+                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.city_locality')}</span>
                                             <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
                                                 {listing.locality ? `${listing.locality}, ` : ''}{listing.city || ''}
                                             </span>
@@ -617,9 +673,9 @@ const PropertyDetails = () => {
                                 <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                                     <UserRound className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                     <div>
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Listed By</span>
+                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.listed_by')}</span>
                                         <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                            {listing.ownerType === 'Broker' ? 'Builder / Broker Agency' : 'Direct Land Owner'}
+                                            {listing.ownerType === 'Broker' ? t('property_details.builder_agency') : t('property_details.direct_owner')}
                                         </span>
                                     </div>
                                 </div>
@@ -628,19 +684,19 @@ const PropertyDetails = () => {
                                 <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl sm:col-span-2">
                                     <ShieldCheck className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
                                     <div className="w-full">
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Land Highlights</span>
+                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.highlights')}</span>
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {listing.cornerPlot && (
-                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">Corner Plot</span>
+                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">{t('property_details.corner_plot')}</span>
                                             )}
                                             {listing.roadTouch && (
-                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">Road Touch</span>
+                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">{t('property_details.road_touch')}</span>
                                             )}
                                             {listing.isAgricultural && (
-                                                <span className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-wider">Agricultural</span>
+                                                <span className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-wider">{t('property_details.agricultural')}</span>
                                             )}
                                             {!listing.cornerPlot && !listing.roadTouch && !listing.isAgricultural && (
-                                                <span className="text-xs font-medium text-slate-400">Standard premium residential/commercial zone</span>
+                                                <span className="text-xs font-medium text-slate-400">{t('property_details.std_zone')}</span>
                                             )}
                                         </div>
                                     </div>
@@ -652,7 +708,7 @@ const PropertyDetails = () => {
                         {listing.amenities?.length > 0 && (
                             <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
                                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                    <CheckCircle2 size={20} className="text-[#c9a84c]" /> Premium Features & Utilities
+                                    <CheckCircle2 size={20} className="text-[#c9a84c]" /> {t('property_details.amenities_title')}
                                 </h3>
                                 <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-5" />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -672,7 +728,7 @@ const PropertyDetails = () => {
                                 <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
                                         <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2" >
-                                            <MapPin size={20} className="text-[#c9a84c]" /> Satellite Mapping & View
+                                            <MapPin size={20} className="text-[#c9a84c]" /> {t('property_details.satellite_map')}
                                         </h3>
                                         <div className="h-0.5 w-16 bg-[#c9a84c]/30 mt-2" />
                                     </div>
@@ -681,7 +737,7 @@ const PropertyDetails = () => {
                                             onClick={() => navigate(`/shared-map/${listing.mapConfig.shareId}`)}
                                             className="bg-slate-900 text-white hover:bg-[#c9a84c] hover:text-slate-950 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-md self-start sm:self-center"
                                         >
-                                            <Layers size={14} className="text-[#c9a84c]" /> Interactive Boundary Map
+                                            <Layers size={14} className="text-[#c9a84c]" /> {t('property_details.interactive_map_btn')}
                                         </button>
                                     )}
                                 </div>
@@ -709,7 +765,7 @@ const PropertyDetails = () => {
                                         <Navigation size={16} />
                                     </div>
                                     <p className="text-xs font-bold text-slate-500 leading-normal">
-                                        Direct satellite scan of the plot. Tap on the map to interact or zoom.
+                                        {t('property_details.google_satellite_hint')}
                                     </p>
                                 </div>
                             </div>
@@ -719,13 +775,13 @@ const PropertyDetails = () => {
                         {(listing.documents?.length > 0 || listing.videos?.length > 0) && (
                             <div className="bg-[#FAF9F5] border border-[#c9a84c]/30 rounded-3xl p-6 sm:p-8 shadow-xs">
                                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                    <ShieldCheck size={22} className="text-[#c9a84c]" /> Verified Property Documents
+                                    <ShieldCheck size={22} className="text-[#c9a84c]" /> {t('property_details.verified_docs')}
                                 </h3>
                                 <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-6" />
 
                                 {listing.videos?.length > 0 && (
                                     <div className="mb-6">
-                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Site Drone Footages</h4>
+                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.drone_footage')}</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {listing.videos.map((vid, idx) => (
                                                 <div key={idx} className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm aspect-video">
@@ -738,7 +794,7 @@ const PropertyDetails = () => {
 
                                 {listing.documents?.length > 0 && (
                                     <div>
-                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Legal Certifications & Papers</h4>
+                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.legal_papers')}</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {listing.documents.map((doc, idx) => (
                                                 <a
@@ -752,9 +808,9 @@ const PropertyDetails = () => {
                                                         <FileText size={18} />
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#c9a84c] transition-colors truncate">Legal Document {idx + 1}</div>
+                                                        <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#c9a84c] transition-colors truncate">{t('property_details.legal_document')} {idx + 1}</div>
                                                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                                                            Click to View <ExternalLink size={10} />
+                                                            {t('property_details.click_to_view')} <ExternalLink size={10} />
                                                         </div>
                                                     </div>
                                                 </a>
@@ -768,7 +824,7 @@ const PropertyDetails = () => {
                         {/* 8. Reviews and Ratings */}
                         <div className="bg-white rounded-3xl border border-slate-100 p-5 sm:p-6 shadow-xs">
                             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                <MessageCircle size={20} className="text-[#c9a84c]" /> Buyer Reviews & Feedback
+                                <MessageCircle size={20} className="text-[#c9a84c]" /> {t('property_details.buyer_reviews')}
                             </h3>
                             <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-4" />
 
@@ -787,7 +843,7 @@ const PropertyDetails = () => {
                                             ))}
                                         </div>
                                         <div className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-0.5">
-                                            Based on {reviewsData?.count || 0} customer {reviewsData?.count === 1 ? 'review' : 'reviews'}
+                                            {t('property_details.based_on')} {reviewsData?.count || 0} {reviewsData?.count === 1 ? t('property_details.review_count') : t('property_details.reviews_count')}
                                         </div>
                                     </div>
                                 </div>
@@ -807,7 +863,7 @@ const PropertyDetails = () => {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                                    <span className="font-extrabold text-slate-950 text-xs">{review.user?.name || 'Anonymous User'}</span>
+                                                    <span className="font-extrabold text-slate-950 text-xs">{review.user?.name || t('property_details.anonymous')}</span>
                                                     <span className="text-[9px] text-slate-400 font-bold">
                                                         {new Date(review.createdAt).toLocaleDateString('en-IN')}
                                                     </span>
@@ -829,26 +885,26 @@ const PropertyDetails = () => {
                             ) : (
                                 <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 mb-4">
                                     <MessageCircle size={32} className="mx-auto text-slate-300 mb-2.5" />
-                                    <h4 className="text-xs font-bold text-slate-900 mb-0.5">No reviews listed yet</h4>
-                                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">Have queries or visited this plot? Share your feedback below.</p>
+                                    <h4 className="text-xs font-bold text-slate-900 mb-0.5">{t('property_details.no_reviews')}</h4>
+                                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">{t('property_details.reviews_feedback_hint')}</p>
                                 </div>
                             )}
 
                             {/* Add Review Form */}
                             {isAuthenticated && (
                                 <div className="border-t border-slate-100 pt-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Post Your Feedback</h4>
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.post_feedback')}</h4>
                                     <form onSubmit={handleSubmitReview} className="space-y-3">
                                         <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Assign Stars</label>
+                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t('property_details.assign_stars')}</label>
                                             {renderStars()}
                                         </div>
                                         <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Your Experience</label>
+                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t('property_details.your_experience')}</label>
                                             <textarea
                                                 value={newReview.comment}
                                                 onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                                                placeholder="Detail your experience, location insights, or direct negotiation feedback..."
+                                                placeholder={t('property_details.review_placeholder')}
                                                 rows="3"
                                                 className="w-full p-3 border border-slate-200 rounded-xl focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/10 transition-all font-medium text-xs placeholder:text-slate-400 focus:outline-none bg-slate-50/50"
                                                 disabled={submittingReview}
@@ -859,7 +915,7 @@ const PropertyDetails = () => {
                                             disabled={submittingReview || !newReview.comment.trim()}
                                             className="w-full py-3 bg-slate-950 hover:bg-[#c9a84c] hover:text-slate-950 text-white font-extrabold text-xs rounded-xl transition-all uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
                                         >
-                                            {submittingReview ? 'Submitting review...' : 'Submit Rating'}
+                                            {submittingReview ? t('property_details.submitting_review') : t('property_details.submit_review')}
                                         </button>
                                     </form>
                                 </div>
@@ -874,7 +930,7 @@ const PropertyDetails = () => {
                             {/* Seller & Action Card */}
                             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-md space-y-5">
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                    <Users size={15} className="text-[#c9a84c]" /> Seller Contact
+                                    <Users size={15} className="text-[#c9a84c]" /> {t('property_details.seller_contact')}
                                 </h3>
 
                                 <div
@@ -885,7 +941,7 @@ const PropertyDetails = () => {
                                         {listing.createdBy?.name?.charAt(0) || 'U'}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <div className="font-extrabold text-slate-900 text-sm truncate group-hover:text-[#c9a84c] transition-colors">{listing.createdBy?.name || 'Seller Agent'}</div>
+                                        <div className="font-extrabold text-slate-900 text-sm truncate group-hover:text-[#c9a84c] transition-colors">{listing.createdBy?.name || t('property_details.authorized_seller')}</div>
                                         <span className="inline-flex items-center gap-0.5 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
                                             <UserCheck size={9} />
                                             {listing.createdBy?.role || 'Broker'}
@@ -899,7 +955,7 @@ const PropertyDetails = () => {
                                         onClick={() => navigate('/dashboard')}
                                         className="w-full py-3.5 bg-slate-950 hover:bg-[#c9a84c] text-white hover:text-slate-950 font-extrabold text-xs rounded-2xl transition-all uppercase tracking-widest shadow-sm"
                                     >
-                                        Manage Listings
+                                        {t('property_details.manage_listings')}
                                     </button>
                                 ) : (
                                     <div className="space-y-2.5">
@@ -909,7 +965,7 @@ const PropertyDetails = () => {
                                             className="w-full py-3.5 bg-slate-950 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60 text-white font-extrabold text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
                                         >
                                             <Calendar size={14} className="stroke-[2.5px] text-[#c9a84c]" />
-                                            {requestingVisit ? 'Requesting...' : 'Contact Seller'}
+                                            {requestingVisit ? t('property_details.requesting_visit') : t('property_details.request_site_visit')}
                                         </button>
 
                                         <button
@@ -928,7 +984,7 @@ const PropertyDetails = () => {
                                                 }`}
                                         >
                                             <Heart size={14} className={isFavorite ? 'fill-current' : ''} />
-                                            {isFavorite ? 'Saved Listing' : 'Save To Favorites'}
+                                            {isFavorite ? t('property_details.saved_listing') : t('property_details.save_to_favorites')}
                                         </button>
                                     </div>
                                 )}
@@ -949,11 +1005,11 @@ const PropertyDetails = () => {
                                                 : 'text-[#c9a84c]'
                                         }`}>
                                         {listing.isTokened ? (
-                                            <><CheckCircle2 size={15} /> Land Reserved</>
+                                            <><CheckCircle2 size={15} /> {t('property_details.land_reserved')}</>
                                         ) : systemSettings?.isInstantBookingEnabled === false ? (
-                                            <><ZapOff size={15} /> Booking Suspended</>
+                                            <><ZapOff size={15} /> {t('property_details.booking_suspended')}</>
                                         ) : (
-                                            <><Zap size={15} className="fill-current" /> Instant Booking</>
+                                            <><Zap size={15} className="fill-current" /> {t('property_details.instant_booking')}</>
                                         )}
                                     </h3>
 
@@ -966,7 +1022,7 @@ const PropertyDetails = () => {
                                                     {listing.tokenAmount?.toLocaleString('en-IN')}
                                                 </div>
                                                 <span className="text-[10px] text-slate-400 font-medium block mt-1 leading-normal">
-                                                    Fully refundable transaction to secure buying priority and stop other offers.
+                                                    {t('property_details.token_desc')}
                                                 </span>
                                             </div>
                                             <button
@@ -974,7 +1030,7 @@ const PropertyDetails = () => {
                                                 disabled={submitting}
                                                 className="w-full py-3.5 bg-linear-to-r from-[#c9a84c] to-[#b8933a] hover:from-[#b8933a] hover:to-[#a67c00] disabled:bg-[#d1c9b8] text-slate-950 font-black text-xs rounded-2xl shadow-lg transition-all uppercase tracking-widest"
                                             >
-                                                {submitting ? 'Initiating Gate...' : 'Reserve Securely'}
+                                                {submitting ? t('property_details.initiating_gate') : t('property_details.reserve_securely')}
                                             </button>
                                         </div>
                                     )}
@@ -982,16 +1038,16 @@ const PropertyDetails = () => {
                                     {!listing.isTokened && systemSettings?.isInstantBookingEnabled === false && (
                                         <div>
                                             <p className="text-xs font-semibold text-slate-500 leading-relaxed">
-                                                Token booking is currently paused by admin setting. Direct negotiation with the seller remains fully open.
+                                                {t('property_details.booking_paused_desc')}
                                             </p>
                                         </div>
                                     )}
 
                                     {listing.isTokened && (
                                         <div className="text-center bg-white/80 border border-emerald-100 rounded-2xl p-4">
-                                            <span className="text-xs text-emerald-800 font-extrabold block">✓ Property Booked</span>
+                                            <span className="text-xs text-emerald-800 font-extrabold block">✓ {t('property_details.property_booked')}</span>
                                             <span className="text-[10px] text-slate-500 font-bold block mt-1">
-                                                Reserved on {new Date(listing.tokenedAt).toLocaleDateString('en-IN')}
+                                                {t('property_details.reserved_on')} {new Date(listing.tokenedAt).toLocaleDateString('en-IN')}
                                             </span>
                                         </div>
                                     )}
@@ -1007,14 +1063,14 @@ const PropertyDetails = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border border-slate-100 rounded-3xl p-6 shadow-md">
                     <div>
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                            <Users size={14} className="text-[#c9a84c]" /> Seller Reference
+                            <Users size={14} className="text-[#c9a84c]" /> {t('property_details.seller_reference')}
                         </h3>
                         <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
                             <div className="w-10 h-10 rounded-full bg-slate-950 flex items-center justify-center text-[#c9a84c] font-black text-sm shrink-0">
                                 {listing.createdBy?.name?.charAt(0) || 'U'}
                             </div>
                             <div>
-                                <div className="font-extrabold text-slate-900 text-xs">{listing.createdBy?.name || 'Agent'}</div>
+                                <div className="font-extrabold text-slate-900 text-xs">{listing.createdBy?.name || t('property_details.agent')}</div>
                                 <span className="inline-flex items-center gap-0.5 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
                                     {listing.createdBy?.role || 'Broker'}
                                 </span>
@@ -1027,7 +1083,7 @@ const PropertyDetails = () => {
                                 onClick={() => navigate('/dashboard')}
                                 className="w-full py-3.5 bg-slate-950 text-white font-extrabold text-xs rounded-2xl uppercase tracking-widest"
                             >
-                                Dashboard
+                                {t('navbar.dashboard')}
                             </button>
                         ) : (
                             <div className="grid grid-cols-2 gap-2">
@@ -1035,7 +1091,7 @@ const PropertyDetails = () => {
                                     onClick={handleSiteVisitRequest}
                                     className="py-3 bg-slate-950 text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-1 uppercase tracking-widest"
                                 >
-                                    <Calendar size={13} className="text-[#c9a84c]" /> Contact
+                                    <Calendar size={13} className="text-[#c9a84c]" /> {t('search_page.contact')}
                                 </button>
                                 <button
                                     onClick={handleWhatsApp}
@@ -1051,39 +1107,49 @@ const PropertyDetails = () => {
 
             {/* ── 📱 Mobile Sticky Bottom Bar (Stunning floating layout for mobile viewports) ── */}
             {!isAuthenticated || (user?.id !== listing.createdBy?._id && user?._id !== listing.createdBy?._id) ? (
-                <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-100 shadow-2xl px-4 py-3 md:hidden flex items-center justify-between gap-3">
+                <div className="fixed bottom-4 left-4 right-4 z-40 bg-white/95 backdrop-blur-md border border-slate-100 shadow-2xl rounded-2xl px-4 py-3 md:hidden flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Total Price</span>
-                        <div className="text-lg font-black text-slate-950 truncate" >
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">{t('search_page.total_price')}</span>
+                        <div className="text-base font-black text-slate-950 truncate" >
                             ₹{listing.price?.toLocaleString('en-IN')}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         <button
                             onClick={handleWhatsApp}
-                            className="w-10 h-10 bg-[#25d366] text-white rounded-xl flex items-center justify-center transition-all shadow-xs shrink-0"
+                            className="w-10 h-10 bg-[#25d366] text-white rounded-full flex items-center justify-center transition-all shadow-md shrink-0 hover:scale-105 active:scale-95"
                             title="Chat on WhatsApp"
                         >
                             <MessageCircle size={18} className="fill-current" />
                         </button>
 
-                        <button
-                            onClick={handleSiteVisitRequest}
-                            disabled={requestingVisit}
-                            className="bg-slate-950 text-white font-extrabold text-xs px-4 py-3 rounded-xl flex items-center gap-1.5 uppercase tracking-widest shadow-md"
-                        >
-                            <Calendar size={13} className="text-[#c9a84c] stroke-[2.5px]" />
-                            {requestingVisit ? '...' : 'Contact'}
-                        </button>
-
-                        {listing.isBookingEnabled && !listing.isTokened && systemSettings?.isInstantBookingEnabled !== false && (
+                        {listing.isBookingEnabled && !listing.isTokened && systemSettings?.isInstantBookingEnabled !== false ? (
+                            <>
+                                <button
+                                    onClick={handleSiteVisitRequest}
+                                    disabled={requestingVisit}
+                                    className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center text-slate-800 shadow-sm active:scale-95 transition-all"
+                                    title={t('search_page.contact')}
+                                >
+                                    <Calendar size={16} className="text-slate-600" />
+                                </button>
+                                <button
+                                    onClick={handleReserveToken}
+                                    disabled={submitting}
+                                    className="h-10 px-4 bg-gradient-to-r from-[#c9a84c] to-[#b8933a] hover:from-[#b8933a] hover:to-[#a67c00] text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 uppercase tracking-widest shadow-md transition-all active:scale-95 shrink-0"
+                                >
+                                    <Zap size={11} className="fill-current" /> {t('property_details.reserve_securely')}
+                                </button>
+                            </>
+                        ) : (
                             <button
-                                onClick={handleReserveToken}
-                                disabled={submitting}
-                                className="bg-gradient-to-r from-[#c9a84c] to-[#b8933a] text-slate-950 font-black text-[10px] px-3.5 py-3 rounded-xl flex items-center gap-1 uppercase tracking-widest shadow-md shrink-0"
+                                onClick={handleSiteVisitRequest}
+                                disabled={requestingVisit}
+                                className="h-10 px-5 bg-slate-950 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md active:scale-95 transition-all"
                             >
-                                <Zap size={10} className="fill-current" /> Reserve
+                                <Calendar size={14} className="text-[#c9a84c]" />
+                                <span>{requestingVisit ? '...' : t('search_page.contact')}</span>
                             </button>
                         )}
                     </div>

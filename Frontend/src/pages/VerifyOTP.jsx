@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
 import { ShieldCheck, RefreshCw, ArrowLeft, Building2, ChevronRight, Mail } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const VerifyOTP = () => {
     const [otp,       setOtp]       = useState(['', '', '', '', '', '']);
@@ -11,6 +12,7 @@ const VerifyOTP = () => {
     const [resending, setResending] = useState(false);
     const [timer,     setTimer]     = useState(60);
     const { verifyOTP, resendOTP }  = useContext(AuthContext);
+    const { t } = useLanguage();
     const location  = useLocation();
     const navigate  = useNavigate();
     const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
@@ -44,7 +46,7 @@ const VerifyOTP = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const otpString = otp.join('');
-        if (otpString.length !== 6) { setError('Please enter all 6 digits'); return; }
+        if (otpString.length !== 6) { setError(t('verify_otp.enter_6_digits_error')); return; }
         setLoading(true);
         setError(null);
         try {
@@ -64,7 +66,7 @@ const VerifyOTP = () => {
         try {
             await resendOTP(email);
             setTimer(60);
-            toast.success('OTP resent successfully!');
+            toast.success(t('verify_otp.otp_resent_success'));
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to resend OTP');
         } finally {
@@ -87,7 +89,7 @@ const VerifyOTP = () => {
                         <Building2 size={13} />
                         <span>Kharsan Properties</span>
                         <ChevronRight size={11} />
-                        <span>Verify Email</span>
+                        <span>{t('verify_otp.verify_email')}</span>
                     </div>
                 </div>
             </div>
@@ -110,10 +112,10 @@ const VerifyOTP = () => {
                     {/* Heading */}
                     <div className="text-center mb-8">
                         <h2 className="text-3xl font-black text-[#1a2340] tracking-tight mb-2">
-                            Verify Your <span className="text-[#c9a84c]">Email</span>
+                            {t('verify_otp.verify_email')}
                         </h2>
                         <p className="text-[#1a2340]/50 text-sm font-medium leading-relaxed">
-                            We've sent a 6-digit code to
+                            {t('verify_otp.subtitle')}
                         </p>
                         <div className="mt-2 inline-flex items-center gap-2 bg-white border border-[#1a2340]/10 rounded-xl px-4 py-2 shadow-sm">
                             <Mail size={14} className="text-[#c9a84c] shrink-0" />
@@ -135,7 +137,7 @@ const VerifyOTP = () => {
                         <form onSubmit={handleSubmit} className="space-y-7">
                             <div>
                                 <p className="text-[10px] font-black text-[#1a2340]/40 uppercase tracking-[0.15em] text-center mb-4">
-                                    Enter 6-digit code
+                                    {t('verify_otp.enter_code')}
                                 </p>
                                 <div className="flex justify-center gap-2.5">
                                     {otp.map((digit, index) => (
@@ -166,8 +168,8 @@ const VerifyOTP = () => {
                                 className="w-full bg-[#1a2340] hover:bg-[#243060] text-[#c9a84c] py-3.5 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-lg hover:-translate-y-0.5 disabled:opacity-70 flex items-center justify-center gap-2"
                             >
                                 {loading
-                                    ? <><RefreshCw className="animate-spin" size={16} /> Verifying...</>
-                                    : <><ShieldCheck size={16} /> Verify Account</>
+                                    ? <><RefreshCw className="animate-spin" size={16} /> {t('verify_otp.verifying')}</>
+                                    : <><ShieldCheck size={16} /> {t('verify_otp.verify_btn')}</>
                                 }
                             </button>
                         </form>
@@ -176,7 +178,7 @@ const VerifyOTP = () => {
                         <div className="pt-5 border-t border-[#f8f5ee]">
                             <div className="flex items-center justify-between gap-4">
                                 <p className="text-[#1a2340]/40 text-xs font-medium">
-                                    Didn't receive the code?
+                                    {t('verify_otp.didnt_receive')}
                                 </p>
 
                                 {/* Countdown ring + resend button */}
@@ -214,7 +216,7 @@ const VerifyOTP = () => {
                                             ? <RefreshCw className="animate-spin" size={13} />
                                             : <RefreshCw size={13} />
                                         }
-                                        Resend
+                                        {t('verify_otp.resend_btn')}
                                     </button>
                                 </div>
                             </div>
@@ -227,7 +229,7 @@ const VerifyOTP = () => {
                             onClick={() => navigate('/register')}
                             className="text-[#1a2340]/40 hover:text-[#1a2340] text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto transition-colors"
                         >
-                            <ArrowLeft size={13} /> Back to Register
+                            <ArrowLeft size={13} /> {t('verify_otp.back_to_register')}
                         </button>
                     </div>
                 </div>

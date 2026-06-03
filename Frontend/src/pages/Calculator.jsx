@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, History, RotateCcw, Delete, Calculator as CalcIcon, X, Percent, Divide, Plus, Minus, Equal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../components/SEO';
+import { useLanguage } from '../context/LanguageContext';
 
 const Calculator = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [display, setDisplay] = useState('0');
   const [formula, setFormula] = useState('');
   const [history, setHistory] = useState([]);
@@ -190,19 +192,19 @@ const Calculator = () => {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-[#1a2340] font-bold text-xs uppercase tracking-wider mb-6 hover:text-[#c9a84c] transition-colors bg-transparent border-none p-0 cursor-pointer"
         >
-          <ArrowLeft size={14} /> Go Back
+          <ArrowLeft size={14} /> {t('calculator.go_back')}
         </button>
 
         {/* Header */}
         <div className="text-center mb-8">
           <span className="inline-block bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
-            Smart Tool
+            {t('calculator.smart_tool')}
           </span>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#1a2340] mb-2" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            Financial Calculator
+            {t('calculator.financial_calculator')}
           </h1>
           <p className="text-[#64748b] text-base font-medium">
-            Accurate calculations for your property investments
+            {t('calculator.subtitle')}
           </p>
         </div>
 
@@ -244,7 +246,7 @@ const Calculator = () => {
             <div className="history-card shadow-lg">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-extrabold text-[#1a2340] flex items-center gap-2">
-                  <History size={22} className="text-[#c9a84c]" /> History
+                  <History size={22} className="text-[#c9a84c]" /> {t('calculator.history')}
                 </h3>
                 {history.length > 0 && (
                   <button 
@@ -261,8 +263,8 @@ const Calculator = () => {
                   {history.length === 0 ? (
                     <div className="text-center py-12 text-[#94a3b8]">
                       <CalcIcon size={48} className="mx-auto mb-4 opacity-20" />
-                      <p className="font-bold">No history yet</p>
-                      <p className="text-xs">Your calculations will appear here</p>
+                      <p className="font-bold">{t('calculator.no_history')}</p>
+                      <p className="text-xs">{t('calculator.calculations_appear_here')}</p>
                     </div>
                   ) : (
                     history.map((entry, i) => (
@@ -289,9 +291,9 @@ const Calculator = () => {
 
             {/* Quick Tips */}
             <div className="p-6 bg-[#1a2340] rounded-2xl text-white shadow-xl">
-              <h4 className="text-sm font-extrabold text-[#c9a84c] uppercase tracking-widest mb-3">Pro Tip</h4>
+              <h4 className="text-sm font-extrabold text-[#c9a84c] uppercase tracking-widest mb-3">{t('calculator.pro_tip')}</h4>
               <p className="text-sm text-gray-300 font-medium leading-relaxed">
-                Use the <span className="text-white font-bold">F9</span> key from any page on the site to quickly jump back to this calculator. You can also use your keyboard's number pad for faster inputs.
+                {t('calculator.tip_desc')}
               </p>
             </div>
           </div>

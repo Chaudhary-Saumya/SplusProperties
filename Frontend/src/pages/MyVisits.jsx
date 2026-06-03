@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Calendar, ArrowLeft, MapPin, Phone, Building2, ChevronRight } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUrl';
+import { useLanguage } from '../context/LanguageContext';
 
 const MyVisits = () => {
     const [inquiries, setInquiries] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -70,7 +72,7 @@ const MyVisits = () => {
                         <Building2 size={14} />
                         <span>Kharsan Properties</span>
                         <ChevronRight size={12} />
-                        <span>My Contact Requests</span>
+                        <span>{t('my_visits.title')}</span>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
@@ -83,9 +85,9 @@ const MyVisits = () => {
                             </button>
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
-                                    My <span className="text-[#c9a84c]">Contact Requests</span>
+                                    {t('my_visits.title')}
                                 </h1>
-                                <p className="text-white/50 font-medium mt-1 text-sm">Track all the contact requests you've sent to property sellers</p>
+                                <p className="text-white/50 font-medium mt-1 text-sm">{t('my_visits.subtitle')}</p>
                             </div>
                         </div>
 
@@ -93,7 +95,7 @@ const MyVisits = () => {
                             <div className="flex items-center gap-2 bg-[#c9a84c]/15 border border-[#c9a84c]/30 px-4 py-2 rounded-xl w-fit">
                                 <div className="w-2 h-2 rounded-full bg-[#c9a84c] animate-pulse"></div>
                                 <span className="text-sm font-black text-[#c9a84c] uppercase tracking-widest">
-                                    {inquiries.length} Active {inquiries.length === 1 ? 'Request' : 'Requests'}
+                                    {inquiries.length} {t('received_inquiries.contacted')} {inquiries.length === 1 ? t('my_visits.breadcrumb') : t('my_visits.breadcrumb')}
                                 </span>
                             </div>
                         )}
@@ -110,15 +112,15 @@ const MyVisits = () => {
                         <div className="w-24 h-24 rounded-2xl bg-[#1a2340] flex items-center justify-center mb-6 shadow-lg">
                             <Calendar size={40} className="text-[#c9a84c]" />
                         </div>
-                        <h2 className="text-2xl font-black text-[#1a2340] mb-2">No Requests Yet</h2>
+                        <h2 className="text-2xl font-black text-[#1a2340] mb-2">{t('my_visits.no_visits')}</h2>
                         <p className="text-[#1a2340]/50 max-w-md mx-auto mb-8 text-sm font-medium leading-relaxed">
-                            When you contact a seller about a property, your request will appear here so you can track whether the seller has connected with you.
+                            {t('my_visits.no_visits_desc')}
                         </p>
                         <button
                             onClick={() => navigate('/search')}
                             className="bg-[#1a2340] hover:bg-[#243060] text-[#c9a84c] px-8 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg hover:-translate-y-0.5"
                         >
-                            Explore Properties
+                            {t('my_visits.explore_properties')}
                         </button>
                     </div>
                 ) : (
@@ -158,7 +160,7 @@ const MyVisits = () => {
                                             <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold text-[#1a2340]/50">
                                                 <span className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="text-[#c9a84c]" />
-                                                    Requested {new Date(inq.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    {t('my_visits.requested_on')} {new Date(inq.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 </span>
                                                 {inq.listingId?.location && (
                                                     <span className="flex items-center gap-1.5">

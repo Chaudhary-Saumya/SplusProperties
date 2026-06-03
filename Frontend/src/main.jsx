@@ -4,6 +4,7 @@ import App from './App.jsx'
 import './index.css'
 
 import { AuthProvider } from './context/AuthContext.jsx'
+import { LanguageProvider } from './context/LanguageContext.jsx'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { HelmetProvider } from 'react-helmet-async'
 import { Analytics } from '@vercel/analytics/react'
@@ -17,8 +18,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         }
       >
         <AuthProvider>
-          <App />
-          <Analytics />
+          <LanguageProvider>
+            <App />
+            <Analytics />
+          </LanguageProvider>
         </AuthProvider>
       </GoogleOAuthProvider>
     </HelmetProvider>

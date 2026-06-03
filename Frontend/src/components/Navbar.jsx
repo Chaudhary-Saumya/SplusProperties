@@ -1,13 +1,28 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { ChevronDown, Menu, X, Home } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
+  const { language, toggleLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [mobileSections, setMobileSections] = useState({
+    properties: false,
+    tools: false,
+    account: false,
+    dashboard: false
+  });
   const navigate = useNavigate();
+
+  const toggleMobileSection = (section) => {
+    setMobileSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const handleLogout = () => {
     logout();
@@ -25,6 +40,9 @@ const Navbar = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
+        :root {
+          --navbar-height: 80px;
+        }
         .navbar-root {
           position: sticky; top: 0; z-index: 50;
           background: rgba(255, 255, 255, 0.85);
@@ -156,12 +174,169 @@ const Navbar = () => {
         /* Mobile toggle */
         .hamburger { display: none; background: none; border: none; cursor: pointer; color: #1a2340; padding: 4px; }
         @media (max-width: 1150px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
-        .mobile-actions { display: none; align-items: center; gap: 16px; }
+        .mobile-actions { display: none; align-items: center; gap: 12px; }
         @media (max-width: 1150px) { .mobile-actions { display: flex; } }
         .mob-quick-link { color: #1a2340; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
         .mob-quick-link:hover { color: #c9a84c; }
 
+        /* Mobile Action Buttons */
+        .mob-header-login-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1a2340;
+          background: #f0f4ff;
+          border: 1px solid rgba(26, 35, 64, 0.15);
+          padding: 6px 14px;
+          border-radius: 20px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        .mob-header-login-btn:hover {
+          background: #1a2340;
+          color: #fff;
+          border-color: #1a2340;
+        }
+        .mob-header-dashboard-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #1a2340;
+          background: #f0f4ff;
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+          border: 1px solid rgba(26, 35, 64, 0.1);
+        }
+        .mob-header-dashboard-btn:hover {
+          color: #c9a84c;
+          background: #1a2340;
+        }
+
+        /* Profile Card inside Mobile Menu */
+        .mob-profile-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 18px;
+          background: linear-gradient(135deg, #1a2340 0%, #2b395d 100%);
+          border-bottom: 3px solid #c9a84c;
+        }
+        .mob-profile-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .mob-profile-label {
+          font-size: 9px;
+          font-weight: 800;
+          color: #c9a84c;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+        }
+        .mob-profile-name {
+          font-size: 15px;
+          font-weight: 800;
+          color: #fff;
+          text-transform: capitalize;
+        }
+        .mob-profile-role {
+          font-size: 10px;
+          font-weight: 700;
+          color: #d1d5db;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .mob-profile-logout-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 11px;
+          font-weight: 800;
+          color: #fff;
+          background: #ef4444;
+          border: none;
+          padding: 8px 14px;
+          border-radius: 20px;
+          cursor: pointer;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          transition: all 0.2s ease;
+        }
+        .mob-profile-logout-btn:hover {
+          background: #dc2626;
+        }
+
+        /* Collapsible Accordions in Mobile Menu */
+        .mob-accordion-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 14px 18px;
+          font-size: 13px;
+          font-weight: 800;
+          color: #1a2340;
+          background: #fff;
+          border: none;
+          border-bottom: 1px solid #f0ebe0;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s ease;
+        }
+        .mob-accordion-header:hover, .mob-accordion-header.active {
+          background: #fdfaf5;
+          color: #c9a84c;
+        }
+        .mob-chevron {
+          transition: transform 0.2s ease;
+          color: #8c90aa;
+        }
+        .mob-chevron.open {
+          transform: rotate(180deg);
+          color: #c9a84c;
+        }
+        .mob-accordion-content {
+          background: #fafaf9;
+          border-bottom: 1px solid #e2d9c5;
+        }
+
+        /* Language Toggle Button Styles */
+        .lang-toggle-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #1a2340;
+          background: #f0f4ff;
+          border: 1px solid rgba(26, 35, 64, 0.15);
+          padding: 8px 14px;
+          border-radius: 20px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          letter-spacing: 0.5px;
+        }
+        .lang-toggle-btn:hover {
+          background: #1a2340;
+          color: #fff;
+          border-color: #1a2340;
+        }
+        .lang-toggle-btn span.active-lang {
+          color: #c9a84c;
+        }
+
         @media (max-width: 640px) {
+          :root {
+            --navbar-height: 70px;
+          }
           .logo-svg { height: 50px; }
           .navbar-inner { height: 70px; padding: 0 16px; }
           .mobile-menu { max-height: calc(100vh - 70px); }
@@ -330,8 +505,8 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="nav-desktop">
-            <Link to="/" className="nav-link">Home</Link>
-            <Link to="/about" className="nav-link">About</Link>
+            <Link to="/" className="nav-link">{t('navbar.home')}</Link>
+            <Link to="/about" className="nav-link">{t('navbar.about')}</Link>
 
             {/* Properties dropdown */}
             <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
@@ -341,17 +516,17 @@ const Navbar = () => {
                 aria-haspopup="true"
                 aria-expanded={activeDropdown === 'search'}
               >
-                Properties <ChevronDown size={14} className={`chevron ${activeDropdown === 'search' ? 'open' : ''}`} />
+                {t('navbar.properties')} <ChevronDown size={14} className={`chevron ${activeDropdown === 'search' ? 'open' : ''}`} />
               </button>
               {activeDropdown === 'search' && (
                 <div className="dropdown-menu">
-                  <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Buy</Link>
+                  <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.buy')}</Link>
                   {isAuthenticated ? (
-                    <Link to="/create-listing" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Sell</Link>
+                    <Link to="/create-listing" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.sell')}</Link>
                   ) : (
-                    <Link to="/login" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Sell</Link>
+                    <Link to="/login" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.sell')}</Link>
                   )}
-                  <Link to="/brokers" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Contact Brokers</Link>
+                  <Link to="/brokers" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.contact_brokers')}</Link>
                 </div>
               )}
             </div>
@@ -364,30 +539,37 @@ const Navbar = () => {
                 aria-haspopup="true"
                 aria-expanded={activeDropdown === 'tools'}
               >
-                Tools <ChevronDown size={14} className={`chevron ${activeDropdown === 'tools' ? 'open' : ''}`} />
+                {t('navbar.tools')} <ChevronDown size={14} className={`chevron ${activeDropdown === 'tools' ? 'open' : ''}`} />
               </button>
               {activeDropdown === 'tools' && (
                 <div className="dropdown-menu">
-                  <Link to="/area-converter" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Area Converter</Link>
-                  <Link to="/calculator" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Calculator (FN + F9)</Link>
-                  <Link to="/boundary-map" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Boundary Map</Link>
-                  {isAuthenticated && <Link to="/saved-maps" className="dropdown-item" onClick={() => setActiveDropdown(null)}>Saved Boundaries</Link>}
+                  <Link to="/area-converter" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.area_converter')}</Link>
+                  <Link to="/calculator" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.calculator')} (FN + F9)</Link>
+                  <Link to="/boundary-map" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.boundary_map')}</Link>
+                  {isAuthenticated && <Link to="/saved-maps" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.saved_boundaries')}</Link>}
                 </div>
               )}
             </div>
 
             {isAuthenticated && (
               <>
-                <Link to="/favorites" className="nav-link">My Favourites</Link>
-                <Link to="/my-visits" className="nav-link">Site Visit Request</Link>
+                <Link to="/favorites" className="nav-link">{t('navbar.my_favourites')}</Link>
+                <Link to="/my-visits" className="nav-link">{t('navbar.site_visit')}</Link>
               </>
             )}
+
+            {/* Language Toggle Switch (Desktop) */}
+            <button className="lang-toggle-btn" onClick={toggleLanguage} style={{ marginLeft: '8px' }} title="Switch Language / ભાષા બદલો">
+              <span className={language === 'en' ? 'active-lang' : ''}>EN</span>
+              <span style={{ color: '#9ca3af', fontSize: '9px' }}>|</span>
+              <span className={language === 'gu' ? 'active-lang' : ''}>ગુજ</span>
+            </button>
 
             <div className="nav-divider" />
 
             {isAuthenticated ? (
               <>
-                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="nav-link">Dashboard</Link>
+                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="nav-link">{t('navbar.dashboard')}</Link>
                 <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
                   <button
                     className="user-dropdown-btn"
@@ -405,7 +587,7 @@ const Navbar = () => {
                   {activeDropdown === 'user' && (
                     <div className="dropdown-menu user-menu" style={{ minWidth: '150px' }}>
                       <button onClick={handleLogout} className="dropdown-item logout-item">
-                        Logout
+                        {t('navbar.logout')}
                       </button>
                     </div>
                   )}
@@ -413,22 +595,32 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-login">Login</Link>
-                <Link to="/register" className="btn-signup">Sign Up</Link>
+                <Link to="/login" className="btn-login">{t('navbar.login')}</Link>
+                <Link to="/register" className="btn-signup">{t('navbar.signup')}</Link>
               </>
             )}
           </div>
 
-          {/* Mobile: Quick icon + hamburger */}
+          {/* Mobile Actions: Clean Quick Buttons next to Hamburger */}
           <div className="mobile-actions">
-            {isAuthenticated && (
+            <button className="lang-toggle-btn" onClick={toggleLanguage} style={{ padding: '6px 10px' }} title="Switch Language / ભાષા બદલો">
+              <span className={language === 'en' ? 'active-lang' : ''}>EN</span>
+              <span style={{ color: '#9ca3af', fontSize: '9px' }}>|</span>
+              <span className={language === 'gu' ? 'active-lang' : ''}>ગુજ</span>
+            </button>
+
+            {!isAuthenticated ? (
+              <Link to="/login" className="mob-header-login-btn" onClick={() => setIsOpen(false)}>
+                <LogIn size={14} /> {t('navbar.login')}
+              </Link>
+            ) : (
               <Link
                 to={user?.role === 'Admin' ? '/admin' : '/dashboard'}
-                className="mob-quick-link"
+                className="mob-header-dashboard-btn"
                 onClick={() => setIsOpen(false)}
                 title="Dashboard"
               >
-                <Home size={24} />
+                <LayoutDashboard size={18} />
               </Link>
             )}
             <button className="hamburger" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
@@ -437,62 +629,109 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Mobile Menu — all items same font-size and padding ── */}
+        {/* ── Mobile Menu ── */}
         <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
           {isAuthenticated && (
-            <div style={{ padding: '20px 18px', background: '#f8f5ee', borderBottom: '1px solid #e2d9c5' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', marginBottom: '4px' }}>Logged in as</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1a2340' }}>{user.name}</div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280' }}>{user.role}</div>
+            <div className="mob-profile-card">
+              <div className="mob-profile-info">
+                <span className="mob-profile-label">{t('navbar.logged_in_as')}</span>
+                <span className="mob-profile-name">{user.name}</span>
+                <span className="mob-profile-role">{user.role}</span>
+              </div>
+              <button onClick={handleLogout} className="mob-profile-logout-btn" title="Logout">
+                <LogOut size={13} /> {t('navbar.logout')}
+              </button>
             </div>
           )}
 
-          {/* Main */}
-          <Link to="/" className="mob-item" onClick={() => setIsOpen(false)}>Home</Link>
-          <Link to="/about" className="mob-item" onClick={() => setIsOpen(false)}>About</Link>
+          {/* Main Links */}
+          <Link to="/" className="mob-item" onClick={() => setIsOpen(false)}>{t('navbar.home')}</Link>
+          <Link to="/about" className="mob-item" onClick={() => setIsOpen(false)}>{t('navbar.about')}</Link>
 
-          {/* Properties */}
-          <span className="mob-category">Properties</span>
-          <Link to="/search?type=buy" className="mob-sub-item" onClick={() => setIsOpen(false)}>Buy Property</Link>
-          {isAuthenticated ? (
-            <Link to="/create-listing" className="mob-sub-item" onClick={() => setIsOpen(false)}>Sell / List Property</Link>
-          ) : (
-            <Link to="/login" className="mob-sub-item" onClick={() => setIsOpen(false)}>Sell / List Property</Link>
+          {/* Properties Dropdown */}
+          <button 
+            className={`mob-accordion-header ${mobileSections.properties ? 'active' : ''}`}
+            onClick={() => toggleMobileSection('properties')}
+          >
+            <span>{t('navbar.properties')}</span>
+            <ChevronDown size={15} className={`mob-chevron ${mobileSections.properties ? 'open' : ''}`} />
+          </button>
+          {mobileSections.properties && (
+            <div className="mob-accordion-content">
+              <Link to="/search?type=buy" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.buy')}</Link>
+              {isAuthenticated ? (
+                <Link to="/create-listing" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.sell')}</Link>
+              ) : (
+                <Link to="/login" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.sell')}</Link>
+              )}
+              <Link to="/brokers" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.contact_brokers')}</Link>
+            </div>
           )}
-          <Link to="/brokers" className="mob-sub-item" onClick={() => setIsOpen(false)}>Contact Brokers</Link>
 
-          {/* Tools */}
-          <span className="mob-category">Tools</span>
-          <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>Area Converter</Link>
-          <Link to="/calculator" className="mob-sub-item" onClick={() => setIsOpen(false)}>Calculator</Link>
-          <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>Boundary Map</Link>
-          {isAuthenticated && <Link to="/saved-maps" className="mob-sub-item" onClick={() => setIsOpen(false)}>Saved Boundaries</Link>}
+          {/* Tools Dropdown */}
+          <button 
+            className={`mob-accordion-header ${mobileSections.tools ? 'active' : ''}`}
+            onClick={() => toggleMobileSection('tools')}
+          >
+            <span>{t('navbar.tools')}</span>
+            <ChevronDown size={15} className={`mob-chevron ${mobileSections.tools ? 'open' : ''}`} />
+          </button>
+          {mobileSections.tools && (
+            <div className="mob-accordion-content">
+              <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.area_converter')}</Link>
+              <Link to="/calculator" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.calculator')}</Link>
+              <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.boundary_map')}</Link>
+              {isAuthenticated && <Link to="/saved-maps" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.saved_boundaries')}</Link>}
+            </div>
+          )}
 
-          {/* Auth-only */}
+          {/* Logged in sections */}
           {isAuthenticated && (
             <>
-              <span className="mob-category">My Account</span>
-              <Link to="/favorites" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Favourites</Link>
-              <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Contact Requests</Link>
+              {/* My Account Dropdown */}
+              <button 
+                className={`mob-accordion-header ${mobileSections.account ? 'active' : ''}`}
+                onClick={() => toggleMobileSection('account')}
+              >
+                <span>{t('navbar.my_account')}</span>
+                <ChevronDown size={15} className={`mob-chevron ${mobileSections.account ? 'open' : ''}`} />
+              </button>
+              {mobileSections.account && (
+                <div className="mob-accordion-content">
+                  <Link to="/favorites" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_favourites')}</Link>
+                  <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_contact_requests')}</Link>
+                </div>
+              )}
 
-              <span className="mob-category">Dashboard</span>
-              <Link to="/dashboard?tab=overview" className="mob-sub-item" onClick={() => setIsOpen(false)}>Overview</Link>
-              <Link to="/dashboard?tab=listings" className="mob-sub-item" onClick={() => setIsOpen(false)}>My Listings</Link>
-              <Link to="/dashboard?tab=transactions" className="mob-sub-item" onClick={() => setIsOpen(false)}>Token History</Link>
-              {(user?.role === 'Seller' || user?.role === 'Broker') && (
-                <Link to="/dashboard?tab=payouts" className="mob-sub-item" onClick={() => setIsOpen(false)}>Payout Accounts</Link>
+              {/* Dashboard Dropdown */}
+              <button 
+                className={`mob-accordion-header ${mobileSections.dashboard ? 'active' : ''}`}
+                onClick={() => toggleMobileSection('dashboard')}
+              >
+                <span>{t('navbar.dashboard_options')}</span>
+                <ChevronDown size={15} className={`mob-chevron ${mobileSections.dashboard ? 'open' : ''}`} />
+              </button>
+              {mobileSections.dashboard && (
+                <div className="mob-accordion-content">
+                  <Link to="/dashboard?tab=overview" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.overview')}</Link>
+                  <Link to="/dashboard?tab=listings" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_listings')}</Link>
+                  <Link to="/dashboard?tab=transactions" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.token_history')}</Link>
+                  {(user?.role === 'Seller' || user?.role === 'Broker') && (
+                    <Link to="/dashboard?tab=payouts" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.payout_accounts')}</Link>
+                  )}
+                </div>
               )}
             </>
           )}
 
-          {/* Auth strip at bottom */}
+          {/* Auth Strip at Bottom */}
           <div className="mob-auth-strip">
             {isAuthenticated ? (
-              <button onClick={handleLogout} className="mob-btn-logout">Logout</button>
+              <button onClick={handleLogout} className="mob-btn-logout">{t('navbar.logout')}</button>
             ) : (
               <>
-                <Link to="/login" className="mob-btn-login" onClick={() => setIsOpen(false)}>Login</Link>
-                <Link to="/register" className="mob-btn-signup" onClick={() => setIsOpen(false)}>Sign Up</Link>
+                <Link to="/login" className="mob-btn-login" onClick={() => setIsOpen(false)}>{t('navbar.login')}</Link>
+                <Link to="/register" className="mob-btn-signup" onClick={() => setIsOpen(false)}>{t('navbar.signup')}</Link>
               </>
             )}
           </div>
