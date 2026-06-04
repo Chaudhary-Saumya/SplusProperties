@@ -5,13 +5,14 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target, Calculator } from 'lucide-react';
+import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target, Calculator, Layers, Building2 } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import { getImageUrl } from '../utils/imageUrl';
+import { useLanguage } from '../context/LanguageContext';
 
 
 const slides = [
@@ -282,6 +283,7 @@ const HeroCarousel = () => {
 /* ─── Footer ─────────────────────────────────────────────────────────────── */
 const Footer = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   return (
     <footer className="bg-[#1a2340] text-white pt-16 pb-10 px-6 border-t-[5px] border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
       <div className="max-w-7xl mx-auto">
@@ -306,7 +308,7 @@ const Footer = () => {
               </svg>
             </div>
             <p className="text-white/50 text-sm leading-relaxed mb-8 max-w-xs md:max-w-sm mx-auto lg:mx-0">
-              Leading the digital transformation of real estate. We specialize in verified agricultural, residential, and commercial land management with intelligent mapping technology.
+              {t('footer.desc')}
             </p>
             <div className="flex gap-4 justify-center lg:justify-start">
               <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
@@ -325,43 +327,39 @@ const Footer = () => {
           <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6 text-center sm:text-left mt-4 lg:mt-0">
             {/* Quick Links */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Explore</h4>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.explore')}</h4>
               <div className="flex flex-col gap-3">
-                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Home</Link>
-                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">About Us</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Trending Plots</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Verified Sellers</Link>
-                {/* <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Market Blogs</Link> */}
+                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.home')}</Link>
+                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.about_us')}</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.trending_plots')}</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.verified_sellers')}</Link>
               </div>
             </div>
 
             {/* Services */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Services</h4>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.services')}</h4>
               <div className="flex flex-col gap-3">
-                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Buy Property</Link>
-                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Sell Property</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Land Mapping</Link>
-                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Broker Connect</Link>
-                {/* <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Legal Verification</Link> */}
+                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.buy_property')}</Link>
+                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.sell_property')}</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.land_mapping')}</Link>
+                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.broker_connect')}</Link>
               </div>
             </div>
 
             {/* Tools */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Smart Tools</h4>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.smart_tools')}</h4>
               <div className="flex flex-col gap-3">
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Boundary Map</Link>
-                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Area Converter</Link>
-                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">Saved Boundaries</Link>
-                {/* <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">KML Exporter</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">PDF Reports</Link> */}
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.boundary_map')}</Link>
+                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.area_converter')}</Link>
+                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.saved_boundaries')}</Link>
               </div>
             </div>
 
             {/* Contact */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">Contact</h4>
+              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.contact')}</h4>
               <div className="flex flex-col gap-4 items-center sm:items-start">
                 <a href="mailto:support@kharsan.com" className="flex gap-3 items-center group">
                   <Mail size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
@@ -379,12 +377,12 @@ const Footer = () => {
         {/* Bottom Strip */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <p className="text-white/40 text-sm font-semibold">
-            © {new Date().getFullYear()} Kharsan Properties. A Unit of Kharsan IT Solution. All rights reserved.
+            © {new Date().getFullYear()} {t('footer.rights_reserved')}
           </p>
           <div className="flex flex-wrap justify-center gap-6">
-            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Privacy Policy</Link>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Terms of Service</a>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">Cookie Policy</a>
+            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.privacy_policy')}</Link>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.terms_of_service')}</a>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.cookie_policy')}</a>
           </div>
         </div>
       </div>
@@ -393,8 +391,201 @@ const Footer = () => {
 };
 
 
+// Mobile Entrance Dashboard component for mobile devices only
+const MobileEntrance = () => {
+  const { user, isAuthenticated } = useContext(AuthContext);
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+  const [mobileSearch, setMobileSearch] = useState('');
+
+  const handleMobileSearchSubmit = (e) => {
+    e.preventDefault();
+    // Always navigate to search — even if empty, to let user focus & type there
+    navigate(`/search${mobileSearch.trim() ? `?query=${encodeURIComponent(mobileSearch.trim())}` : ''}`, { state: { autoFocus: true } });
+  };
+
+  // Tapping the search bar immediately navigates to /search with autofocus
+  const handleSearchFocus = () => {
+    navigate('/search', { state: { autoFocus: true } });
+  };
+
+  const getCards = () => {
+    if (!isAuthenticated) {
+      return [
+        {
+          title: language === 'en' ? 'Buy Land' : 'જમીન ખરીદો',
+          desc: language === 'en' ? 'Explore verified plots' : 'વેરિફાઇડ પ્લોટ અને જમીન જુઓ',
+          icon: <Search className="text-[#c9a84c]" size={22} />,
+          link: '/search'
+        },
+        {
+          title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
+          desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
+          icon: <Layers className="text-[#c9a84c]" size={22} />,
+          link: '/boundary-map'
+        },
+        {
+          title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
+          desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
+          icon: <Calculator className="text-[#c9a84c]" size={22} />,
+          link: '/area-converter'
+        },
+        {
+          title: language === 'en' ? 'Sell Land' : 'જમીન વેચો',
+          desc: language === 'en' ? 'List your property' : 'વેચાણ માટે પ્રોપર્ટી લિસ્ટ કરો',
+          icon: <Building2 className="text-[#c9a84c]" size={22} />,
+          link: '/login'
+        }
+      ];
+    }
+
+    if (user?.role === 'Buyer') {
+      return [
+        {
+          title: language === 'en' ? 'Dashboard' : 'ડેશબોર્ડ',
+          desc: language === 'en' ? 'My account overview' : 'મારી પ્રોફાઇલ અને ઇતિહાસ',
+          icon: <Eye className="text-[#c9a84c]" size={22} />,
+          link: '/dashboard'
+        },
+        {
+          title: language === 'en' ? 'Buy Land' : 'જમીન ખરીદો',
+          desc: language === 'en' ? 'Explore verified plots' : 'વેરિફાઇડ પ્લોટ અને જમીન જુઓ',
+          icon: <Search className="text-[#c9a84c]" size={22} />,
+          link: '/search'
+        },
+        {
+          title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
+          desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
+          icon: <Layers className="text-[#c9a84c]" size={22} />,
+          link: '/boundary-map'
+        },
+        {
+          title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
+          desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
+          icon: <Calculator className="text-[#c9a84c]" size={22} />,
+          link: '/area-converter'
+        }
+      ];
+    }
+
+    // Seller or Broker
+    return [
+      {
+        title: language === 'en' ? 'Dashboard' : 'ડેશબોર્ડ',
+        desc: language === 'en' ? 'Manage listings & payments' : 'પ્રોપર્ટી અને પેમેન્ટ સંચાલન',
+        icon: <Eye className="text-[#c9a84c]" size={22} />,
+        link: '/dashboard'
+      },
+      {
+        title: user?.role === 'Broker'
+          ? (language === 'en' ? 'Create Listing' : 'લિસ્ટિંગ બનાવો')
+          : (language === 'en' ? 'Create Listing' : 'લિસ્ટિંગ બનાવો'),
+        desc: language === 'en' ? 'Add a new property to sell' : 'નવી પ્રોપર્ટી ઉમેરો અને વેચો',
+        icon: <Building2 className="text-[#c9a84c]" size={22} />,
+        link: '/create-listing'
+      },
+      {
+        title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
+        desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
+        icon: <Layers className="text-[#c9a84c]" size={22} />,
+        link: '/boundary-map'
+      },
+      {
+        title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
+        desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
+        icon: <Calculator className="text-[#c9a84c]" size={22} />,
+        link: '/area-converter'
+      }
+    ];
+  };
+
+  const cards = getCards();
+
+  return (
+    <div className="bg-transparent text-[#1a2340] pt-6 pb-12 px-5 relative overflow-hidden flex flex-col gap-6 font-['Nunito_Sans',sans-serif]">
+      {/* soft ambient light-themed background accent */}
+      <div className="absolute top-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-[#c9a84c]/5 blur-[60px] pointer-events-none" />
+
+      {/* Title & Welcome */}
+      <div className="flex flex-col gap-1.5 z-10">
+        <span className="text-[#c9a84c] text-[10px] font-black uppercase tracking-[0.25em]">
+          {isAuthenticated
+            ? `${language === 'en' ? 'WELCOME BACK' : 'નમસ્તે'}, ${user?.name?.split(' ')[0]}`
+            : (language === 'en' ? 'PREMIUM PORTAL' : 'પ્રીમિયમ પોર્ટલ')}
+        </span>
+        <h1 className="text-[#1a2340] text-3xl font-black tracking-tight leading-tight">
+          {isAuthenticated
+            ? (language === 'en' ? `Hello, ${user?.name?.split(' ')[0]}` : `નમસ્કાર, ${user?.name?.split(' ')[0]}`)
+            : (language === 'en' ? 'Find Your Perfect Plot of Land' : 'તમારી આદર્શ જમીન શોધો')}
+        </h1>
+        <p className="text-[#64748b] text-[13px] font-semibold leading-relaxed max-w-sm">
+          {isAuthenticated
+            ? (user?.role === 'Buyer'
+                ? (language === 'en' ? 'Browse properties, manage favorites & track your reservations.' : 'જમીન જુઓ, પસંદગી સાચવો અને બુકિંગ ટ્રૅક કરો.')
+                : (language === 'en' ? 'Manage your listings, payments and boundary maps.' : 'તમારી યાદી, ચૂકવણી અને નકશા સંચાલિત કરો.'))
+            : (language === 'en'
+                ? 'Verified agricultural lands, commercial zones & plots directly from owners.'
+                : 'વેરિફાઇડ ખેતીની જમીન અને પ્લોટ્સ સીધા જ વેચનાર પાસેથી મેળવો.')}
+        </p>
+      </div>
+
+      {/* Search Input Box — tapping redirects to /search with autofocus */}
+      <form onSubmit={handleMobileSearchSubmit} className="z-10 w-full">
+        <div className="relative flex items-center bg-white border border-[#e2d9c5] rounded-2xl px-4 py-3.5 shadow-[0_8px_30px_rgba(26,35,64,0.03)] transition-all focus-within:border-[#c9a84c]/70">
+          <Search size={18} className="text-[#c9a84c] shrink-0" />
+          <input
+            type="text"
+            readOnly
+            placeholder={language === 'en' ? 'Search by location or village...' : 'ગામ અથવા જગ્યાનું નામ શોધો...'}
+            onFocus={handleSearchFocus}
+            onClick={handleSearchFocus}
+            className="flex-1 bg-transparent border-none text-[#1a2340] text-sm font-semibold placeholder:text-[#9ca3af] outline-none ml-2.5 cursor-pointer"
+          />
+          <span className="text-xs font-black text-[#c9a84c] uppercase tracking-wider shrink-0 ml-1">→</span>
+        </div>
+      </form>
+
+      {/* Role-based 2×2 Quick Access Grid */}
+      <div className="z-10">
+        <p className="text-[10px] font-black text-[#1a2340]/40 uppercase tracking-[0.2em] mb-3">
+          {language === 'en' ? 'Quick Access' : 'ઝડપી ઍક્સેસ'}
+        </p>
+        <div className="grid grid-cols-2 gap-3.5">
+          {cards.map((card, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.06 }}
+              onClick={() => navigate(card.link)}
+              className="bg-white border border-[#e2d9c5] active:border-[#c9a84c] active:scale-[0.97] transition-all rounded-[22px] p-4 flex flex-col justify-between aspect-square cursor-pointer shadow-sm hover:shadow-md"
+            >
+              {/* Top icon */}
+              <div className="w-10 h-10 rounded-2xl bg-[#f8f5ee] border border-[#e2d9c5]/60 flex items-center justify-center shadow-sm">
+                {card.icon}
+              </div>
+
+              {/* Title and subtitle */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[#1a2340] font-black text-[14px] leading-tight flex items-center gap-0.5">
+                  {card.title}
+                  <ChevronRight size={12} className="text-[#c9a84c] opacity-80 ml-0.5" />
+                </span>
+                <span className="text-[#6b7280] text-[10.5px] font-semibold leading-tight">
+                  {card.desc}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -546,8 +737,8 @@ const Home = () => {
 
   const getSectionData = () => {
     if (!isAuthenticated) return { 
-      title: 'Trending Properties', 
-      sub: 'The most demanded plots with highest interaction volumes.', 
+      title: language === 'en' ? 'Trending Properties' : 'ટ્રેન્ડિંગ પ્રોપર્ટીઝ', 
+      sub: language === 'en' ? 'The most demanded plots with highest interaction volumes.' : 'સૌથી વધુ પસંદ કરાયેલ અને લોકપ્રિય પ્લોટ્સ.', 
       data: trending,
       isLoading: isTrendingLoading,
       isError: isTrendingError,
@@ -556,28 +747,28 @@ const Home = () => {
     };
 
     if (user.role === 'Buyer') return {
-      title: 'My Favourite Properties',
-      sub: 'Quick access to the lands you saved for later.',
+      title: language === 'en' ? 'My Favourite Properties' : 'મારી પસંદગીની પ્રોપર્ટીઝ',
+      sub: language === 'en' ? 'Quick access to the lands you saved for later.' : 'તમે સાચવેલી પ્રોપર્ટીઝની ઝડપી ઍક્સેસ.',
       data: myFavorites,
       isLoading: isProfileLoading,
       isError: false,
       refetch: refetchProfile,
-      emptyTitle: 'No Favourites Yet',
-      emptySub: 'Start exploring and heart the properties you love to see them here.',
-      cta: 'Explore Listings',
+      emptyTitle: language === 'en' ? 'No Favourites Yet' : 'કોઈ પસંદગી નથી',
+      emptySub: language === 'en' ? 'Start exploring and heart the properties you love to see them here.' : 'તમારી મનપસંદ પ્રોપર્ટી લિસ્ટિંગને હાર્ટ કરો જેથી તે અહીં દેખાય.',
+      cta: language === 'en' ? 'Explore Listings' : 'પ્રોપર્ટી શોધો',
       ctaLink: '/search'
     };
 
     return {
-      title: 'My Listed Properties',
-      sub: 'Track and manage the properties you have listed.',
+      title: language === 'en' ? 'My Listed Properties' : 'મારી લિસ્ટ કરેલી પ્રોપર્ટીઝ',
+      sub: language === 'en' ? 'Track and manage the properties you have listed.' : 'તમે લિસ્ટ કરેલી જમીનનું સંચાલન કરો.',
       data: myListings,
       isLoading: isMyListingsLoading,
       isError: false,
       refetch: () => {}, // Handled by myListings query
-      emptyTitle: 'No Listings Yet',
-      emptySub: 'Start your journey as a seller by listing your first property today.',
-      cta: 'List My First Property',
+      emptyTitle: language === 'en' ? 'No Listings Yet' : 'કોઈ લિસ્ટિંગ નથી',
+      emptySub: language === 'en' ? 'Start your journey as a seller by listing your first property today.' : 'આજે જ તમારી પ્રથમ પ્રોપર્ટી લિસ્ટ કરીને વેચાણની શરૂઆત કરો.',
+      // cta: language === 'en' ? 'List My First Property' : 'પ્રથમ પ્રોપર્ટી લિસ્ટ કરો',
       ctaLink: '/create-listing'
     };
   };
@@ -592,8 +783,15 @@ const Home = () => {
       />
 
 
-      {/* ── Hero Carousel ── */}
-      <HeroCarousel />
+      {/* Laptop / Desktop View Hero */}
+      <div className="hidden md:block">
+        <HeroCarousel />
+      </div>
+
+      {/* Mobile View Entrance Hero */}
+      <div className="block md:hidden">
+        <MobileEntrance />
+      </div>
 
       {/* ── Floating Search Bar ── */}
       {/* <div style={{ background: '#f8f5ee', padding: '0 24px' }}>
@@ -633,7 +831,7 @@ const Home = () => {
       </div> */}
 
       {/* ── Stats Strip ── */}
-      <div style={{ background: '#1a2340', padding: '28px 24px' }}>
+      <div className="hidden md:block" style={{ background: '#1a2340', padding: '28px 24px' }}>
         <div style={{
           maxWidth: 1100, margin: '0 auto',
           display: 'flex', justifyContent: 'space-around',
@@ -781,7 +979,9 @@ const Home = () => {
         <div className="section-header">
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>
-              {isAuthenticated ? 'Personalized for You' : 'Most Viewed'}
+              {isAuthenticated 
+                ? (language === 'en' ? 'Personalized for You' : 'તમારા માટે ખાસ') 
+                : (language === 'en' ? 'Most Viewed' : 'સૌથી વધુ જોવાયેલ')}
             </div>
             <h2 style={{ fontFamily: "'Nunito Sans', serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1a2340', fontWeight: 700, margin: 0 }}>
               {title} 
@@ -790,15 +990,15 @@ const Home = () => {
               {sub}
             </p>
           </div>
-          <Link to={ctaLink || "/search"} style={{
+          {/* <Link to={ctaLink || "/search"} style={{
             background: '#1a2340', color: '#c9a84c', textDecoration: 'none',
             padding: '12px 28px', borderRadius: 12, fontWeight: 800,
             fontSize: 13, letterSpacing: '1px', textTransform: 'uppercase',
             border: '2px solid #1a2340', whiteSpace: 'nowrap',
             transition: 'all 0.2s',
           }}>
-            {cta || 'Explore All'}
-          </Link>
+            {cta || (language === 'en' ? 'Explore All' : 'બધું શોધો')}
+          </Link> */}
         </div>
 
         {/* Content */}
@@ -840,7 +1040,9 @@ const Home = () => {
                   onClick={() => navigate(`/listings/${listing._id}`)}
                 >
                   <div className="square-card-badge">
-                    {listing.propertyType || 'Land'}
+                    {listing.propertyType === 'Land' 
+                      ? (language === 'en' ? 'Land' : 'જમીન') 
+                      : (language === 'en' ? 'Plot' : 'પ્લોટ')}
                   </div>
                   
                   {isAuthenticated && user?.role === 'Buyer' && (

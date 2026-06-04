@@ -429,7 +429,7 @@ const BoundaryMap = () => {
     : 'idle';
 
   // Sheet heights: peek = just handle + controls, half = 45vh, full = 90vh
-  const sheetHeights = { peek: 'calc(env(safe-area-inset-bottom) + 85px)', half: '50vh', full: '90vh' };
+  const sheetHeights = { peek: 'calc(env(safe-area-inset-bottom, 0px) + 90px)', half: '50dvh', full: '90dvh' };
 
   const onSheetTouchStart = (e) => {
     dragStart.current = e.touches[0].clientY;
@@ -445,7 +445,7 @@ const BoundaryMap = () => {
   const totalArea = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0);
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-[#0a0f1e]">
+    <div className="h-[100dvh] w-screen overflow-hidden relative bg-[#0a0f1e]">
       <SEO title={t('boundary_map.title')} description={t('boundary_map.description')} />
       <style>{`
         .gold-marker { pointer-events: auto !important; z-index: 1000 !important; }
@@ -466,7 +466,7 @@ const BoundaryMap = () => {
       <MapContainer
         center={center}
         zoom={18}
-        style={{ height: '100vh', width: '100vw', position: 'absolute', inset: 0 }}
+        style={{ height: '100%', width: '100vw', position: 'absolute', inset: 0 }}
         ref={mapRef}
         zoomControl={false}
         dragging={true}

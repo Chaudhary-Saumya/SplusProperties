@@ -79,6 +79,7 @@ const Search = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [wishlist, setWishlist] = useState(new Set());
     const [accumulatedListings, setAccumulatedListings] = useState([]);
+    const searchInputRef = useRef(null);
 
     // ── Hydrate wishlist from authenticated user's saved favorites ──────────
     useEffect(() => {
@@ -91,6 +92,18 @@ const Search = () => {
             setWishlist(new Set());
         }
     }, [isAuthenticated, user?.favorites]);
+
+    // ── Auto-focus search input when navigated from Home mobile search bar ──
+    useEffect(() => {
+        if (location.state?.autoFocus && searchInputRef.current) {
+            // Small delay to let the page finish rendering before focusing
+            const timer = setTimeout(() => {
+                searchInputRef.current?.focus();
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [location.state?.autoFocus]);
+
     const isFirstRender = useRef(true);
 
     const { data: resultData, isLoading, isError, error, refetch, isFetching } = useQuery({
@@ -494,6 +507,7 @@ const Search = () => {
                                 <SearchIcon size={18} className="text-[#c9a84c] flex-shrink-0" />
                             )}
                             <input
+                                ref={searchInputRef}
                                 type="text"
                                 placeholder={isGeoMode ? t('search_page.searching_near_you') : t('search_page.search_placeholder')}
                                 className="flex-1 bg-transparent border-none outline-none text-[#1a2340] font-bold text-sm placeholder-[#b0a898] w-full"
