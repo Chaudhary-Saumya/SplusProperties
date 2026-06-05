@@ -217,6 +217,12 @@ const Dashboard = () => {
   const [deleteConfirmPassword, setDeleteConfirmPassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
+  /* ── Listing action states ── */
+  // confirmModal: { id, title } | null
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [pendingIds, setPendingIds] = useState(new Set());
+  const [deletingId, setDeletingId] = useState(null);
+
   /* ── Payout Account State ── */
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState(null);
@@ -291,22 +297,46 @@ const Dashboard = () => {
   };
 
   const toggleStatus = async (id, newStatus) => {
+    if (pendingIds.has(id)) return; // prevent double-click
+    // Optimistic update — update cache instantly
+    setPendingIds(prev => new Set(prev).add(id));
+    queryClient.setQueryData(["dashboardListings", user?.id || user?._id], (old) =>
+      old ? old.map(l => l._id === id ? { ...l, status: newStatus } : l) : old
+    );
     try {
       await axios.put(`/api/listings/${id}`, { status: newStatus });
-      queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
     } catch {
+      // Rollback on failure
       toast.error("Failed to update status");
+      queryClient.setQueryData(["dashboardListings", user?.id || user?._id], (old) =>
+        old ? old.map(l => l._id === id ? { ...l, status: newStatus === 'Active' ? 'Inactive' : 'Active' } : l) : old
+      );
+    } finally {
+      setPendingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Permanently delete this property?")) {
-      try {
-        await axios.delete(`/api/listings/${id}`);
-        queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
-      } catch {
-        toast.error("Failed to delete property");
-      }
+  const handleDelete = (id, title) => {
+    setConfirmModal({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmModal) return;
+    const { id } = confirmModal;
+    setDeletingId(id);
+    setConfirmModal(null);
+    // Optimistic remove from list
+    queryClient.setQueryData(["dashboardListings", user?.id || user?._id], (old) =>
+      old ? old.filter(l => l._id !== id) : old
+    );
+    try {
+      await axios.delete(`/api/listings/${id}`);
+      toast.success("Property deleted");
+    } catch {
+      toast.error("Failed to delete property");
+      queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -1218,10 +1248,15 @@ const Dashboard = () => {
                               </td>
                               <td className="py-4 pr-4">
                                 <div className="flex items-center gap-2">
-                                  <Toggle
-                                    checked={l.status === "Active"}
-                                    onChange={() => toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
-                                  />
+                                  <button
+                                    onClick={() => !pendingIds.has(l._id) && toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
+                                    disabled={pendingIds.has(l._id)}
+                                    className={`relative w-11 h-6 rounded-full transition-colors ${pendingIds.has(l._id) ? 'opacity-50 cursor-wait' : 'cursor-pointer'} ${l.status === "Active" ? "bg-[#c9a84c]" : "bg-[#d1d5db]"}`}
+                                  >
+                                    {pendingIds.has(l._id)
+                                      ? <span className="absolute inset-0 flex items-center justify-center"><span className="w-3 h-3 border-2 border-white/60 border-t-white rounded-full animate-spin" /></span>
+                                      : <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${l.status === "Active" ? "translate-x-5" : ""}`} />}
+                                  </button>
                                   <span className={`text-xs font-bold ${l.status === "Active" ? "text-[#15803d]" : "text-[#9ca3af]"}`}>
                                     {l.status}
                                   </span>
@@ -1234,7 +1269,14 @@ const Dashboard = () => {
                                 <div className="flex items-center justify-end gap-1">
                                   <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 text-[#6b7280] hover:bg-[#f0ebe0] rounded-lg transition-all" title="View"><Eye size={15} /></button>
                                   <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 text-[#2563eb] hover:bg-[#eff6ff] rounded-lg transition-all" title="Edit"><Edit size={15} /></button>
-                                  <button onClick={() => handleDelete(l._id)} className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all" title="Delete"><Trash2 size={15} /></button>
+                                  <button
+                                    onClick={() => handleDelete(l._id, l.title)}
+                                    disabled={deletingId === l._id}
+                                    className="p-2 text-[#dc2626] hover:bg-[#fff0f0] rounded-lg transition-all disabled:opacity-40"
+                                    title="Delete"
+                                  >
+                                    {deletingId === l._id ? <span className="w-3.5 h-3.5 border-2 border-red-300 border-t-red-600 rounded-full animate-spin block" /> : <Trash2 size={15} />}
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -1259,16 +1301,28 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                                     <div className="flex items-center gap-2">
-                                      <Toggle
-                                        checked={l.status === "Active"}
-                                        onChange={() => toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
-                                      />
+                                      <button
+                                        onClick={() => !pendingIds.has(l._id) && toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
+                                        disabled={pendingIds.has(l._id)}
+                                        className={`relative w-11 h-6 rounded-full transition-colors ${pendingIds.has(l._id) ? 'opacity-50 cursor-wait' : 'cursor-pointer'} ${l.status === "Active" ? "bg-[#c9a84c]" : "bg-[#d1d5db]"}`}
+                                      >
+                                        {pendingIds.has(l._id)
+                                          ? <span className="absolute inset-0 flex items-center justify-center"><span className="w-3 h-3 border-2 border-white/60 border-t-white rounded-full animate-spin" /></span>
+                                          : <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${l.status === "Active" ? "translate-x-5" : ""}`} />}
+                                      </button>
                                       <span className={`text-[10px] font-black uppercase tracking-wider ${l.status === "Active" ? "text-emerald-600" : "text-slate-400"}`}>{l.status}</span>
                                     </div>
                                     <div className="flex gap-2">
                                       <button onClick={() => navigate(`/listings/${l._id}`)} className="w-8 h-8 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="View"><Eye size={14} /></button>
                                       <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="w-8 h-8 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="Edit"><Edit size={14} /></button>
-                                      <button onClick={() => handleDelete(l._id)} className="w-8 h-8 bg-red-50 border border-red-100 text-red-600 rounded-lg flex items-center justify-center transition-all active:scale-90" title="Delete"><Trash2 size={14} /></button>
+                                      <button
+                                        onClick={() => handleDelete(l._id, l.title)}
+                                        disabled={deletingId === l._id}
+                                        className="w-8 h-8 bg-red-50 border border-red-100 text-red-600 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
+                                        title="Delete"
+                                      >
+                                        {deletingId === l._id ? <span className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin block" /> : <Trash2 size={14} />}
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -1795,6 +1849,48 @@ const Dashboard = () => {
           })}
         </div>
       </div>
+
+      {/* ── Custom Delete Confirmation Modal ── */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setConfirmModal(null)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-[#1a2340]/60 backdrop-blur-sm" />
+          {/* Modal */}
+          <div
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="w-14 h-14 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={26} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-black text-[#1a2340] text-center mb-1">Delete Property?</h3>
+            <p className="text-sm text-slate-500 font-medium text-center mb-1 leading-snug">
+              This will permanently remove:
+            </p>
+            <p className="text-sm font-bold text-[#1a2340] text-center mb-5 line-clamp-2 px-2">
+              "{confirmModal.title}"
+            </p>
+            <p className="text-[11px] text-red-400 font-semibold text-center mb-5">
+              ⚠️ This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-3 rounded-xl bg-[#f8f5ee] hover:bg-[#f0ebe0] text-[#1a2340] font-bold text-sm transition-all border border-[#e2d9c5]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-sm transition-all shadow-lg shadow-red-500/20 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

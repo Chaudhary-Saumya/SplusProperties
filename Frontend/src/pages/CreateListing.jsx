@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { useLanguage } from '../context/LanguageContext';
 
 // Fix for default marker icons in Leaflet + Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -28,6 +29,7 @@ L.Icon.Default.mergeOptions({
 });
 
 function MapSearch({ onSelect }) {
+    const { t } = useLanguage();
     const [query, setQuery] = useState('');
     const [mapSuggestions, setMapSuggestions] = useState([]);
     const [showMapSuggestions, setShowMapSuggestions] = useState(false);
@@ -57,7 +59,7 @@ function MapSearch({ onSelect }) {
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search for a location..."
+                        placeholder={t('create_listing.search_map_placeholder')}
                         className="w-full px-3 py-3 text-xs font-bold text-[#1a2340] outline-none placeholder:text-[#1a2340]/30"
                     />
                 </div>
@@ -149,8 +151,46 @@ const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }
 const inputCls = "w-full px-5 py-3.5 rounded-xl border border-[#1a2340]/15 bg-[#f8f5ee]/60 focus:ring-2 focus:ring-[#c9a84c]/40 focus:border-[#c9a84c] outline-none transition-all font-semibold text-[#1a2340] text-base placeholder:text-[#1a2340]/30";
 const labelCls = "block text-[10px] font-black text-[#1a2340]/50 mb-2 uppercase tracking-[0.15em]";
 
+const unitLabels = {
+    en: {
+        guntha: 'Guntha (Gutha)',
+        hectare: 'Hectare (Hector)',
+        aare: 'Aare',
+        vigha_bada: 'Bigha (23.78 Gutha)',
+        vigha_chhota: 'Bigha (16.19 Gutha)',
+        acre: 'Acre',
+        sqm: 'Square Meter (Sq.Mt)',
+        sqft: 'Square Feet (Sqft)',
+        gaj: 'Gaj / Yard / Vaar',
+    },
+    gu: {
+        guntha: 'ગુન્ટા',
+        hectare: 'હેક્ટર',
+        aare: 'આરે',
+        vigha_bada: 'વીઘું (મોટું - ૨૩.૭૮ ગુન્ટા)',
+        vigha_chhota: 'વીઘું (નાનું - ૧૬.૧૯ ગુન્ટા)',
+        acre: 'એકર',
+        sqm: 'ચોરસ મીટર',
+        sqft: 'ચોરસ ફૂટ',
+        gaj: 'ગજ / વાર',
+    }
+};
+
+const toBase = {
+    guntha: 1,
+    hectare: 98.84,
+    aare: 0.98,
+    vigha_bada: 23.78,
+    vigha_chhota: 16.19,
+    acre: 40,
+    sqm: 0.0098,
+    sqft: 1/1089,
+    gaj: 9/1089,
+};
+
 const CreateListing = () => {
     const { user } = useContext(AuthContext);
+    const { language, t } = useLanguage();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -181,11 +221,9 @@ const CreateListing = () => {
         locality: ''
     });
     const [payoutAccounts, setPayoutAccounts] = useState([]);
-    const [suggestions, setSuggestions] = useState([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
     const [locationMethod, setLocationMethod] = useState('address');
     const [areaValue, setAreaValue] = useState('');
-    const [areaUnit, setAreaUnit] = useState('Sq Ft');
+    const [areaUnit, setAreaUnit] = useState('sqft');
     const [images, setImages] = useState(null);
 
     const { data: systemSettings } = useQuery({
@@ -213,35 +251,18 @@ const CreateListing = () => {
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    useEffect(() => {
-        const timeoutId = setTimeout(async () => {
-            if (formData.location && formData.location.trim().length > 2 && !formData.mapCoordinates.lat) {
-                try {
-                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(formData.location)}&format=json&limit=5&addressdetails=1`);
-                    setSuggestions(res.data);
-                    setShowSuggestions(true);
-                } catch (e) {
-                    console.error("Nominatim error", e);
-                }
-            } else if (!formData.location || formData.location.length <= 2) {
-                setSuggestions([]);
-                setShowSuggestions(false);
-            }
-        }, 600);
-        return () => clearTimeout(timeoutId);
-    }, [formData.location, formData.mapCoordinates.lat]);
-
     const detectMyLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
-                const address = await reverseGeocode(latitude, longitude);
-                setFormData({
-                    ...formData,
-                    location: address || formData.location,
+                setLocationMethod('map');
+                setFormData(prev => ({
+                    ...prev,
                     mapCoordinates: { lat: latitude, lng: longitude },
+                    locationMode: 'map',
                     mapBounds: null
-                });
+                }));
+                toast.success('GPS location detected! Pin placed on map.');
             }, () => {
                 toast.warning('Location access denied or failed.');
             });
@@ -249,6 +270,7 @@ const CreateListing = () => {
             toast.error('Geolocation is not supported by your browser.');
         }
     };
+
 
     useEffect(() => {
         axios.get('/api/auth/me')
@@ -261,6 +283,25 @@ const CreateListing = () => {
             })
             .catch(err => console.error('Failed to fetch payout accounts:', err));
     }, [formData.payoutAccountId]);
+
+    const getCalculatedRates = () => {
+        const p = parseFloat(formData.price);
+        const a = parseFloat(areaValue);
+        if (isNaN(p) || isNaN(a) || p <= 0 || a <= 0) return null;
+
+        const currentLang = language === 'gu' ? 'gu' : 'en';
+        const rateForSelected = p / a;
+        const selectedLabel = unitLabels[currentLang][areaUnit] || areaUnit;
+
+        return {
+            selected: {
+                label: selectedLabel,
+                rate: rateForSelected
+            }
+        };
+    };
+
+    const rateResults = getCalculatedRates();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -280,12 +321,29 @@ const CreateListing = () => {
                     }
                 }
             }
+            let finalLocation = formData.location;
+            // Only use explicit map pin coords — never auto-geocode from address
+            let coords = locationMethod === 'map' ? { ...formData.mapCoordinates } : { lat: null, lng: null };
+            
+            if (locationMethod === 'address') {
+                const addrParts = [
+                    formData.plotNumber ? `Plot/Survey ${formData.plotNumber}` : '',
+                    formData.areaName,
+                    formData.locality,  // taluka
+                    formData.city,
+                    "Gujarat, India"
+                ].filter(Boolean);
+                finalLocation = addrParts.join(', ');
+            }
+
             const isAgri = formData.propertyType === 'Land' 
                 ? (formData.landType === 'Agricultural')
                 : (formData.plotType === 'Agricultural' || formData.isAgricultural);
 
             const listingPayload = {
                 ...formData,
+                location: finalLocation,
+                mapCoordinates: coords,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
                 images: uploadedImagePaths,
@@ -329,12 +387,12 @@ const CreateListing = () => {
                             <Building2 size={12} />
                             <span>Kharsan Admin</span>
                             <ChevronRight size={10} />
-                            <span>New Listing</span>
+                            <span>{t('create_listing.breadcrumb')}</span>
                         </div>
                         <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white leading-tight">
-                            Create Your <span className="text-[#c9a84c]">Property Legacy</span>
+                            {t('create_listing.legacy_title')}
                         </h1>
-                        <p className="text-white/50 font-semibold mt-2 text-sm max-w-md">Launch your next landmark property across the Kharsan network.</p>
+                        <p className="text-white/50 font-semibold mt-2 text-sm max-w-md">{t('create_listing.legacy_subtitle')}</p>
                     </div>
 
                     <div className="hidden lg:flex items-center gap-4">
@@ -343,7 +401,9 @@ const CreateListing = () => {
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-3 rounded-2xl transition-all border border-white/10 group"
                         >
                             {showSidebar ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-                            <span className="font-black text-xs uppercase tracking-widest">{showSidebar ? 'Hide Portfolio' : 'View Portfolio'}</span>
+                            <span className="font-black text-xs uppercase tracking-widest">
+                                {showSidebar ? t('create_listing.hide_portfolio') : t('create_listing.view_portfolio')}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -368,26 +428,26 @@ const CreateListing = () => {
 
                         <form onSubmit={handleSubmit} className="space-y-8">
                             <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar mb-4">
-                                <StepPill number="1" label="Details" done active />
-                                <StepPill number="2" label="Location" active />
-                                <StepPill number="3" label="Media" active={false} />
+                                <StepPill number="1" label={t('create_listing.step1')} done active />
+                                <StepPill number="2" label={t('create_listing.step2')} active />
+                                <StepPill number="3" label={t('create_listing.step3')} active={false} />
                             </div>
 
-                            <SectionCard icon={<Building2 />} title="Property Details" subtitle="The core narrative of your listing">
+                            <SectionCard icon={<Building2 />} title={t('create_listing.prop_details_title')} subtitle={t('create_listing.prop_details_subtitle')}>
                                 <div className="space-y-8">
                                     <div>
-                                        <label className={labelCls}>Property Title</label>
+                                        <label className={labelCls}>{t('create_listing.prop_title_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
                                         <input
                                             type="text" name="title" required
                                             value={formData.title} onChange={handleChange}
                                             className={inputCls}
-                                            placeholder="e.g. 500 Sq Yd Corner Plot in Sector 14"
+                                            placeholder={t('create_listing.prop_title_ph')}
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
-                                            <label className={labelCls}>Property Category</label>
+                                            <label className={labelCls}>{t('create_listing.prop_category_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
                                             <select
                                                 name="propertyType"
                                                 value={formData.propertyType}
@@ -400,37 +460,37 @@ const CreateListing = () => {
                                         </div>
                                         {formData.propertyType === 'Plot' && (
                                             <div>
-                                                <label className={labelCls}>Plot Sub-Type</label>
+                                                <label className={labelCls}>{t('create_listing.plot_subtype_lbl')}</label>
                                                 <select
                                                     name="plotType"
                                                     value={formData.plotType}
                                                     onChange={e => setFormData({ ...formData, plotType: e.target.value })}
                                                     className={inputCls + ' cursor-pointer'}
                                                 >
-                                                    <option value="None">Select Plot Type...</option>
-                                                    <option value="Residential">Residential</option>
-                                                    <option value="Commercial">Commercial</option>
-                                                    <option value="Industrial">Industrial</option>
-                                                    <option value="Agricultural">Agricultural</option>
-                                                    <option value="Other">Other</option>
+                                                    <option value="None">{t('create_listing.plot_subtype_select')}</option>
+                                                    <option value="Residential">{t('create_listing.plot_opt_res')}</option>
+                                                    <option value="Commercial">{t('create_listing.plot_opt_comm')}</option>
+                                                    <option value="Industrial">{t('create_listing.plot_opt_ind')}</option>
+                                                    <option value="Agricultural">{t('create_listing.plot_opt_agri')}</option>
+                                                    <option value="Other">{t('create_listing.plot_opt_oth')}</option>
                                                 </select>
                                             </div>
                                         )}
                                         {formData.propertyType === 'Land' && (
                                             <div>
-                                                <label className={labelCls}>Land Sub-Type</label>
+                                                <label className={labelCls}>{t('create_listing.land_subtype_lbl')}</label>
                                                 <select
                                                     name="landType"
                                                     value={formData.landType}
                                                     onChange={e => setFormData({ ...formData, landType: e.target.value })}
                                                     className={inputCls + ' cursor-pointer'}
                                                 >
-                                                    <option value="None">Select Land Type...</option>
-                                                    <option value="Agricultural">Agricultural</option>
-                                                    <option value="Non-Agricultural">Non-Agricultural (NA)</option>
-                                                    <option value="Industrial">Industrial</option>
-                                                    <option value="Commercial">Commercial</option>
-                                                    <option value="Other">Other</option>
+                                                    <option value="None">{t('create_listing.land_subtype_select')}</option>
+                                                    <option value="Agricultural">{t('create_listing.plot_opt_agri')}</option>
+                                                    <option value="Non-Agricultural">{t('create_listing.land_opt_na')}</option>
+                                                    <option value="Industrial">{t('create_listing.plot_opt_ind')}</option>
+                                                    <option value="Commercial">{t('create_listing.plot_opt_comm')}</option>
+                                                    <option value="Other">{t('create_listing.plot_opt_oth')}</option>
                                                 </select>
                                             </div>
                                         )}
@@ -438,51 +498,66 @@ const CreateListing = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className={labelCls}>Listing Price</label>
+                                            <label className={labelCls}>{t('create_listing.price_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
                                             <div className="relative">
                                                 <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
                                                 <input
                                                     type="number" name="price" required min="1000"
                                                     value={formData.price} onChange={handleChange}
                                                     className={inputCls + ' pl-12'}
-                                                    placeholder="45,00,000"
+                                                    placeholder={t('create_listing.price_ph')}
                                                 />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className={labelCls}>Total Area</label>
+                                            <label className={labelCls}>{t('create_listing.area_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
                                             <div className="flex gap-3">
                                                 <input
                                                     type="number" required min="0.001" step="any"
                                                     value={areaValue} onChange={(e) => setAreaValue(e.target.value)}
                                                     className={inputCls + ' w-2/3'}
-                                                    placeholder="500"
+                                                    placeholder={t('create_listing.area_ph')}
                                                 />
                                                 <select
                                                     value={areaUnit} onChange={(e) => setAreaUnit(e.target.value)}
                                                     className={inputCls + ' w-1/3 cursor-pointer'}
                                                 >
-                                                    <option value="Sq Ft">Sq Ft</option>
-                                                    <option value="Sq Yd">Sq Yd</option>
-                                                    <option value="Acres">Acres</option>
+                                                    {Object.keys(unitLabels[language === 'gu' ? 'gu' : 'en']).map((key) => (
+                                                        <option key={key} value={key}>
+                                                            {unitLabels[language === 'gu' ? 'gu' : 'en'][key]}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* Price per unit rate display — temporarily disabled */}
+                                    {/* {rateResults && (
+                                        <div className="flex justify-end mt-2">
+                                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-xl text-xs sm:text-sm font-black text-[#1a2340]">
+                                                <span>1 {rateResults.selected.label} =</span>
+                                                <span className="text-[#b8933a] text-sm sm:text-base font-black">
+                                                    ₹{rateResults.selected.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )} */}
+
+
                                     <div>
-                                        <label className={labelCls}>Story & Description</label>
+                                        <label className={labelCls}>{t('create_listing.description_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
                                         <textarea
                                             name="description" required rows="6"
                                             value={formData.description} onChange={handleChange}
                                             className={inputCls + ' resize-none'}
-                                            placeholder="What makes this property special? Mention proximity to landmarks, soil quality, or future potential..."
+                                            placeholder={t('create_listing.description_ph')}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className={labelCls}>Property Attributes</label>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
+                                        <label className={labelCls}>{t('create_listing.attributes_lbl')}</label>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
                                             {formData.propertyType === 'Plot' && (
                                                 <label className="flex items-center gap-3 cursor-pointer select-none">
                                                     <input
@@ -491,7 +566,7 @@ const CreateListing = () => {
                                                         onChange={e => setFormData({ ...formData, cornerPlot: e.target.checked })}
                                                         className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
                                                     />
-                                                    <span className="text-xs font-bold text-[#1a2340]/70">Corner Plot</span>
+                                                    <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_corner')}</span>
                                                 </label>
                                             )}
                                             <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -501,7 +576,7 @@ const CreateListing = () => {
                                                     onChange={e => setFormData({ ...formData, roadTouch: e.target.checked })}
                                                     className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
                                                 />
-                                                <span className="text-xs font-bold text-[#1a2340]/70">Road Touch</span>
+                                                <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_road')}</span>
                                             </label>
                                             {formData.propertyType === 'Plot' && (
                                                 <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -511,18 +586,9 @@ const CreateListing = () => {
                                                         onChange={e => setFormData({ ...formData, isAgricultural: e.target.checked })}
                                                         className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
                                                     />
-                                                    <span className="text-xs font-bold text-[#1a2340]/70">Agricultural Plot</span>
+                                                    <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_agri')}</span>
                                                 </label>
                                             )}
-                                            <label className="flex items-center gap-3 cursor-pointer select-none">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.isFeatured}
-                                                    onChange={e => setFormData({ ...formData, isFeatured: e.target.checked })}
-                                                    className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
-                                                />
-                                                <span className="text-xs font-bold text-[#1a2340]/70">Featured Listing</span>
-                                            </label>
                                         </div>
                                     </div>
                                 </div>
@@ -530,14 +596,14 @@ const CreateListing = () => {
 
                             <SectionCard
                                 icon={<MapPin />}
-                                title="Geographic Position"
-                                subtitle="Define exactly where your legacy stands"
+                                title={t('create_listing.location_title')}
+                                subtitle={t('create_listing.location_subtitle')}
                             >
                                 <div className="space-y-6">
                                     <div className="flex flex-wrap bg-[#f8f5ee] p-2 rounded-2xl border border-[#1a2340]/10 gap-2">
                                         {[
-                                            { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
-                                            { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> }
+                                            { id: 'address', label: t('create_listing.loc_mode_address'), icon: <MapPin size={14} /> },
+                                            { id: 'map', label: t('create_listing.loc_mode_map'), icon: <Target size={14} /> }
                                         ].map((method) => (
                                             <button
                                                 key={method.id}
@@ -560,98 +626,71 @@ const CreateListing = () => {
                                         <div className="space-y-6">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className={labelCls}>Plot / Survey Number</label>
+                                                     <label className={labelCls}>Plot / Survey Number</label>
                                                     <input
                                                         type="text" name="plotNumber"
                                                         value={formData.plotNumber}
                                                         onChange={handleChange}
                                                         className={inputCls}
-                                                        placeholder="e.g. 102/B or 55"
+                                                        placeholder="e.g. 102/B or Survey No. 55"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className={labelCls}>Area / Landmark Name</label>
+                                                    <label className={labelCls}>Nearby Landmark / Area Name</label>
                                                     <input
                                                         type="text" name="areaName"
                                                         value={formData.areaName}
                                                         onChange={handleChange}
                                                         className={inputCls}
-                                                        placeholder="e.g. Near Shiv Temple"
+                                                        placeholder="e.g. Near Shiv Temple, Badarpura Road"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className={labelCls}>City / Town</label>
+                                                    <label className={labelCls}>Village / City <span className="text-red-500 font-bold ml-1">*</span></label>
                                                     <input
-                                                        type="text" name="city" required
+                                                        type="text" name="city"
+                                                        required
                                                         value={formData.city}
                                                         onChange={handleChange}
                                                         className={inputCls}
-                                                        placeholder="e.g. Ahmedabad"
+                                                        placeholder="e.g. Palanpur, Vadgam, Deesa"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className={labelCls}>Locality / Sub-Area</label>
+                                                    <label className={labelCls}>Taluka</label>
                                                     <input
-                                                        type="text" name="locality" required
+                                                        type="text" name="locality"
                                                         value={formData.locality}
                                                         onChange={handleChange}
                                                         className={inputCls}
-                                                        placeholder="e.g. Bopal"
+                                                        placeholder="e.g. Vadgam, Danta, Palanpur"
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="relative">
-                                                <label className={labelCls}>Village / City (Search)</label>
-                                                <input
-                                                    type="text" name="location" required
-                                                    value={formData.location}
-                                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                                    autoComplete="off"
-                                                    className={inputCls}
-                                                    placeholder="Search village or city..."
-                                                />
-                                                {showSuggestions && suggestions.length > 0 && (
-                                                    <ul className="absolute top-[105%] left-0 w-full bg-white border border-[#1a2340]/15 shadow-2xl rounded-2xl z-[100] p-2 max-h-72 overflow-y-auto">
-                                                        {suggestions.map((s, idx) => (
-                                                            <li
-                                                                key={idx}
-                                                                onClick={() => {
-                                                                    const b = s.boundingbox;
-                                                                    setFormData({
-                                                                        ...formData,
-                                                                        location: s.display_name,
-                                                                        mapCoordinates: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
-                                                                        mapBounds: [[parseFloat(b[0]), parseFloat(b[2])], [parseFloat(b[1]), parseFloat(b[3])]]
-                                                                    });
-                                                                    setShowSuggestions(false);
-                                                                }}
-                                                                className="p-4 hover:bg-[#f8f5ee] cursor-pointer rounded-xl transition-all group"
-                                                            >
-                                                                <span className="block text-[#1a2340] font-black text-sm group-hover:text-[#c9a84c]">{s.display_name.split(',')[0]}</span>
-                                                                <span className="text-[10px] text-[#1a2340]/40 font-bold truncate mt-1">{s.display_name}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
+                                            <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl mt-2">
+                                                <span className="text-blue-500 mt-0.5">ℹ️</span>
+                                                <p className="text-[11px] font-semibold text-blue-700 leading-snug">
+                                                    Map location will <strong>not</strong> be shown on this listing. To show a precise pin on the map for buyers, switch to <strong>Precise Pin</strong> mode above.
+                                                </p>
                                             </div>
                                         </div>
                                     )}
 
                                     {locationMethod === 'map' && (
                                         <div className="space-y-4">
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                                 <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
-                                                    Drop Pin on Precise Location
+                                                    {t('create_listing.map_pin_instruction')}
                                                 </p>
                                                 <button
                                                     type="button"
                                                     onClick={detectMyLocation}
-                                                    className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
+                                                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
                                                 >
-                                                    <Navigation size={12} /> Use My GPS Location
+                                                    <Navigation size={12} /> {t('create_listing.use_gps_btn')}
                                                 </button>
                                             </div>
                                             <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative">
@@ -671,23 +710,23 @@ const CreateListing = () => {
                                 </div>
                             </SectionCard>
 
-                            <SectionCard icon={<UploadCloud />} title="Visual Portfolio" subtitle="Showcase the beauty of your land" accent>
+                            <SectionCard icon={<UploadCloud />} title={t('create_listing.visual_portfolio_title')} subtitle={t('create_listing.visual_portfolio_subtitle')} accent>
                                 <div className="border-2 border-dashed border-[#c9a84c]/40 rounded-3xl p-12 text-center bg-[#c9a84c]/5 hover:bg-[#c9a84c]/10 transition-all cursor-pointer relative group">
                                     <input type="file" multiple accept="image/*" onChange={(e) => setImages(e.target.files)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                     <UploadCloud className="mx-auto text-[#c9a84c] mb-4 group-hover:scale-110 transition-transform" size={48} />
                                     <p className="text-[#1a2340] font-black text-lg mb-1">
-                                        {images?.length > 0 ? `${images.length} Images Selected` : 'Drop Property Photos Here'}
+                                        {images?.length > 0 ? t('create_listing.images_selected_count').replace('{count}', images.length) : t('create_listing.drop_images_msg')}
                                     </p>
-                                    <p className="text-[#1a2340]/40 font-bold text-xs uppercase tracking-widest">High resolution .jpg or .png</p>
+                                    <p className="text-[#1a2340]/40 font-bold text-xs uppercase tracking-widest">{t('create_listing.image_requirements')}</p>
                                 </div>
                             </SectionCard>
 
                             {systemSettings?.isInstantBookingEnabled !== false && (
-                                <SectionCard icon={<CreditCard />} title="Instant Booking" subtitle="Secure your leads with digital tokens">
+                                <SectionCard icon={<CreditCard />} title={t('create_listing.instant_booking_title')} subtitle={t('create_listing.instant_booking_subtitle')}>
                                     <div className="flex items-center justify-between mb-8">
                                         <div>
-                                            <p className="font-black text-[#1a2340]">Enable Reservation System</p>
-                                            <p className="text-xs text-[#1a2340]/40 font-semibold mt-1">Allow buyers to reserve with a small token amount</p>
+                                            <p className="font-black text-[#1a2340]">{t('create_listing.enable_reservation')}</p>
+                                            <p className="text-xs text-[#1a2340]/40 font-semibold mt-1">{t('create_listing.enable_reservation_sub')}</p>
                                         </div>
                                         <button
                                             type="button"
@@ -701,7 +740,7 @@ const CreateListing = () => {
                                     {formData.isBookingEnabled && (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-6 pt-6 border-t border-[#f8f5ee]">
                                             <div>
-                                                <label className={labelCls}>Token Amount (Capped at 2%)</label>
+                                                <label className={labelCls}>{t('create_listing.token_amt_lbl')}</label>
                                                 <div className="relative">
                                                     <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
                                                     <input
@@ -711,12 +750,12 @@ const CreateListing = () => {
                                                             setFormData({ ...formData, tokenAmount: Math.min(e.target.value, max) });
                                                         }}
                                                         className={inputCls + ' pl-12'}
-                                                        placeholder="Enter amount..."
+                                                        placeholder={t('create_listing.token_amt_ph')}
                                                     />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className={labelCls}>Payout Account</label>
+                                                <label className={labelCls}>{t('create_listing.payout_acc_lbl')}</label>
                                                 <select
                                                     value={formData.payoutAccountId}
                                                     onChange={(e) => setFormData({ ...formData, payoutAccountId: e.target.value })}
@@ -732,15 +771,25 @@ const CreateListing = () => {
                                 </SectionCard>
                             )}
 
-                            <div className="bg-[#1a2340] rounded-[2.5rem] p-8 flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
-                                <div>
-                                    <p className="text-white font-black text-lg">Ready to launch?</p>
-                                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Instant publication across Kharsan nodes</p>
+                            <div className="bg-[#1a2340] rounded-[2.5rem] p-6 sm:p-8 flex flex-col lg:flex-row justify-between items-center gap-6 shadow-2xl">
+                                <div className="text-center lg:text-left">
+                                    <p className="text-white font-black text-lg">{t('create_listing.ready_to_launch')}</p>
+                                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">{t('create_listing.publication_hint')}</p>
                                 </div>
-                                <div className="flex gap-4 w-full md:w-auto">
-                                    <button type="button" onClick={() => navigate(-1)} className="flex-1 md:flex-none px-8 py-4 font-black text-white/60 hover:text-white transition-all bg-white/5 rounded-2xl text-xs uppercase tracking-[0.2em]">Cancel</button>
-                                    <button type="submit" disabled={loading} className="flex-1 md:flex-none bg-[#c9a84c] hover:bg-[#d9b85c] text-[#1a2340] px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-[#c9a84c]/20 flex items-center justify-center gap-3 active:scale-95">
-                                        {loading ? <span className="w-4 h-4 border-2 border-[#1a2340]/30 border-t-[#1a2340] rounded-full animate-spin"></span> : <><Tag size={16} /> Publish Now</>}
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => navigate(-1)} 
+                                        className="flex-1 lg:flex-none flex items-center justify-center px-6 sm:px-4 py-3.5 sm:py-4 font-black text-white/60 hover:text-white transition-all bg-white/5 rounded-2xl text-xs uppercase tracking-[0.2em]"
+                                    >
+                                        {t('create_listing.cancel_btn')}
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        disabled={loading} 
+                                        className="flex-1 lg:flex-none bg-[#c9a84c] hover:bg-[#d9b85c] text-[#1a2340] px-8 sm:px-5 py-3.5 sm:py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg shadow-[#c9a84c]/20 hover:shadow-xl hover:shadow-[#c9a84c]/30 flex items-center justify-center gap-3 active:scale-95"
+                                    >
+                                        {loading ? <span className="w-4 h-4 border-2 border-[#1a2340]/30 border-t-[#1a2340] rounded-full animate-spin"></span> : <><Tag size={16} /> {t('create_listing.publish_btn')}</>}
                                     </button>
                                 </div>
                             </div>
@@ -759,8 +808,8 @@ const CreateListing = () => {
                                 <div className="bg-white rounded-[2.5rem] border border-[#1a2340]/10 p-8 shadow-sm">
                                     <div className="flex items-center justify-between mb-8">
                                         <div>
-                                            <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-1">Your Growth</h4>
-                                            <h3 className="text-xl font-black text-[#1a2340]">Recent Portfolio</h3>
+                                            <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-1">{t('create_listing.sidebar_growth')}</h4>
+                                            <h3 className="text-xl font-black text-[#1a2340]">{t('create_listing.sidebar_portfolio')}</h3>
                                         </div>
                                         <div className="w-10 h-10 bg-[#f8f5ee] rounded-xl flex items-center justify-center text-[#1a2340]">
                                             <LayoutDashboard size={20} />
@@ -775,7 +824,7 @@ const CreateListing = () => {
                                                     <Sparkles size={24} />
                                                 </div>
                                                 <p className="text-[#1a2340]/40 font-bold text-[10px] uppercase tracking-widest leading-loose px-4">
-                                                    Your portfolio is empty. Launch your first legacy property.
+                                                    {t('create_listing.sidebar_empty')}
                                                 </p>
                                             </div>
                                         ) : (
@@ -802,7 +851,7 @@ const CreateListing = () => {
 
                                     {myListingsData?.length > 5 && (
                                         <button onClick={() => navigate('/dashboard')} className="w-full mt-6 py-4 rounded-2xl bg-[#1a2340]/5 text-[#1a2340] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[#1a2340] hover:text-white transition-all">
-                                            View Full Portfolio
+                                            {t('create_listing.sidebar_view_full')}
                                         </button>
                                     )}
 
@@ -815,7 +864,7 @@ const CreateListing = () => {
                                             ))}
                                         </div>
                                         <p className="text-[10px] font-bold text-[#1a2340]/40 leading-tight">
-                                            {myListingsData?.length || 0} active listings across <br /> 3 regional tiers.
+                                            {t('create_listing.sidebar_active_listings').replace('{count}', myListingsData?.length || 0)}
                                         </p>
                                     </div>
                                 </div>
@@ -824,9 +873,9 @@ const CreateListing = () => {
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
                                         <Sparkles size={48} className="text-[#c9a84c]" />
                                     </div>
-                                    <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-4">Pro Tip</h4>
+                                    <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-4">{t('create_listing.sidebar_pro_tip')}</h4>
                                     <p className="text-[#1a2340] font-bold text-xs leading-relaxed">
-                                        Verified listings receive 3.4x more engagement from high-intent buyers in metro tiers.
+                                        {t('create_listing.sidebar_pro_tip_desc')}
                                     </p>
                                 </div>
                             </motion.div>

@@ -53,19 +53,55 @@ const slides = [
 /* ─── Hero Carousel ───────────────────────────────────────────────────────── */
 const HeroCarousel = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
+  const { t, language } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
+  const localSlides = [
+    {
+      image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80',
+      tag: t('home.slide0_tag'),
+      heading: t('home.slide0_heading'),
+      sub: t('home.slide0_sub'),
+      cta: t('home.slide0_cta'),
+      ctaLink: '/search',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1659572863867-70ae4445ad4e?q=80&w=3056&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+      tag: t('home.slide1_badge'),
+      heading: t('home.slide1_title'),
+      sub: t('home.slide1_desc'),
+      cta: t('home.slide1_btn'),
+      ctaLink: '/boundary-map',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+      tag: t('home.slide2_badge'),
+      heading: t('home.slide2_title'),
+      sub: t('home.slide2_desc'),
+      cta: t('home.slide2_btn'),
+      ctaLink: '/area-converter',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+      tag: t('home.slide3_badge'),
+      heading: t('home.slide3_title'),
+      sub: t('home.slide3_desc'),
+      cta: t('home.slide3_btn'),
+      ctaLink: '/register',
+    }
+  ];
+
   const go = useCallback((idx) => {
     if (animating) return;
     setAnimating(true);
     setTimeout(() => {
-      setCurrent((idx + slides.length) % slides.length);
+      setCurrent((idx + localSlides.length) % localSlides.length);
       setAnimating(false);
     }, 400);
-  }, [animating]);
+  }, [animating, localSlides.length]);
 
   useEffect(() => {
     const t = setInterval(() => go(current + 1), 5500);
@@ -90,12 +126,12 @@ const HeroCarousel = () => {
     if (isRightSwipe) go(current - 1);
   };
 
-  const baseSlide = slides[current];
+  const baseSlide = localSlides[current];
   const slide = { ...baseSlide };
   
   if (current === 0 && isAuthenticated && user) {
-    slide.tag = `Welcome, ${user.name}`;
-    slide.heading = `Hello ${user.name.split(' ')[0]},\nFind Your Perfect Plot`;
+    slide.tag = language === 'en' ? `Welcome, ${user.name}` : `સ્વાગત છે, ${user.name}`;
+    slide.heading = language === 'en' ? `Hello ${user.name.split(' ')[0]},\nFind Your Perfect Plot` : `નમસ્તે ${user.name.split(' ')[0]},\nતમારી આદર્શ જમીન શોધો`;
   }
 
   return (
@@ -258,7 +294,7 @@ const HeroCarousel = () => {
         position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
         display: 'flex', gap: 8, zIndex: 6,
       }}>
-        {slides.map((_, i) => (
+        {localSlides.map((_, i) => (
           <button key={i} onClick={() => go(i)} style={{
             width: i === current ? 28 : 8, height: 8, borderRadius: 4,
             background: i === current ? '#c9a84c' : 'rgba(255,255,255,0.4)',
@@ -271,7 +307,6 @@ const HeroCarousel = () => {
       {/* Area Converter Button */}
       <Link to="/area-converter" className="area-converter-btn">
         <Calculator size={18} />
-       
       </Link>
 
     </div>
@@ -585,7 +620,7 @@ const MobileEntrance = () => {
 
 const Home = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -838,10 +873,10 @@ const Home = () => {
           flexWrap: 'wrap', gap: 24,
         }}>
           {[
-            { num: '100%', label: 'Verified Listings' },
-            { num: 'Smart', label: 'Digitized Mapping' },
-            { num: 'Direct', label: 'Seller Connection' },
-            { num: 'Zero', label: 'Hidden Charges' },
+            { num: t('home.stat_verified_num'), label: t('home.stat_verified_label') },
+            { num: t('home.stat_mapping_num'), label: t('home.stat_mapping_label') },
+            { num: t('home.stat_connection_num'), label: t('home.stat_connection_label') },
+            { num: t('home.stat_charges_num'), label: t('home.stat_charges_label') },
           ].map(({ num, label }) => (
             <div key={label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, color: '#c9a84c', fontWeight: 700 }}>{num}</div>

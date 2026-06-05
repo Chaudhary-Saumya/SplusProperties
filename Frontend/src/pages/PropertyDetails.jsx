@@ -44,18 +44,20 @@ function MapRecenter({ position }) {
 }
 
 const PropertyDetails = () => {
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const { id } = useParams();
+    const cleanId = id ? id.split(/[\s%]/)[0] : '';
     const [mainImageIndex, setMainImageIndex] = useState(0);
     const [isFavorite, setIsFavorite] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const { user, isAuthenticated } = useContext(AuthContext);
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptData, setReceiptData] = useState(null);
-    const [displayUnit, setDisplayUnit] = useState('Sq. Ft');
+    const [displayUnit, setDisplayUnit] = useState('sqft');
     const [originalAreaValue, setOriginalAreaValue] = useState(0);
-    const [originalUnit, setOriginalUnit] = useState('Sq. Ft');
+    const [originalUnit, setOriginalUnit] = useState('sqft');
     // const [ownerInquiries, setOwnerInquiries] = useState(0);
     const [requestingVisit, setRequestingVisit] = useState(false);
     // const [requestingContact, setRequestingContact] = useState(false); /* for commented Send Message button */
@@ -69,17 +71,21 @@ const PropertyDetails = () => {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const conversionFactors = {
-        'Sq. Ft': 1.0,
-        'Sq. Mtr': 0.0929,
-        'Sq. Yard': 0.1111,
-        'Hectare': 0.00000929,
-        'Acre': 0.0000229568
+        guntha: 1,
+        hectare: 98.84,
+        aare: 0.98,
+        vigha_bada: 23.78,
+        vigha_chhota: 16.19,
+        acre: 40,
+        sqm: 0.0098,
+        sqft: 1 / 1089,
+        gaj: 9 / 1089,
     };
 
     const { data: listing, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['listing', id],
+        queryKey: ['listing', cleanId],
         queryFn: async () => {
-            const res = await axios.get(`/api/listings/${id}`);
+            const res = await axios.get(`/api/listings/${cleanId}`);
             return res.data.data;
         }
     });
@@ -88,7 +94,7 @@ const PropertyDetails = () => {
         if (!listing) return t('property_details.category_label');
         const typeLabel = listing.propertyType === 'Plot' ? t('search_page.plots') : t('search_page.lands');
         const subTypeValue = listing.propertyType === 'Plot' ? listing.plotType : listing.landType;
-        
+
         if (subTypeValue && subTypeValue !== 'None') {
             const subTypeKey = subTypeValue.toLowerCase().replace('-', '_');
             const subTypeTrans = t(`search_page.${subTypeKey}`);
@@ -98,14 +104,18 @@ const PropertyDetails = () => {
     };
 
     const getUnitLabel = (u) => {
-        switch (u) {
-            case 'Sq. Ft': return t('tools_page.sqft') || u;
-            case 'Sq. Mtr': return t('tools_page.sqmt') || u;
-            case 'Sq. Yard': return t('tools_page.sqyrd') || u;
-            case 'Hectare': return t('tools_page.hectare') || u;
-            case 'Acre': return t('tools_page.acre') || u;
-            default: return u;
-        }
+        const labels = {
+            guntha: language === 'gu' ? 'ગુન્ટા' : 'Guntha (Gutha)',
+            hectare: language === 'gu' ? 'હેક્ટર' : 'Hectare (Hector)',
+            aare: language === 'gu' ? 'આરે' : 'Aare',
+            vigha_bada: language === 'gu' ? 'વીઘું (મોટું - ૨૩.૭૮ ગુન્ટા)' : 'Bigha (23.78 Gutha)',
+            vigha_chhota: language === 'gu' ? 'વીઘું (નાનું - ૧૬.૧૯ ગુન્ટા)' : 'Bigha (16.19 Gutha)',
+            acre: language === 'gu' ? 'એકર' : 'Acre',
+            sqm: language === 'gu' ? 'ચોરસ મીટર' : 'Square Meter (Sq.Mt)',
+            sqft: language === 'gu' ? 'ચોરસ ફૂટ' : 'Square Feet (Sqft)',
+            gaj: language === 'gu' ? 'ગજ / વાર' : 'Gaj / Yard / Vaar',
+        };
+        return labels[u] || u;
     };
 
     const getRoleLabel = (role) => {
@@ -124,9 +134,9 @@ const PropertyDetails = () => {
     });
 
     const { data: reviewsData, isLoading: reviewsLoading, refetch: refetchReviews } = useQuery({
-        queryKey: ['reviews', id],
+        queryKey: ['reviews', cleanId],
         queryFn: async () => {
-            const res = await axios.get(`/api/listings/${id}/reviews`);
+            const res = await axios.get(`/api/listings/${cleanId}/reviews`);
             return res.data;
         }
     });
@@ -137,27 +147,34 @@ const PropertyDetails = () => {
             const match = areaStr.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
             if (match) {
                 const value = parseFloat(match[1]);
-                const unit = match[2].trim();
+                const unit = match[2].trim().toLowerCase();
                 setOriginalAreaValue(value);
-                const foundUnit = Object.keys(conversionFactors).find(u =>
-                    unit.toLowerCase().includes(u.toLowerCase()) ||
-                    (u === 'Sq. Yard' && (unit.toLowerCase().includes('yard') || unit.toLowerCase().includes('gaj')))
-                );
-                if (foundUnit) {
-                    setOriginalUnit(foundUnit);
-                    setDisplayUnit(foundUnit);
-                }
+
+                let mappedUnit = 'sqft';
+                if (unit.includes('ft') || unit.includes('feet')) mappedUnit = 'sqft';
+                else if (unit.includes('yard') || unit.includes('gaj') || unit.includes('yd') || unit.includes('vaar')) mappedUnit = 'gaj';
+                else if (unit.includes('meter') || unit.includes('mtr') || unit.includes('sqm') || unit.includes('મીટર')) mappedUnit = 'sqm';
+                else if (unit.includes('acre') || unit.includes('એકર')) mappedUnit = 'acre';
+                else if (unit.includes('hectare') || unit.includes('hector') || unit.includes('હેક્ટર')) mappedUnit = 'hectare';
+                else if (unit.includes('guntha') || unit.includes('gutha') || unit.includes('ગુન્ટા')) mappedUnit = 'guntha';
+                else if (unit.includes('aare') || unit.includes('આરે')) mappedUnit = 'aare';
+                else if (unit.includes('vigha_bada') || unit.includes('bada') || unit.includes('મોટું') || unit.includes('23.78')) mappedUnit = 'vigha_bada';
+                else if (unit.includes('vigha_chhota') || unit.includes('chhota') || unit.includes('નાનું') || unit.includes('16.19')) mappedUnit = 'vigha_chhota';
+                else mappedUnit = 'sqft';
+
+                setOriginalUnit(mappedUnit);
+                setDisplayUnit(mappedUnit);
             }
             if (user && user.favorites) {
                 const isSaved = user.favorites.some(fav => {
-                    if (typeof fav === 'string') return fav === id;
-                    if (typeof fav === 'object' && fav !== null) return (fav._id || fav.id) === id;
+                    if (typeof fav === 'string') return fav === cleanId;
+                    if (typeof fav === 'object' && fav !== null) return (fav._id || fav.id) === cleanId;
                     return false;
                 });
                 setIsFavorite(isSaved);
             }
         }
-    }, [conversionFactors, listing, user]);
+    }, [listing, user, cleanId]);
 
     useEffect(() => {
         const script = document.createElement('script');
@@ -165,20 +182,20 @@ const PropertyDetails = () => {
         script.async = true;
         document.body.appendChild(script);
 
-        if (id && !sessionStorage.getItem(`viewed_${id}`)) {
-            axios.post(`/api/listings/${id}/view`).catch(e => console.error(e));
-            sessionStorage.setItem(`viewed_${id}`, 'true');
+        if (cleanId && !sessionStorage.getItem(`viewed_${cleanId}`)) {
+            axios.post(`/api/listings/${cleanId}/view`).catch(e => console.error(e));
+            sessionStorage.setItem(`viewed_${cleanId}`, 'true');
         }
 
         return () => {
             if (document.body.contains(script)) document.body.removeChild(script);
         };
-    }, [id]);
+    }, [cleanId]);
 
     const getConvertedArea = () => {
         if (!originalAreaValue) return listing?.area;
-        const baseSqFt = originalAreaValue / conversionFactors[originalUnit];
-        const convertedValue = baseSqFt * conversionFactors[displayUnit];
+        const baseGuntha = originalAreaValue * conversionFactors[originalUnit];
+        const convertedValue = baseGuntha / conversionFactors[displayUnit];
         if (convertedValue < 0.01) return convertedValue.toFixed(6);
         if (convertedValue < 1) return convertedValue.toFixed(4);
         return convertedValue.toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -187,7 +204,7 @@ const PropertyDetails = () => {
     const handleFavorite = async () => {
         if (!isAuthenticated) return navigate('/login');
         try {
-            const res = await axios.post(`/api/auth/favorites/${id}`);
+            const res = await axios.post(`/api/auth/favorites/${cleanId}`);
             if (user && res.data && res.data.data) {
                 user.favorites = res.data.data;
             }
@@ -205,7 +222,7 @@ const PropertyDetails = () => {
         setRequestingVisit(true);
         try {
             await axios.post('/api/inquiries', {
-                listingId: id,
+                listingId: cleanId,
                 type: 'SiteVisit',
                 message: 'I would like to schedule a site visit for this property. Please suggest available dates and contact me to arrange.'
             });
@@ -224,7 +241,7 @@ const PropertyDetails = () => {
         try {
             // 1. Create Razorpay order
             const { data } = await axios.post('/api/payments/create-order', {
-                listingId: id
+                listingId: cleanId
             });
 
             // 2. Open Razorpay checkout (demo/test mode)
@@ -276,9 +293,26 @@ const PropertyDetails = () => {
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     };
 
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText(window.location.href);
-        toast.info(t('property_details.link_copied'));
+    const handleShareOptions = async (e) => {
+        if (e) e.stopPropagation();
+        const listingUrl = `${window.location.origin}/listings/${cleanId}`;
+        const shareData = {
+            title: listing?.title || 'Kharsan Properties',
+            text: listing ? `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}` : '',
+            url: listingUrl
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    setShowShareModal(true);
+                }
+            }
+        } else {
+            setShowShareModal(true);
+        }
     };
 
     if (isLoading) return <DetailSkeleton />;
@@ -299,7 +333,7 @@ const PropertyDetails = () => {
 
         setSubmittingReview(true);
         try {
-            await axios.post(`/api/listings/${id}/reviews`, newReview);
+            await axios.post(`/api/listings/${cleanId}/reviews`, newReview);
             toast.success(t('property_details.review_success'));
             setNewReview({ rating: 5, comment: '' });
             refetchReviews();
@@ -336,8 +370,8 @@ const PropertyDetails = () => {
                             <Star
                                 size={28}
                                 className={`transition-colors duration-150 ${i <= currentRating
-                                        ? 'text-[#c9a84c] fill-[#c9a84c] filter drop-shadow-[0_2px_4px_rgba(201,168,76,0.15)]'
-                                        : 'text-slate-300 hover:text-[#c9a84c] fill-transparent'
+                                    ? 'text-[#c9a84c] fill-[#c9a84c] filter drop-shadow-[0_2px_4px_rgba(201,168,76,0.15)]'
+                                    : 'text-slate-300 hover:text-[#c9a84c] fill-transparent'
                                     }`}
                                 strokeWidth={i <= currentRating ? 1.5 : 2}
                             />
@@ -468,65 +502,89 @@ const PropertyDetails = () => {
                         <div className="bg-white sm:rounded-3xl border-y sm:border border-slate-100 p-0 sm:p-5 shadow-none sm:shadow-xs -mx-4 sm:mx-0 overflow-hidden">
                             <div className="relative rounded-none sm:rounded-2xl overflow-hidden bg-slate-950 aspect-video group shadow-none sm:shadow-inner">
                                 {listing.images?.length > 0 ? (
-                                    <>
-                                        <img
-                                            src={getImageUrl(listing.images[mainImageIndex])}
-                                            alt={listing.title}
-                                            fetchpriority="high"
-                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
-                                        />
-                                        
-                                        {/* Floating Overlays for Mobile Only */}
-                                        <div className="sm:hidden absolute top-4 left-4 z-30">
-                                            <button
-                                                onClick={() => navigate(-1)}
-                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
-                                            >
-                                                <ArrowLeft size={16} strokeWidth={2.5} />
-                                            </button>
+                                    <img
+                                        src={getImageUrl(listing.images[mainImageIndex])}
+                                        alt={listing.title}
+                                        fetchpriority="high"
+                                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
+                                    />
+                                ) : (listing.locationMode === 'map' && listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
+                                    <div className="w-full h-full relative z-0">
+                                        <MapContainer
+                                            center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
+                                            zoom={15}
+                                            zoomControl={true}
+                                            style={{ height: '100%', width: '100%' }}
+                                        >
+                                            <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                            <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
+                                                <Popup>{listing.title}</Popup>
+                                            </Marker>
+                                            <MapRecenter position={{ lat: parseFloat(listing.mapCoordinates.lat), lng: parseFloat(listing.mapCoordinates.lng) }} />
+                                        </MapContainer>
+                                        <div className="absolute bottom-4 left-4 bg-slate-900/85 backdrop-blur-xs text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider z-10 pointer-events-none">
+                                            🗺️ Satellite Location Map
                                         </div>
-                                        <div className="sm:hidden absolute top-4 right-4 z-30 flex gap-2">
-                                            <button
-                                                onClick={handleFavorite}
-                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
-                                            >
-                                                <Heart size={16} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-700'} strokeWidth={2} />
-                                            </button>
-                                            <button
-                                                onClick={handleCopyLink}
-                                                className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-[#c9a84c] active:scale-90 transition-all"
-                                            >
-                                                <Share2 size={16} strokeWidth={2} />
-                                            </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FAF9F6] to-[#e2d9c5]/40 text-slate-700 p-6 text-center gap-3">
+                                        <div className="w-14 h-14 bg-[#1a2340]/5 rounded-full flex items-center justify-center text-[#c9a84c]">
+                                            <Image size={28} />
                                         </div>
+                                        <div className="max-w-md">
+                                            <h4 className="text-sm font-extrabold uppercase tracking-widest text-[#1a2340] mb-1">
+                                                No Photos Available
+                                            </h4>
+                                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                The seller has not uploaded photos for this property yet. Please refer to the location coordinates map or contact the builder/seller directly for more details.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
 
-                                        {/* Mobile Page indicator */}
-                                        <span className="sm:hidden absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider z-20">
-                                            {mainImageIndex + 1} / {listing.images.length}
-                                        </span>
+                                {/* Floating Overlays for Mobile Only */}
+                                <div className="sm:hidden absolute top-4 left-4 z-30">
+                                    <button
+                                        onClick={() => navigate(-1)}
+                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
+                                    >
+                                        <ArrowLeft size={16} strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                                <div className="sm:hidden absolute top-4 right-4 z-30 flex gap-2">
+                                    <button
+                                        onClick={handleFavorite}
+                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
+                                    >
+                                        <Heart size={16} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-700'} strokeWidth={2} />
+                                    </button>
+                                    <button
+                                        onClick={handleShareOptions}
+                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-[#c9a84c] active:scale-90 transition-all"
+                                    >
+                                        <Share2 size={16} strokeWidth={2} />
+                                    </button>
+                                </div>
 
-                                        {/* Desktop Overlay gradient */}
-                                        <div className="hidden sm:flex absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 items-end justify-between">
+                                {/* Floating Overlay for Desktop */}
+                                <div className="hidden sm:flex absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 items-end justify-between z-10 pointer-events-none">
+                                    <div>
+                                        {listing.images?.length > 0 && (
                                             <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider">
                                                 {t('property_details.image')} {mainImageIndex + 1} / {listing.images.length}
                                             </span>
-
-                                            <button
-                                                onClick={handleCopyLink}
-                                                className="bg-white hover:bg-slate-50 text-slate-900 p-2 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs font-bold"
-                                                title="Copy Share Link"
-                                            >
-                                                <Share2 size={14} className="text-[#c9a84c]" />
-                                                <span>{t('property_details.share_listing')}</span>
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-3">
-                                        <Image size={56} strokeWidth={1} className="text-slate-300" />
-                                        <span className="text-xs font-bold uppercase tracking-wider">{t('property_details.no_photos')}</span>
+                                        )}
                                     </div>
-                                )}
+
+                                    <button
+                                        onClick={handleShareOptions}
+                                        className="bg-white hover:bg-slate-50 text-slate-900 p-2 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs font-bold pointer-events-auto"
+                                        title="Share Property"
+                                    >
+                                        <Share2 size={14} className="text-[#c9a84c]" />
+                                        <span>{t('property_details.share_listing')}</span>
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Thumbnails Container */}
@@ -537,8 +595,8 @@ const PropertyDetails = () => {
                                             key={idx}
                                             onClick={() => setMainImageIndex(idx)}
                                             className={`shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all relative ${mainImageIndex === idx
-                                                    ? 'border-[#c9a84c] scale-98 shadow-sm ring-2 ring-[#c9a84c]/20'
-                                                    : 'border-slate-100 opacity-70 hover:opacity-100 hover:scale-98'
+                                                ? 'border-[#c9a84c] scale-98 shadow-sm ring-2 ring-[#c9a84c]/20'
+                                                : 'border-slate-100 opacity-70 hover:opacity-100 hover:scale-98'
                                                 }`}
                                         >
                                             <img src={getImageUrl(img)} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" loading="lazy" />
@@ -723,7 +781,7 @@ const PropertyDetails = () => {
                         )}
 
                         {/* 6. Satellite Map Location */}
-                        {((listing.locationMode === 'map') || (!listing.locationMode && listing.mapCoordinates?.lat)) && (
+                        {(listing.locationMode === 'map' && listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) && (
                             <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-xs">
                                 <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
@@ -744,19 +802,19 @@ const PropertyDetails = () => {
 
                                 <div className="h-80 w-full relative z-0">
                                     <MapContainer
-                                        center={[listing.mapCoordinates.lat, listing.mapCoordinates.lng]}
+                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
                                         zoom={15}
                                         style={{ height: '100%', width: '100%' }}
                                         scrollWheelZoom={false}
                                     >
                                         <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                        <Marker position={[listing.mapCoordinates.lat, listing.mapCoordinates.lng]}>
+                                        <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
                                             <Popup>
                                                 <div className="font-bold text-slate-900">{listing.title}</div>
                                                 <div className="text-xs text-slate-500">{listing.location}</div>
                                             </Popup>
                                         </Marker>
-                                        <MapRecenter position={listing.mapCoordinates} />
+                                        <MapRecenter position={{ lat: parseFloat(listing.mapCoordinates.lat), lng: parseFloat(listing.mapCoordinates.lng) }} />
                                     </MapContainer>
                                 </div>
 
@@ -979,8 +1037,8 @@ const PropertyDetails = () => {
                                         <button
                                             onClick={handleFavorite}
                                             className={`w-full py-3.5 font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest border border-slate-200 ${isFavorite
-                                                    ? 'bg-rose-50 text-rose-700 border-rose-100'
-                                                    : 'bg-white text-slate-800 hover:border-[#c9a84c] hover:bg-slate-50'
+                                                ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                : 'bg-white text-slate-800 hover:border-[#c9a84c] hover:bg-slate-50'
                                                 }`}
                                         >
                                             <Heart size={14} className={isFavorite ? 'fill-current' : ''} />
@@ -993,16 +1051,16 @@ const PropertyDetails = () => {
                             {/* Token Reservation Card */}
                             {listing.isBookingEnabled && listing.tokenAmount > 0 && (
                                 <div className={`rounded-3xl p-6 border shadow-md transition-all ${listing.isTokened
-                                        ? 'bg-emerald-50/50 border-emerald-100'
-                                        : systemSettings?.isInstantBookingEnabled === false
-                                            ? 'bg-slate-50 border-slate-100 opacity-80'
-                                            : 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border-slate-900 text-white'
+                                    ? 'bg-emerald-50/50 border-emerald-100'
+                                    : systemSettings?.isInstantBookingEnabled === false
+                                        ? 'bg-slate-50 border-slate-100 opacity-80'
+                                        : 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border-slate-900 text-white'
                                     }`}>
                                     <h3 className={`text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-1.5 ${listing.isTokened
-                                            ? 'text-emerald-700'
-                                            : systemSettings?.isInstantBookingEnabled === false
-                                                ? 'text-slate-400'
-                                                : 'text-[#c9a84c]'
+                                        ? 'text-emerald-700'
+                                        : systemSettings?.isInstantBookingEnabled === false
+                                            ? 'text-slate-400'
+                                            : 'text-[#c9a84c]'
                                         }`}>
                                         {listing.isTokened ? (
                                             <><CheckCircle2 size={15} /> {t('property_details.land_reserved')}</>
@@ -1158,6 +1216,91 @@ const PropertyDetails = () => {
 
             {/* Receipt Modal */}
             <ReceiptModal isOpen={showReceipt} onClose={() => setShowReceipt(false)} receiptData={receiptData} />
+
+            {/* Share Options Modal */}
+            {showShareModal && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200"
+                    onClick={() => setShowShareModal(false)}
+                >
+                    <div
+                        className="bg-white border border-[#e2d9c5]/60 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Close button */}
+                        <button
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50 transition-colors"
+                            onClick={() => setShowShareModal(false)}
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <h3 className="text-lg font-black text-[#1a2340] mb-4 pr-8 uppercase tracking-wider" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+                            Share Property
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            {/* WhatsApp */}
+                            <a
+                                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${listing?.title || 'Property'} - ${listing?.location || ''}: ${window.location.origin}/listings/${cleanId}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 transition-all text-emerald-800"
+                            >
+                                <div className="w-10 h-10 bg-[#25d366] text-white rounded-full flex items-center justify-center shadow-sm">
+                                    <MessageCircle size={18} className="fill-current" />
+                                </div>
+                                <span className="text-xs font-bold">WhatsApp</span>
+                            </a>
+
+                            {/* Twitter / X */}
+                            <a
+                                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${listing?.title || 'Property'} in ${listing?.location || ''}`)}&url=${encodeURIComponent(`${window.location.origin}/listings/${cleanId}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all text-slate-800"
+                            >
+                                <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-sm">
+                                    <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                    </svg>
+                                </div>
+                                <span className="text-xs font-bold">Twitter / X</span>
+                            </a>
+
+                            {/* Facebook */}
+                            <a
+                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/listings/${cleanId}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 hover:bg-blue-50 transition-all text-blue-800"
+                            >
+                                <div className="w-10 h-10 bg-[#1877f2] text-white rounded-full flex items-center justify-center shadow-sm">
+                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                    </svg>
+                                </div>
+                                <span className="text-xs font-bold">Facebook</span>
+                            </a>
+
+                            {/* Copy Link */}
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`${window.location.origin}/listings/${cleanId}`);
+                                    toast.success(t('property_details.link_copied') || 'Listing link copied to clipboard');
+                                    setShowShareModal(false);
+                                }}
+                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-amber-50/50 border border-amber-100 hover:bg-amber-50 transition-all text-amber-800"
+                            >
+                                <div className="w-10 h-10 bg-[#c9a84c] text-white rounded-full flex items-center justify-center shadow-sm">
+                                    <Share2 size={18} />
+                                </div>
+                                <span className="text-xs font-bold">Copy Link</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

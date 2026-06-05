@@ -3,10 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { UploadCloud, MapPin, Save, ArrowLeft, Building2, ChevronRight, X, CreditCard, ImageIcon, Target, Navigation } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useLanguage } from '../context/LanguageContext';
+import { useQuery } from '@tanstack/react-query';
+import {
+    UploadCloud, MapPin, Save, ArrowLeft, Building2, ChevronRight,
+    X, CreditCard, ImageIcon, Target, Navigation, Search as SearchIcon
+} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Fix for default marker icons in Leaflet + Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -20,12 +26,54 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
+// ── Area unit definitions (same as CreateListing) ────────────────────────────
+const unitLabels = {
+    en: {
+        guntha: 'Guntha (Gutha)',
+        hectare: 'Hectare (Hector)',
+        aare: 'Aare',
+        vigha_bada: 'Bigha (23.78 Gutha)',
+        vigha_chhota: 'Bigha (16.19 Gutha)',
+        acre: 'Acre',
+        sqm: 'Square Meter (Sq.Mt)',
+        sqft: 'Square Feet (Sqft)',
+        gaj: 'Gaj / Yard / Vaar',
+    },
+    gu: {
+        guntha: 'ગુન્ટા',
+        hectare: 'હેક્ટર',
+        aare: 'આરે',
+        vigha_bada: 'વીઘું (મોટું - ૨૩.૭૮ ગુન્ટા)',
+        vigha_chhota: 'વીઘું (નાનું - ૧૬.૧૯ ગુન્ટા)',
+        acre: 'એકર',
+        sqm: 'ચોરસ મીટર',
+        sqft: 'ચોરસ ફૂટ',
+        gaj: 'ગજ / વાર',
+    }
+};
+
+// Map raw stored unit strings back to unitLabels keys
+function mapUnitKey(rawUnit) {
+    const r = (rawUnit || '').trim().toLowerCase();
+    if (r === 'sqft' || r.includes('square feet') || r.includes('sq ft') || r.includes('sqft')) return 'sqft';
+    if (r === 'gaj' || r.includes('yard') || r.includes('gaj') || r.includes('vaar') || r.includes('sq yd')) return 'gaj';
+    if (r === 'sqm' || r.includes('sq.mt') || r.includes('square meter') || r.includes('sq meter') || r.includes('sqm')) return 'sqm';
+    if (r === 'acre' || r.includes('acre')) return 'acre';
+    if (r === 'hectare' || r.includes('hectare') || r.includes('hector')) return 'hectare';
+    if (r === 'guntha' || r.includes('guntha') || r.includes('gutha')) return 'guntha';
+    if (r === 'aare' || r.includes('aare')) return 'aare';
+    if (r === 'vigha_bada' || r.includes('23.78') || r.includes('bada') || r.includes('vigha_bada')) return 'vigha_bada';
+    if (r === 'vigha_chhota' || r.includes('16.19') || r.includes('chhota') || r.includes('vigha_chhota')) return 'vigha_chhota';
+    return 'sqft'; // default
+}
+
+// ── Helper components ────────────────────────────────────────────────────────
 async function reverseGeocode(lat, lng) {
     try {
         const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
         return res.data.display_name;
     } catch (e) {
-        console.error("Reverse geocoding error", e);
+        console.error('Reverse geocoding error', e);
         return null;
     }
 }
@@ -33,9 +81,7 @@ async function reverseGeocode(lat, lng) {
 function MapRecenter({ position }) {
     const map = useMap();
     useEffect(() => {
-        if (position?.lat) {
-            map.setView([position.lat, position.lng], 15);
-        }
+        if (position?.lat) map.setView([position.lat, position.lng], 15);
     }, [position, map]);
     return null;
 }
@@ -61,7 +107,7 @@ function MapSearch({ onSelect }) {
     const [showMapSuggestions, setShowMapSuggestions] = useState(false);
 
     useEffect(() => {
-        const t = setTimeout(async () => {
+        const timer = setTimeout(async () => {
             if (query.length > 2) {
                 try {
                     const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
@@ -73,7 +119,7 @@ function MapSearch({ onSelect }) {
                 setShowMapSuggestions(false);
             }
         }, 600);
-        return () => clearTimeout(t);
+        return () => clearTimeout(timer);
     }, [query]);
 
     return (
@@ -113,14 +159,11 @@ function MapSearch({ onSelect }) {
     );
 }
 
-import { useMapEvents } from 'react-leaflet';
-import { getImageUrl } from '../utils/imageUrl';
-
-// ── Shared style tokens ──────────────────────────────────────────
+// ── Shared style tokens ──────────────────────────────────────────────────────
 const inputCls = "w-full px-5 py-3.5 rounded-xl border border-[#1a2340]/15 bg-[#f8f5ee]/60 focus:ring-2 focus:ring-[#c9a84c]/40 focus:border-[#c9a84c] outline-none transition-all font-semibold text-[#1a2340] text-base placeholder:text-[#1a2340]/30";
 const labelCls = "block text-[10px] font-black text-[#1a2340]/50 mb-2 uppercase tracking-[0.15em]";
 
-// ── Section card wrapper (matches CreateListing) ─────────────────
+// ── Section card wrapper ─────────────────────────────────────────────────────
 const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }) => (
     <div className={`relative bg-white rounded-2xl border border-[#1a2340]/10 shadow-sm ${className}`}>
         <div className="flex items-start gap-4 px-7 pt-6 pb-5 border-b border-[#f8f5ee]">
@@ -136,13 +179,16 @@ const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }
     </div>
 );
 
+// ── Main component ───────────────────────────────────────────────────────────
 const EditListing = () => {
     const { id } = useParams();
     const { user } = useContext(AuthContext);
+    const { language } = useLanguage();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(true);
     const [error, setError] = useState(null);
+
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -156,6 +202,7 @@ const EditListing = () => {
         locationMode: 'address',
         mapCoordinates: { lat: null, lng: null },
         mapBounds: null,
+        isBookingEnabled: false,
         propertyType: 'Plot',
         plotType: 'None',
         landType: 'None',
@@ -164,19 +211,27 @@ const EditListing = () => {
         cornerPlot: false,
         isFeatured: false,
         city: '',
-        locality: ''
+        locality: ''     // used as Taluka
     });
 
     const [locationMethod, setLocationMethod] = useState('address');
-    const [suggestions, setSuggestions] = useState([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
 
     const [areaValue, setAreaValue] = useState('');
-    const [areaUnit, setAreaUnit] = useState('Sq Ft');
+    const [areaUnit, setAreaUnit] = useState('sqft');
     const [existingImages, setExistingImages] = useState([]);
     const [images, setImages] = useState(null);
     const [payoutAccounts, setPayoutAccounts] = useState([]);
 
+    // Fetch system settings to check if token booking is enabled by admin
+    const { data: systemSettings } = useQuery({
+        queryKey: ['systemSettings'],
+        queryFn: async () => {
+            const res = await axios.get('/api/settings');
+            return res.data.data;
+        }
+    });
+
+    // ── Fetch existing listing ───────────────────────────────────────────────
     useEffect(() => {
         const fetchListing = async () => {
             try {
@@ -210,10 +265,13 @@ const EditListing = () => {
                     locality: data.locality || ''
                 });
                 setLocationMethod(data.locationMode || 'address');
+
+                // Parse stored area string → value + unit key
                 const areaParts = data.area ? data.area.split(' ') : [];
                 if (areaParts.length >= 2) {
                     setAreaValue(areaParts[0]);
-                    setAreaUnit(areaParts.slice(1).join(' '));
+                    const rawUnit = areaParts.slice(1).join(' ');
+                    setAreaUnit(mapUnitKey(rawUnit));
                 } else {
                     setAreaValue(data.area || '');
                 }
@@ -228,6 +286,7 @@ const EditListing = () => {
         if (user) fetchListing();
     }, [id, user, navigate]);
 
+    // ── Fetch payout accounts ────────────────────────────────────────────────
     useEffect(() => {
         axios.get('/api/auth/me')
             .then(res => {
@@ -239,44 +298,43 @@ const EditListing = () => {
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    useEffect(() => {
-        const t = setTimeout(async () => {
-            if (formData.location.length > 2 && locationMethod === 'address' && !formData.mapCoordinates.lat) {
-                try {
-                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.location)}&addressdetails=1&limit=5`);
-                    setSuggestions(res.data);
-                    setShowSuggestions(true);
-                } catch (e) { console.error(e); }
-            } else {
-                setSuggestions([]);
-                setShowSuggestions(false);
-            }
-        }, 600);
-        return () => clearTimeout(t);
-    }, [formData.location, locationMethod, formData.mapCoordinates.lat]);
-
+    // ── GPS detection ────────────────────────────────────────────────────────
     const detectMyLocation = () => {
-        if (!navigator.geolocation) return toast.error("Geolocation not supported");
+        if (!navigator.geolocation) return toast.error('Geolocation not supported');
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const { latitude, longitude } = pos.coords;
+                setLocationMethod('map');
                 setFormData(prev => ({
                     ...prev,
-                    mapCoordinates: { lat: latitude, lng: longitude }
+                    mapCoordinates: { lat: latitude, lng: longitude },
+                    locationMode: 'map'
                 }));
-                setLocationMethod('map');
-                setFormData(prev => ({ ...prev, locationMode: 'map' }));
-                toast.success("Location detected via GPS");
+                toast.success('GPS location detected! Pin placed on map.');
             },
-            () => toast.error("Unable to retrieve location")
+            () => toast.error('Unable to retrieve location')
         );
     };
 
+    // ── Price-per-unit calculation ───────────────────────────────────────────
+    const getCalculatedRate = () => {
+        const p = parseFloat(formData.price);
+        const a = parseFloat(areaValue);
+        if (isNaN(p) || isNaN(a) || p <= 0 || a <= 0) return null;
+        const lang = language === 'gu' ? 'gu' : 'en';
+        const label = unitLabels[lang][areaUnit] || areaUnit;
+        return { label, rate: p / a };
+    };
+
+    const rateResult = getCalculatedRate();
+
+    // ── Submit ───────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
         try {
+            // Upload new images
             let uploadedImagePaths = [...existingImages];
             if (images && images.length > 0) {
                 for (let i = 0; i < images.length; i++) {
@@ -285,25 +343,43 @@ const EditListing = () => {
                     const uploadRes = await axios.post('/api/uploads', imgData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
-                    if (uploadRes.data.success) {
-                        uploadedImagePaths.push(uploadRes.data.data);
-                    }
+                    if (uploadRes.data.success) uploadedImagePaths.push(uploadRes.data.data);
                 }
             }
-            const isAgri = formData.propertyType === 'Land' 
+
+            // Only use explicit map-pin coordinates — NEVER auto-geocode from address
+            const coords = locationMethod === 'map'
+                ? { ...formData.mapCoordinates }
+                : { lat: null, lng: null };
+
+            // Build readable location string for address mode
+            let finalLocation = formData.location;
+            if (locationMethod === 'address') {
+                const addrParts = [
+                    formData.plotNumber ? `Plot/Survey ${formData.plotNumber}` : '',
+                    formData.areaName,
+                    formData.locality,   // Taluka
+                    formData.city,
+                    'Gujarat, India'
+                ].filter(Boolean);
+                finalLocation = addrParts.join(', ');
+            }
+
+            const isAgri = formData.propertyType === 'Land'
                 ? (formData.landType === 'Agricultural')
                 : (formData.plotType === 'Agricultural' || formData.isAgricultural);
 
             const listingPayload = {
                 ...formData,
+                location: finalLocation,
+                mapCoordinates: coords,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
                 images: uploadedImagePaths,
-                plotNumber: formData.plotNumber,
-                areaName: formData.areaName,
                 isAgricultural: isAgri,
                 cornerPlot: formData.propertyType === 'Plot' ? formData.cornerPlot : false
             };
+
             await axios.put(`/api/listings/${id}`, listingPayload);
             toast.success('Listing successfully updated!');
             navigate('/dashboard');
@@ -319,6 +395,7 @@ const EditListing = () => {
         setExistingImages(existingImages.filter((_, i) => i !== idx));
     };
 
+    // ── Loading skeleton ─────────────────────────────────────────────────────
     if (fetchLoading) return (
         <div className="min-h-screen bg-[#f8f5ee]">
             <div className="bg-[#1a2340] px-6 py-10 md:px-16">
@@ -348,8 +425,11 @@ const EditListing = () => {
         );
     }
 
+    const lang = language === 'gu' ? 'gu' : 'en';
+
     return (
         <div className="min-h-screen bg-[#f8f5ee]">
+            {/* ── Header ── */}
             <div className="bg-[#1a2340] text-white px-6 py-10 md:px-16">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-2 text-[#c9a84c] text-xs font-bold uppercase tracking-[0.2em] mb-3">
@@ -383,10 +463,13 @@ const EditListing = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+
+                    {/* ── SECTION 1: Property Details ── */}
                     <SectionCard icon={<Building2 />} title="Property Details" subtitle="Update the core information about this listing">
                         <div className="space-y-6">
+                            {/* Title */}
                             <div>
-                                <label className={labelCls}>Property Title</label>
+                                <label className={labelCls}>Property Title <span className="text-red-500 font-bold ml-1">*</span></label>
                                 <input
                                     type="text" name="title" required
                                     value={formData.title} onChange={handleChange}
@@ -394,9 +477,11 @@ const EditListing = () => {
                                     placeholder="e.g. 500 Sq Yd Corner Plot in Sector 14"
                                 />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+
+                            {/* Category + Sub-type */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <div>
-                                    <label className={labelCls}>Property Category</label>
+                                    <label className={labelCls}>Property Category <span className="text-red-500 font-bold ml-1">*</span></label>
                                     <select
                                         name="propertyType"
                                         value={formData.propertyType}
@@ -445,42 +530,60 @@ const EditListing = () => {
                                 )}
                             </div>
 
+                            {/* Price + Area */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
-                                    <label className={labelCls}>Price (INR)</label>
+                                    <label className={labelCls}>Price (₹) <span className="text-red-500 font-bold ml-1">*</span></label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-lg">₹</span>
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
                                         <input
                                             type="number" name="price" required min="1000"
                                             value={formData.price} onChange={handleChange}
-                                            className={inputCls + ' pl-10'}
+                                            className={inputCls + ' pl-12'}
+                                            placeholder="e.g. 1500000"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className={labelCls}>Total Area</label>
+                                    <label className={labelCls}>Total Area <span className="text-red-500 font-bold ml-1">*</span></label>
                                     <div className="flex gap-3">
                                         <input
                                             type="number" required min="0.001" step="any"
-                                            value={areaValue} onChange={(e) => setAreaValue(e.target.value)}
+                                            value={areaValue}
+                                            onChange={(e) => setAreaValue(e.target.value)}
                                             className={inputCls + ' w-2/3'}
+                                            placeholder="e.g. 450"
                                         />
                                         <select
-                                            value={areaUnit} onChange={(e) => setAreaUnit(e.target.value)}
+                                            value={areaUnit}
+                                            onChange={(e) => setAreaUnit(e.target.value)}
                                             className={inputCls + ' w-1/3 cursor-pointer'}
                                         >
-                                            <option value="Sq Ft">Sq Ft</option>
-                                            <option value="Sq Yd">Sq Yd</option>
-                                            <option value="Sq Meter">Sq Meter</option>
-                                            <option value="Acres">Acres</option>
-                                            <option value="Hectares">Hectares</option>
+                                            {Object.keys(unitLabels[lang]).map((key) => (
+                                                <option key={key} value={key}>
+                                                    {unitLabels[lang][key]}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-5">
-                                <label className={labelCls}>Story & Description</label>
+                            {/* Price per unit rate display — temporarily disabled */}
+                            {/* {rateResult && (
+                                <div className="flex justify-end">
+                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-xl text-xs sm:text-sm font-black text-[#1a2340]">
+                                        <span>1 {rateResult.label} =</span>
+                                        <span className="text-[#b8933a] text-sm sm:text-base font-black">
+                                            ₹{rateResult.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+                            )} */}
+
+                            {/* Description */}
+                            <div>
+                                <label className={labelCls}>Description <span className="text-red-500 font-bold ml-1">*</span></label>
                                 <textarea
                                     name="description" required rows="5"
                                     value={formData.description} onChange={handleChange}
@@ -489,7 +592,8 @@ const EditListing = () => {
                                 />
                             </div>
 
-                            <div className="mt-5">
+                            {/* Property Attributes */}
+                            <div>
                                 <label className={labelCls}>Property Attributes</label>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-5 p-5 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
                                     {formData.propertyType === 'Plot' && (
@@ -523,29 +627,21 @@ const EditListing = () => {
                                             <span className="text-xs font-bold text-[#1a2340]/70">Agricultural Plot</span>
                                         </label>
                                     )}
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.isFeatured}
-                                            onChange={e => setFormData({ ...formData, isFeatured: e.target.checked })}
-                                            className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
-                                        />
-                                        <span className="text-xs font-bold text-[#1a2340]/70">Featured Listing</span>
-                                    </label>
                                 </div>
                             </div>
                         </div>
                     </SectionCard>
 
+                    {/* ── SECTION 2: Location ── */}
                     <SectionCard
                         icon={<MapPin />}
                         title="Geographic Position"
-                        subtitle="Pinpoint your property on the map for higher buyer trust"
-                        className={showSuggestions ? 'z-[100]' : 'z-10'}
+                        subtitle="Set the address or pin an exact location on the map"
                     >
+                        {/* Mode switcher */}
                         <div className="bg-[#f8f5ee] p-2 rounded-2xl border border-[#1a2340]/10 flex gap-2 mb-6">
                             {[
-                                { id: 'address', label: 'Search Address', icon: <MapPin size={14} /> },
+                                { id: 'address', label: 'Enter Address', icon: <MapPin size={14} /> },
                                 { id: 'map', label: 'Precise Pin', icon: <Target size={14} /> }
                             ].map((method) => (
                                 <button
@@ -553,15 +649,19 @@ const EditListing = () => {
                                     type="button"
                                     onClick={() => {
                                         setLocationMethod(method.id);
-                                        setFormData({ ...formData, locationMode: method.id });
+                                        setFormData(prev => ({ ...prev, locationMode: method.id }));
                                     }}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${locationMethod === method.id ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg' : 'text-[#1a2340]/40 hover:bg-[#1a2340]/5'}`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${locationMethod === method.id
+                                        ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg'
+                                        : 'text-[#1a2340]/40 hover:bg-[#1a2340]/5'
+                                        }`}
                                 >
                                     {method.icon} {method.label}
                                 </button>
                             ))}
                         </div>
 
+                        {/* Address mode */}
                         {locationMethod === 'address' && (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -572,108 +672,95 @@ const EditListing = () => {
                                             value={formData.plotNumber}
                                             onChange={handleChange}
                                             className={inputCls}
-                                            placeholder="e.g. 102/B or 55"
+                                            placeholder="e.g. 102/B or Survey No. 55"
                                         />
                                     </div>
                                     <div>
-                                        <label className={labelCls}>Area / Landmark Name</label>
+                                        <label className={labelCls}>Nearby Landmark / Area Name</label>
                                         <input
                                             type="text" name="areaName"
                                             value={formData.areaName}
                                             onChange={handleChange}
                                             className={inputCls}
-                                            placeholder="e.g. Near Shiv Temple"
+                                            placeholder="e.g. Near Shiv Temple, Badarpura Road"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className={labelCls}>City / Town</label>
+                                        <label className={labelCls}>Village / City <span className="text-red-500 font-bold ml-1">*</span></label>
                                         <input
                                             type="text" name="city" required
                                             value={formData.city}
                                             onChange={handleChange}
                                             className={inputCls}
-                                            placeholder="e.g. Ahmedabad"
+                                            placeholder="e.g. Palanpur, Vadgam, Deesa"
                                         />
                                     </div>
                                     <div>
-                                        <label className={labelCls}>Locality / Sub-Area</label>
+                                        <label className={labelCls}>Taluka</label>
                                         <input
-                                            type="text" name="locality" required
+                                            type="text" name="locality"
                                             value={formData.locality}
                                             onChange={handleChange}
                                             className={inputCls}
-                                            placeholder="e.g. Bopal"
+                                            placeholder="e.g. Vadgam, Danta, Palanpur"
                                         />
                                     </div>
                                 </div>
-                                <div className="relative">
-                                    <label className={labelCls}>Village / City (Search)</label>
-                                    <input
-                                        type="text" name="location" required
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({ ...formData, location: e.target.value, mapCoordinates: { lat: null, lng: null } })}
-                                        autoComplete="off"
-                                        className={inputCls}
-                                        placeholder="Search village or city..."
-                                    />
-                                    {showSuggestions && suggestions.length > 0 && (
-                                        <ul className="absolute top-[105%] left-0 w-full bg-white border border-[#1a2340]/15 shadow-2xl rounded-2xl z-[100] p-2 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-[#c9a84c]/20">
-                                            {suggestions.map((s, idx) => (
-                                                <li
-                                                    key={idx}
-                                                    onClick={() => {
-                                                        const b = s.boundingbox;
-                                                        setFormData({
-                                                            ...formData,
-                                                            location: s.display_name,
-                                                            mapCoordinates: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
-                                                            mapBounds: [[parseFloat(b[0]), parseFloat(b[2])], [parseFloat(b[1]), parseFloat(b[3])]]
-                                                        });
-                                                        setShowSuggestions(false);
-                                                        setLocationMethod('map');
-                                                        setFormData(prev => ({ ...prev, locationMode: 'map' }));
-                                                    }}
-                                                    className="p-4 hover:bg-[#f8f5ee] cursor-pointer rounded-xl transition-all group"
-                                                >
-                                                    <span className="block text-[#1a2340] font-black text-sm group-hover:text-[#c9a84c]">{s.display_name.split(',')[0]}</span>
-                                                    <span className="text-[10px] text-[#1a2340]/40 font-bold truncate mt-1">{s.display_name}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
+
+                                {/* Info banner */}
+                                <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                    <span className="text-blue-500 mt-0.5">ℹ️</span>
+                                    <p className="text-[11px] font-semibold text-blue-700 leading-snug">
+                                        Map location will <strong>not</strong> be shown on this listing. To show a precise pin on the map for buyers, switch to <strong>Precise Pin</strong> mode above.
+                                    </p>
                                 </div>
                             </div>
                         )}
 
+                        {/* Map (Precise Pin) mode */}
                         {locationMethod === 'map' && (
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
-                                        Drop Pin on Precise Location
+                                        Click anywhere on the map to drop a precise pin
                                     </p>
                                     <button
                                         type="button"
                                         onClick={detectMyLocation}
-                                        className="flex items-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a1200] transition-all"
+                                        className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
                                     >
                                         <Navigation size={12} /> Use My GPS Location
                                     </button>
                                 </div>
                                 <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative z-0">
-                                    <MapContainer center={[formData.mapCoordinates.lat || 24.10, formData.mapCoordinates.lng || 72.38]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                                    <MapContainer
+                                        center={[formData.mapCoordinates.lat || 24.10, formData.mapCoordinates.lng || 72.38]}
+                                        zoom={15}
+                                        style={{ height: '100%', width: '100%' }}
+                                    >
                                         <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                        <MapSearch onSelect={(pos, addr) => setFormData({ ...formData, mapCoordinates: pos, location: addr || formData.location })} />
+                                        <MapSearch
+                                            onSelect={(pos, addr) => setFormData(prev => ({ ...prev, mapCoordinates: pos, location: addr || prev.location }))}
+                                        />
                                         <LocationMarker
                                             position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
-                                            setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
+                                            setPosition={(pos) => setFormData(prev => ({ ...prev, mapCoordinates: pos }))}
                                             setLocation={(addr) => setFormData(prev => ({ ...prev, location: addr }))}
                                         />
                                         <MapRecenter position={formData.mapCoordinates} />
                                     </MapContainer>
                                 </div>
+                                {formData.mapCoordinates.lat && (
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
+                                        <span className="text-green-600 text-sm">📍</span>
+                                        <p className="text-[11px] font-semibold text-green-700">
+                                            Pin set at {parseFloat(formData.mapCoordinates.lat).toFixed(5)}, {parseFloat(formData.mapCoordinates.lng).toFixed(5)} — this will show on the listing map.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </SectionCard>
@@ -717,7 +804,8 @@ const EditListing = () => {
                         </div>
                     </SectionCard>
 
-                    {/* ── SECTION 4: Token Booking ── */}
+                    {/* Token Booking — only shown if admin has enabled it */}
+                    {systemSettings?.isInstantBookingEnabled !== false && (
                     <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable or update online reservations for this property">
                         <div className="flex items-center justify-between">
                             <div>
@@ -745,7 +833,7 @@ const EditListing = () => {
                                         )}
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-lg">₹</span>
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
                                         <input
                                             type="number"
                                             value={formData.tokenAmount}
@@ -754,7 +842,7 @@ const EditListing = () => {
                                                 const max = (formData.price || 0) * 0.02;
                                                 setFormData({ ...formData, tokenAmount: val <= max ? val : max });
                                             }}
-                                            className={inputCls + ' pl-10'}
+                                            className={inputCls + ' pl-12'}
                                             placeholder="Enter token amount..."
                                         />
                                         {formData.tokenAmount > 0 && formData.price > 0 && (
@@ -777,7 +865,7 @@ const EditListing = () => {
                                         >
                                             {payoutAccounts.map(acc => (
                                                 <option key={acc._id} value={acc._id}>
-                                                    {acc.accountType.toUpperCase()} — {acc.holderName} ({acc.details})
+                                                    {acc.accountType?.toUpperCase()} — {acc.holderName || acc.bankName || acc.upiId}
                                                 </option>
                                             ))}
                                         </select>
@@ -799,12 +887,13 @@ const EditListing = () => {
                             </div>
                         )}
                     </SectionCard>
+                    )} {/* end systemSettings.isInstantBookingEnabled */}
 
                     {/* ── Submit bar ── */}
                     <div className="bg-[#1a2340] rounded-2xl px-7 py-5 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div>
                             <p className="text-white font-black text-sm">Ready to save changes?</p>
-                            <p className="text-white/40 text-xs font-medium mt-0.5">Your updates will go live immediately across all city tiers.</p>
+                            <p className="text-white/40 text-xs font-medium mt-0.5">Your updates will go live immediately.</p>
                         </div>
                         <div className="flex gap-3">
                             <button

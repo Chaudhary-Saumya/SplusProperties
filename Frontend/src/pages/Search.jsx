@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download, MessageCircle } from 'lucide-react';
+import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download, MessageCircle, Share2 } from 'lucide-react';
 import ListingSkeleton from '../components/ListingSkeleton';
 import ErrorBox from '../components/ErrorBox';
 import EmptyState from '../components/EmptyState';
@@ -13,6 +13,21 @@ import { useQuery } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icons in Leaflet + Vite
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 /* ─── Collapsible Filter Section ─────────────────────────────────────────── */
 const FilterSection = ({ title, children, defaultOpen = true }) => {
@@ -679,6 +694,22 @@ const Search = () => {
                                                     loading="lazy"
                                                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
+                                            ) : (listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
+                                                <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                                                    <MapContainer 
+                                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} 
+                                                        zoom={14} 
+                                                        zoomControl={false}
+                                                        dragging={false}
+                                                        doubleClickZoom={false}
+                                                        scrollWheelZoom={false}
+                                                        attributionControl={false}
+                                                        style={{ height: '100%', width: '100%' }}
+                                                    >
+                                                        <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                                        <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
+                                                    </MapContainer>
+                                                </div>
                                             ) : (
                                                 <div className="absolute inset-0 w-full h-full flex items-center justify-center text-[#9ca3af] text-[10px] sm:text-xs font-bold uppercase tracking-widest">{t('search_page.no_image')}</div>
                                             )}
@@ -690,8 +721,8 @@ const Search = () => {
                                                 )}
                                             </div>
 
-                                            {/* Wishlist & WhatsApp */}
-                                            <div className="absolute top-2 right-2 flex flex-col gap-1.5 sm:gap-2">
+                                            {/* Wishlist, Share & Mobile Contacts */}
+                                            <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
                                                 <button
                                                     onClick={e => toggleWishlist(e, listing._id)}
                                                     className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-all"
@@ -699,7 +730,28 @@ const Search = () => {
                                                     <Heart size={12} className={wishlist.has(listing._id) ? 'fill-red-500 text-red-500' : 'text-[#6b7280]'} />
                                                 </button>
                                                 <button
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 bg-[#25d366] rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
+                                                    className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-[#6b7280] shadow-md hover:scale-110 active:scale-95 transition-all"
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        const listingUrl = `${window.location.origin}/listings/${listing._id}`;
+                                                        const shareData = {
+                                                            title: listing.title,
+                                                            text: `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}`,
+                                                            url: listingUrl
+                                                        };
+                                                        if (navigator.share) {
+                                                            navigator.share(shareData).catch(err => console.log(err));
+                                                        } else {
+                                                            navigator.clipboard.writeText(listingUrl);
+                                                            toast.success(t('search_page.link_copied') || 'Listing link copied to clipboard');
+                                                        }
+                                                    }}
+                                                    title="Share Property"
+                                                >
+                                                    <Share2 size={12} />
+                                                </button>
+                                                <button
+                                                    className="sm:hidden w-7 h-7 bg-[#25d366] rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
                                                     onClick={e => {
                                                         e.stopPropagation();
                                                         const phone = listing.createdBy?.phone || '';
@@ -732,8 +784,8 @@ const Search = () => {
 
                                         {/* Content */}
                                         <div className="flex-1 flex flex-col justify-between p-3 sm:p-5 min-w-0 relative">
-                                            {/* NEW LISTING ribbon */}
-                                            {listing.status !== 'Reserved' && (
+                                            {/* NEW LISTING ribbon (only for first 24 hours) */}
+                                            {listing.status !== 'Reserved' && (new Date() - new Date(listing.createdAt)) < 24 * 60 * 60 * 1000 && (
                                                 <div className="hidden sm:block absolute top-0 right-0 bg-[#2563eb] text-white text-[8px] sm:text-[9px] font-bold px-2 py-0.5 sm:px-3 sm:py-1 uppercase tracking-widest"
                                                     style={{ clipPath: 'polygon(10px 0%, 100% 0%, 100% 100%, 0% 100%)' }}>
                                                     {t('search_page.new_listing')}
@@ -802,6 +854,16 @@ const Search = () => {
                                                 </div>
 
                                                 <div className="flex gap-2 flex-shrink-0">
+                                                    <button
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            const phone = listing.createdBy?.phone || '';
+                                                            window.open(`https://wa.me/${phone}`, '_blank');
+                                                        }}
+                                                        className="flex items-center gap-1 px-3 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                                                    >
+                                                        <MessageCircle size={12} className="fill-current" /> <span>WhatsApp</span>
+                                                    </button>
                                                     <button
                                                         onClick={e => {
                                                             e.stopPropagation();
