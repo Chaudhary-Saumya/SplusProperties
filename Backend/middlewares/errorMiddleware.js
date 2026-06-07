@@ -1,11 +1,9 @@
 const ErrorResponse = require('../utils/errorResponse');
+const logger = require('../utils/logger');
 
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
-
-  // Log to console for dev
-  console.error(err);
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -29,10 +27,20 @@ const errorHandler = (err, req, res, next) => {
     error = new ErrorResponse(message, 400, 'VALIDATION_ERROR');
   }
 
-  res.status(error.statusCode || 500).json({
+  const statusCode = error.statusCode || 500;
+  const errorCode = error.errorCode || 'SERVER_ERROR';
+
+  // Log error: Log actual 500 internal errors as errors, but client input errors as info/warnings
+  if (statusCode === 500) {
+    logger.error(err);
+  } else {
+    logger.warn(`${req.method} ${req.originalUrl} - ${statusCode} [${errorCode}]: ${error.message}`);
+  }
+
+  res.status(statusCode).json({
     success: false,
     message: error.message || 'Server Error',
-    errorCode: error.errorCode || 'SERVER_ERROR'
+    errorCode: errorCode
   });
 };
 

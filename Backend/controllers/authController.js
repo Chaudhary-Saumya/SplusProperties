@@ -59,6 +59,28 @@ const sendTokenResponse = async (user, statusCode, res, req) => {
 exports.register = asyncHandler(async (req, res, next) => {
     const { name, email, password, role, phone } = req.body;
 
+    // Check if user already exists
+    if (email || phone) {
+        const query = [];
+        if (email) query.push({ email });
+        if (phone) query.push({ phone });
+        
+        const existingUser = await User.findOne({ $or: query });
+
+        if (existingUser) {
+            if (existingUser.isVerified) {
+                const dupField = existingUser.email === email ? 'Email' : 'Phone number';
+                return res.status(400).json({
+                    success: false,
+                    error: `${dupField} is already registered. Please use another one.`
+                });
+            } else {
+                // Delete the unverified user registration so it can be recreated/overwritten
+                await deleteUserAndRelatedData(existingUser._id);
+            }
+        }
+    }
+
     // Generate 6-digit OTP
     const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOTP = await User.hashOTP(plainOTP);

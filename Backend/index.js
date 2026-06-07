@@ -118,6 +118,21 @@ app.use(mongoSanitize);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Clean ObjectIds from request body, params, and query
+const cleanIds = require('./middlewares/cleanIds');
+app.use(cleanIds);
+
+// Express route parameter sanitizer for ':id'
+app.param('id', (req, res, next, id) => {
+    if (id) {
+        const cleanId = id.split(/[\s%]/)[0];
+        if (cleanId.match(/^[0-9a-fA-F]{24}$/)) {
+            req.params.id = cleanId;
+        }
+    }
+    next();
+});
+
 const http = require('http');
 const { Server } = require('socket.io');
 
