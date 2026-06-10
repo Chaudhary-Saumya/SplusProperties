@@ -2,10 +2,11 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../context/LanguageContext';
 
 const Login = () => {
@@ -16,6 +17,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showManualForm, setShowManualForm] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
@@ -44,12 +46,12 @@ const Login = () => {
         setError(null);
         try {
             const data = await googleLogin(credential);
-                if (data?.needsProfileCompletion) {
-                    setShowCompleteModal(true);
-                } else {
-                    if (data?.user?.role === 'Admin') navigate('/admin');
-                    else navigate(redirectPath);
-                }
+            if (data?.needsProfileCompletion) {
+                setShowCompleteModal(true);
+            } else {
+                if (data?.user?.role === 'Admin') navigate('/admin');
+                else navigate(redirectPath);
+            }
         } catch (err) {
             setError(err.response?.data?.error || 'Google Login failed.');
         }
@@ -272,6 +274,59 @@ const Login = () => {
                     padding: 4px 12px; border-radius: 100px;
                     display: flex; align-items: center; gap: 5px;
                 }
+                .login-google-container {
+                    background: #fdfaf5;
+                    border: 1.5px dashed #e2d9c5;
+                    border-radius: 12px;
+                    padding: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .login-btn-outline {
+                    width: 100%;
+                    padding: 14px;
+                    background: #fff;
+                    color: #1a2340;
+                    border: 1.5px solid #e2d9c5;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    font-family: 'Nunito Sans', sans-serif;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    box-sizing: border-box;
+                }
+                .login-btn-outline:hover {
+                    background: #fdfaf5;
+                    border-color: #1a2340;
+                }
+                .login-back-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: none;
+                    border: none;
+                    color: #c9a84c;
+                    font-size: 13px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    cursor: pointer;
+                    padding: 0;
+                    margin-bottom: 24px;
+                    transition: color 0.2s;
+                }
+                .login-back-link:hover {
+                    color: #1a2340;
+                }
             `}</style>
 
             <div className="login-page">
@@ -302,117 +357,163 @@ const Login = () => {
 
                 {/* ── Right: Form Panel ── */}
                 <div className="login-right">
+                    <AnimatePresence mode="wait">
+                        {!showManualForm ? (
+                            <motion.div
+                                key="choice"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                                style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}
+                            >
+                                <h1 className="login-title">{t('auth.login_title')}</h1>
+                                <p className="login-subtitle">{t('auth.login_subtitle')}</p>
 
-                    <h1 className="login-title">{t('auth.login_title')}</h1>
-                    <p className="login-subtitle">{t('auth.login_subtitle')}</p>
+                                {error && <div className="login-error">⚠ {error}</div>}
 
-                    {/* Error */}
-                    {error && (
-                        <div className="login-error">
-                            ⚠ {error}
-                        </div>
-                    )}
+                                {/* Google Sign-In at the Top */}
+                                <div className="login-google-container" style={{ marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#1a2340', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>
+                                        {language === 'en' ? 'Quick Sign-In' : 'ઝડપી સાઇન-ઇન'}
+                                    </span>
+                                    <div className="login-google-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                        {Capacitor.isNativePlatform() ? (
+                                            <button
+                                                type="button"
+                                                className="login-btn"
+                                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
+                                                onClick={async () => {
+                                                    try {
+                                                        await GoogleSignIn.initialize({
+                                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
+                                                        });
+                                                        const result = await GoogleSignIn.signIn();
+                                                        if (result.idToken) {
+                                                            handleGoogleSuccess(result.idToken);
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('Native Google Error:', err);
+                                                        setError('Google Login Canceled or Failed');
+                                                    }
+                                                }}
+                                            >
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
+                                                {language === 'en' ? 'Sign in with Google' : 'Google સાથે સાઇન ઇન કરો'}
+                                            </button>
+                                        ) : (
+                                            <GoogleLogin
+                                                onSuccess={res => handleGoogleSuccess(res.credential)}
+                                                onError={() => setError('Google Login Failed')}
+                                                width="380"
+                                            />
+                                        )}
+                                    </div>
+                                </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit}>
-                        <div className="login-field">
-                            <label htmlFor="identifier" className="login-label">{language === 'en' ? 'Email or Phone Number' : 'ઇમેઇલ અથવા ફોન નંબર'}</label>
-                            <input
-                                id="identifier"
-                                type="text"
-                                name="identifier"
-                                className="login-input"
-                                value={credentials.identifier}
-                                onChange={handleChange}
-                                placeholder={language === 'en' ? 'Enter your email or phone' : 'ઇમેઇલ અથવા ફોન દાખલ કરો'}
-                                required
-                            />
-                        </div>
+                                <div className="login-divider" style={{ margin: '12px 0 24px' }}>
+                                    <div className="login-divider-line" />
+                                    <span className="login-divider-text">{language === 'en' ? 'Or Login Manually' : 'અથવા જાતે લોગીન કરો'}</span>
+                                    <div className="login-divider-line" />
+                                </div>
 
-                        <div className="login-field">
-                            <label htmlFor="password" className="login-label">{t('auth.password')}</label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    className="login-input"
-                                    value={credentials.password}
-                                    onChange={handleChange}
-                                    placeholder="••••••••"
-                                    required
-                                    style={{ paddingRight: '45px' }}
-                                />
+                                {/* Manual login toggle */}
                                 <button
                                     type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    style={{
-                                        position: 'absolute', right: '12px', top: '50%',
-                                        transform: 'translateY(-50%)', background: 'none',
-                                        border: 'none', cursor: 'pointer', color: '#9ca3af',
-                                        display: 'flex', alignItems: 'center'
-                                    }}
+                                    onClick={() => setShowManualForm(true)}
+                                    className="login-btn-outline"
+                                    style={{ marginBottom: '16px' }}
                                 >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    <Mail size={16} color="#c9a84c" />
+                                    <span>{language === 'en' ? 'Login with Email / Phone' : 'ઇમેઇલ / ફોન દ્વારા લોગીન કરો'}</span>
                                 </button>
-                            </div>
-                        </div>
 
-                        <Link to="/forgot-password" className="login-forgot">{t('auth.forgot_password')}</Link>
-
-                        <button type="submit" className="login-btn" disabled={loading}>
-                            {loading ? (language === 'en' ? 'Signing In...' : 'સાઇન ઇન થઈ રહ્યું છે...') : t('auth.btn_login')}
-                        </button>
-                    </form>
-
-                    {/* Divider */}
-                    <div className="login-divider">
-                        <div className="login-divider-line" />
-                        <span className="login-divider-text">{language === 'en' ? 'or continue with' : 'અથવા આગળ વધો'}</span>
-                        <div className="login-divider-line" />
-                    </div>
-
-                    {/* Google */}
-                    <div className="login-google-wrap">
-                        {Capacitor.isNativePlatform() ? (
-                            <button
-                                type="button"
-                                className="login-btn"
-                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'none' }}
-                                onClick={async () => {
-                                    try {
-                                        await GoogleSignIn.initialize({
-                                            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
-                                        });
-                                        const result = await GoogleSignIn.signIn();
-                                        if (result.idToken) {
-                                            handleGoogleSuccess(result.idToken);
-                                        }
-                                    } catch (err) {
-                                        console.error('Native Google Error:', err);
-                                        setError('Google Login Canceled or Failed');
-                                    }
-                                }}
-                            >
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" width="20" height="20" />
-                                {language === 'en' ? 'Sign in with Google' : 'Google સાથે સાઇન ઇન કરો'}
-                            </button>
+                                <p className="login-footer" style={{ marginTop: '16px' }}>
+                                    {language === 'en' ? "Don't have an account?" : "એકાઉન્ટ નથી?"}
+                                    <Link to="/register">{language === 'en' ? 'Create one free' : 'નવું બનાવો'}</Link>
+                                </p>
+                            </motion.div>
                         ) : (
-                            <GoogleLogin
-                                onSuccess={res => handleGoogleSuccess(res.credential)}
-                                onError={() => setError('Google Login Failed')}
-                                width="370"
-                            />
+                            <motion.div
+                                key="manual"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setShowManualForm(false)}
+                                    className="login-back-link"
+                                >
+                                    <ArrowLeft size={14} /> {language === 'en' ? 'Use Google Sign-In' : 'Google સાઇન-અપ વાપરો'}
+                                </button>
+
+                                <h1 className="login-title">{language === 'en' ? 'Login Manually' : 'જાતે લોગીન કરો'}</h1>
+                                <p className="login-subtitle">{language === 'en' ? 'Enter your registered email and password' : 'તમારો રજીસ્ટર્ડ ઇમેઇલ અને પાસવર્ડ દાખલ કરો'}</p>
+
+                                {error && <div className="login-error">⚠ {error}</div>}
+
+                                <form onSubmit={handleSubmit}>
+                                    <div className="login-field">
+                                        <label htmlFor="identifier" className="login-label">{language === 'en' ? 'Email or Phone Number' : 'ઇમેઇલ અથવા ફોન નંબર'}</label>
+                                        <input
+                                            id="identifier"
+                                            type="text"
+                                            name="identifier"
+                                            className="login-input"
+                                            value={credentials.identifier}
+                                            onChange={handleChange}
+                                            placeholder={language === 'en' ? 'Enter your email or phone' : 'ઇમેઇલ અથવા ફોન દાખલ કરો'}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="login-field">
+                                        <label htmlFor="password" className="login-label">{t('auth.password')}</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                id="password"
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                className="login-input"
+                                                value={credentials.password}
+                                                onChange={handleChange}
+                                                placeholder="••••••••"
+                                                required
+                                                style={{ paddingRight: '45px' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                style={{
+                                                    position: 'absolute', right: '12px', top: '50%',
+                                                    transform: 'translateY(-50%)', background: 'none',
+                                                    border: 'none', cursor: 'pointer', color: '#9ca3af',
+                                                    display: 'flex', alignItems: 'center'
+                                                }}
+                                            >
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <Link to="/forgot-password" className="login-forgot">{t('auth.forgot_password')}</Link>
+
+                                    <button type="submit" className="login-btn" disabled={loading}>
+                                        {loading ? (language === 'en' ? 'Signing In...' : 'સાઇન ઇન થઈ રહ્યું છે...') : t('auth.btn_login')}
+                                    </button>
+                                </form>
+
+                                <p className="login-footer" style={{ marginTop: '24px' }}>
+                                    {language === 'en' ? "Don't have an account?" : "એકાઉન્ટ નથી?"}
+                                    <Link to="/register">{language === 'en' ? 'Create one free' : 'નવું બનાવો'}</Link>
+                                </p>
+                            </motion.div>
                         )}
-                    </div>
+                    </AnimatePresence>
 
-                    {/* Footer */}
-                    <p className="login-footer">
-                        {language === 'en' ? "Don't have an account?" : "એકાઉન્ટ નથી?"}
-                        <Link to="/register">{language === 'en' ? 'Create one free' : 'નવું બનાવો'}</Link>
-                    </p>
 
-                    
                 </div>
             </div>
         </>

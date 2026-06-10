@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { getWebsiteBaseUrl } from '../utils/url';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -706,7 +707,7 @@ const Search = () => {
                                                         attributionControl={false}
                                                         style={{ height: '100%', width: '100%' }}
                                                     >
-                                                        <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                                        <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
                                                         <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
                                                     </MapContainer>
                                                 </div>
@@ -733,7 +734,7 @@ const Search = () => {
                                                     className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-[#6b7280] shadow-md hover:scale-110 active:scale-95 transition-all"
                                                     onClick={e => {
                                                         e.stopPropagation();
-                                                        const listingUrl = `${window.location.origin}/listings/${listing._id}`;
+                                                        const listingUrl = `${getWebsiteBaseUrl()}/listings/${listing._id}`;
                                                         const shareData = {
                                                             title: listing.title,
                                                             text: `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}`,

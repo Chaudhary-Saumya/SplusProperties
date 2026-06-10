@@ -13,6 +13,20 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import { getImageUrl } from '../utils/imageUrl';
 import { useLanguage } from '../context/LanguageContext';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 
 const slides = [
@@ -1101,9 +1115,25 @@ const Home = () => {
                     </button>
                   )}
 
-                  <div className="square-card-img-wrap">
+                  <div className="square-card-img-wrap relative">
                     {listing.images?.length > 0 ? (
                       <img src={getImageUrl(listing.images[0])} alt={listing.title} className="square-card-img" loading="lazy" />
+                    ) : (listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
+                      <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                        <MapContainer 
+                          center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} 
+                          zoom={14} 
+                          zoomControl={false}
+                          dragging={false}
+                          doubleClickZoom={false}
+                          scrollWheelZoom={false}
+                          attributionControl={false}
+                          style={{ height: '100%', width: '100%' }}
+                        >
+                          <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                          <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
+                        </MapContainer>
+                      </div>
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontWeight: 800, fontSize: 12 }}>NO IMAGE</div>
                     )}

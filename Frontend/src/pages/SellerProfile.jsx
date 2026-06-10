@@ -13,6 +13,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { getWebsiteBaseUrl } from '../utils/url';
 
 // Fix for default marker icons in Leaflet + Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -64,7 +65,7 @@ const ListingCard = ({ listing, sellerPhone, wishlist, toggleWishlist, seller })
                             attributionControl={false}
                             style={{ height: '100%', width: '100%' }}
                         >
-                            <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                            <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
                             <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
                         </MapContainer>
                     </div>
@@ -95,7 +96,7 @@ const ListingCard = ({ listing, sellerPhone, wishlist, toggleWishlist, seller })
                         className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-[#6b7280] shadow-md hover:scale-110 active:scale-95 transition-all"
                         onClick={e => {
                             e.stopPropagation();
-                            const listingUrl = `${window.location.origin}/listings/${listing._id}`;
+                            const listingUrl = `${getWebsiteBaseUrl()}/listings/${listing._id}`;
                             const shareData = {
                                 title: listing.title,
                                 text: `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}`,
@@ -351,7 +352,7 @@ const SellerProfile = () => {
     const { user, activeListings, reservedListings } = profile;
 
     const handleShare = async () => {
-        const profileUrl = `${window.location.origin}/seller/${user._id || user.id}`;
+        const profileUrl = `${getWebsiteBaseUrl()}/seller/${user._id || user.id}`;
         const shareData = {
             title: `${user.name} - Chaudhary Saumya Properties Partner`,
             url: profileUrl

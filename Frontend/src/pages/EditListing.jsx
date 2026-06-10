@@ -741,7 +741,7 @@ const EditListing = () => {
                                         zoom={15}
                                         style={{ height: '100%', width: '100%' }}
                                     >
-                                        <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                        <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
                                         <MapSearch
                                             onSelect={(pos, addr) => setFormData(prev => ({ ...prev, mapCoordinates: pos, location: addr || prev.location }))}
                                         />

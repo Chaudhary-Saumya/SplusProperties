@@ -13,6 +13,11 @@ const AreaConverter = () => {
   const [topInputs, setTopInputs] = useState({ hectare: '', aare: '', sqm: '' });
   const [reorderEnabled, setReorderEnabled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [totalPrice, setTotalPrice] = useState('');
+  const [unitRate, setUnitRate] = useState('');
+  const [priceUnit, setPriceUnit] = useState('guntha');
+  const [lastEditedPriceField, setLastEditedPriceField] = useState('total');
+  const [lastEditedUnit, setLastEditedUnit] = useState('guntha');
 
   // Bilingual unit labels mapping
   // Note: For PDF Export we intentionally use standard English labels as standard jsPDF Helvetica fonts do not support Gujarati Unicode characters.
@@ -62,34 +67,36 @@ const AreaConverter = () => {
     vigha_chhota: 16.19,
     acre: 40,
     sqm: 0.0098,
-    sqft: 1/1089,
-    gaj: 9/1089,
+    sqft: 1 / 1089,
+    gaj: 9 / 1089,
   };
 
   const convertToBase = (unit, value) => {
     const numValue = parseFloat(value);
     if (!value || isNaN(numValue) || numValue === 0) return 0;
-    
+
     // Convert from the input unit to Guntha
     const factor = toBase[unit];
     if (!factor) return 0;
-    
+
     return numValue * factor;
   };
 
   const convertFromBase = (baseValue, targetUnit) => {
     if (baseValue === 0) return 0;
-    
+
     // Convert from Guntha to the target unit
     const factor = toBase[targetUnit];
     if (!factor) return 0;
-    
+
     return baseValue / factor;
   };
 
   const handleInputChange = (unit, newValue) => {
     // Clear top inputs when user edits main list
     setTopInputs({ hectare: '', aare: '', sqm: '' });
+    setLastEditedUnit(unit);
+    setPriceUnit(unit);
 
     if (newValue === '' || newValue === '-') {
       const clearedValues = {};
@@ -115,18 +122,29 @@ const AreaConverter = () => {
       };
       setHistory(prev => [entry, ...prev.slice(0, 9)]);
     }
+
+    // Recalculate price or rate based on what was last edited
+    if (lastEditedPriceField === 'total') {
+      updatePriceCalculations('total', totalPrice, unit, baseValue);
+    } else {
+      updatePriceCalculations('rate', unitRate, unit, baseValue);
+    }
   };
 
   // Compound top-input handler: sum all three, drive main converter
   const handleTopInputChange = (key, newVal) => {
     const updated = { ...topInputs, [key]: newVal };
     setTopInputs(updated);
+    if (newVal !== '') {
+      setLastEditedUnit(key);
+      setPriceUnit(key);
+    }
 
     // Sum all filled top inputs converted to Guntha
     const totalGuntha =
       (parseFloat(updated.hectare) || 0) * toBase.hectare +
-      (parseFloat(updated.aare)    || 0) * toBase.aare +
-      (parseFloat(updated.sqm)     || 0) * toBase.sqm;
+      (parseFloat(updated.aare) || 0) * toBase.aare +
+      (parseFloat(updated.sqm) || 0) * toBase.sqm;
 
     // If everything is empty, clear all
     const anyFilled = Object.values(updated).some(v => v !== '' && parseFloat(v) > 0);
@@ -144,17 +162,24 @@ const AreaConverter = () => {
       newValues[u.value] = converted === 0 ? '' : converted.toFixed(3).replace(/\.?0+$/, '');
     });
     setValues(newValues);
+
+    // Recalculate price or rate based on what was last edited
+    if (lastEditedPriceField === 'total') {
+      updatePriceCalculations('total', totalPrice, key, totalGuntha);
+    } else {
+      updatePriceCalculations('rate', unitRate, key, totalGuntha);
+    }
   };
 
   // Initialize with default value
-  useEffect(() => {
-    const initialValues = {};
-    orderedUnits.forEach(u => {
-      initialValues[u.value] = u.value === 'guntha' ? '100' : '';
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setValues(initialValues);
-  }, []);
+  // useEffect(() => {
+  //   const initialValues = {};
+  //   orderedUnits.forEach(u => {
+  //     initialValues[u.value] = u.value === 'guntha' ? '0' : '';
+  //   });
+  //   // eslint-disable-next-line react-hooks/set-state-in-effect
+  //   setValues(initialValues);
+  // }, []);
 
   // const copyResult = (unit) => {
   //   if (!values[unit]) return;
@@ -170,6 +195,88 @@ const AreaConverter = () => {
     });
     setValues(clearedValues);
     setTopInputs({ hectare: '', aare: '', sqm: '' });
+    setTotalPrice('');
+    setUnitRate('');
+    setPriceUnit('guntha');
+    setLastEditedPriceField('total');
+    setLastEditedUnit('guntha');
+  };
+
+  const getShortLabel = (unitVal) => {
+    const label = unitLabels[language]?.[unitVal] || unitVal;
+    return label.replace(/\([^)]*\)/g, '').split('/')[0].trim();
+  };
+
+  const updatePriceCalculations = (changedField, val, activeUnit = priceUnit, gunthaVal = values.guntha) => {
+    const gunthaArea = parseFloat(gunthaVal);
+    const numVal = parseFloat(val);
+
+    if (isNaN(numVal) || isNaN(gunthaArea) || gunthaArea <= 0) {
+      if (changedField === 'total') {
+        setTotalPrice(val);
+        setUnitRate('');
+      } else {
+        setUnitRate(val);
+        setTotalPrice('');
+      }
+      return;
+    }
+
+    const factor = toBase[activeUnit];
+    const areaInActiveUnit = gunthaArea / factor;
+
+    if (changedField === 'total') {
+      setTotalPrice(val);
+      const calculatedRate = numVal / areaInActiveUnit;
+      setUnitRate(calculatedRate === 0 ? '' : calculatedRate.toFixed(2).replace(/\.?0+$/, ''));
+    } else {
+      setUnitRate(val);
+      const calculatedTotal = numVal * areaInActiveUnit;
+      setTotalPrice(calculatedTotal === 0 ? '' : calculatedTotal.toFixed(2).replace(/\.?0+$/, ''));
+    }
+  };
+
+  const handleTotalPriceChange = (val) => {
+    setLastEditedPriceField('total');
+    updatePriceCalculations('total', val);
+  };
+
+  const handleUnitRateChange = (val) => {
+    setLastEditedPriceField('rate');
+    updatePriceCalculations('rate', val);
+  };
+
+  const handlePriceUnitChange = (newUnit) => {
+    setPriceUnit(newUnit);
+    updatePriceCalculations('total', totalPrice, newUnit);
+  };
+
+  const calculateUnitPrice = (unitVal) => {
+    const priceNum = parseFloat(totalPrice);
+    const gunthaArea = parseFloat(values.guntha);
+
+    if (isNaN(priceNum) || isNaN(gunthaArea) || gunthaArea <= 0) {
+      return 0;
+    }
+
+    const pricePerGuntha = priceNum / gunthaArea;
+    return pricePerGuntha * toBase[unitVal];
+  };
+
+  const formatCurrency = (val) => {
+    if (isNaN(val) || !isFinite(val) || val === 0) return '₹0';
+
+    let decimals = 2;
+    if (val % 1 === 0) {
+      decimals = 0;
+    } else if (val < 1) {
+      decimals = 4;
+    }
+
+    return '₹' + val.toLocaleString('en-IN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
   };
 
   const handleExportPDF = () => {
@@ -183,27 +290,27 @@ const AreaConverter = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    
+
     // Add title
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(201, 168, 76); // Gold
     doc.text('Area Conversion Report', pageWidth / 2, 20, { align: 'center' });
-    
+
     // Add subtitle
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(26, 35, 64); // Navy
     doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, 28, { align: 'center' });
-    
+
     // Add line
     doc.setDrawColor(201, 168, 76);
     doc.setLineWidth(0.8);
     doc.line(20, 32, pageWidth - 20, 32);
-    
+
     // Prepare data
     const filteredUnits = orderedUnits.filter(unit => values[unit.value] && values[unit.value] !== '');
-    
+
     // Table settings
     let yPos = 40;
     const lineHeight = 8;
@@ -211,20 +318,20 @@ const AreaConverter = () => {
     const col2Width = 50;
     const col3Width = 40;
     const startX = 20;
-    
+
     // Table header
     doc.setFillColor(26, 35, 64); // Navy
     doc.rect(startX, yPos - 5, col1Width + col2Width + col3Width, lineHeight + 2, 'F');
-    
+
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
     doc.text('Unit Name', startX + 3, yPos + 2);
     doc.text('Value', startX + col1Width + 3, yPos + 2);
     doc.text('Unit', startX + col1Width + col2Width + 3, yPos + 2);
-    
+
     yPos += lineHeight + 3;
-    
+
     // Table rows
     doc.setFontSize(10);
     filteredUnits.forEach((unit, index) => {
@@ -233,40 +340,92 @@ const AreaConverter = () => {
         doc.addPage();
         yPos = 20;
       }
-      
+
       // Alternate row colors
       if (index % 2 === 0) {
         doc.setFillColor(248, 250, 252);
         doc.rect(startX, yPos - 5, col1Width + col2Width + col3Width, lineHeight, 'F');
       }
-      
+
       // Row data
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(15, 23, 42);
-      
+
       // Unit name (left aligned)
       doc.text(unit.label.substring(0, 35), startX + 3, yPos + 2);
-      
+
       // Value (right aligned in column)
       doc.setFont('helvetica', 'bold');
       const valueText = values[unit.value];
       const valueWidth = doc.getTextWidth(valueText);
       doc.text(valueText, startX + col1Width + col2Width - 3 - valueWidth, yPos + 2);
-      
+
       // Unit code (center)
       doc.setFont('helvetica', 'normal');
       const unitCode = unit.value.replace('_', ' ').toUpperCase();
       const unitCodeWidth = doc.getTextWidth(unitCode);
       doc.text(unitCode, startX + col1Width + col2Width + (col3Width / 2) - (unitCodeWidth / 2), yPos + 2);
-      
+
       yPos += lineHeight;
     });
-    
+
     // Add border around table
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
     doc.rect(startX, 37, col1Width + col2Width + col3Width, yPos - 37);
-    
+
+    // Add Pricing Valuation if provided
+    const calculatedTotal = parseFloat(totalPrice);
+    if (totalPrice && calculatedTotal > 0 && values.guntha && parseFloat(values.guntha) > 0) {
+      yPos += 15;
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Section title
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(201, 168, 76); // Gold
+      doc.text('Valuation & Unit Rates', startX, yPos);
+
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 35, 64); // Navy
+
+      const totalFormatted = 'Rs. ' + calculatedTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      doc.text(`Total Property Price: ${totalFormatted}`, startX, yPos);
+
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139); // Gray
+      doc.text('Equivalent rates for major units:', startX, yPos);
+
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(26, 35, 64);
+
+      const ratesToPrint = ['guntha', 'hectare', 'aare', 'acre', 'sqft'];
+      ratesToPrint.forEach((uKey) => {
+        const uLabel = orderedUnits.find(ou => ou.value === uKey)?.label || uKey;
+        const cleanLabel = uLabel.replace(/\([^)]*\)/g, '').split('/')[0].trim();
+        const uPrice = calculateUnitPrice(uKey);
+
+        let formattedPrice = '';
+        if (uPrice % 1 === 0) {
+          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        } else if (uPrice < 1) {
+          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 4, minimumFractionDigits: 2 });
+        } else {
+          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+        }
+
+        doc.text(`* Rate per 1 ${cleanLabel}: Rs. ${formattedPrice}`, startX + 5, yPos);
+        yPos += 5;
+      });
+    }
+
     // Footer
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -281,16 +440,16 @@ const AreaConverter = () => {
         { align: 'center' }
       );
     }
-    
+
     // Save the PDF
     doc.save(`area-conversion-${new Date().getTime()}.pdf`);
   };
 
   return (
     <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
-      <SEO 
-        title={language === 'en' ? "Smart Land Area Converter & Calculator" : "સ્માર્ટ જમીન ક્ષેત્રફળ કન્વર્ટર અને કેલ્ક્યુલેટર"} 
-        description="Convert land measurements instantly between Sq. Ft, Sq. Yards, Gaj, Acres, Hectares, and Sq. Meters." 
+      <SEO
+        title={language === 'en' ? "Smart Land Area Converter & Calculator" : "સ્માર્ટ જમીન ક્ષેત્રફળ કન્વર્ટર અને કેલ્ક્યુલેટર"}
+        description="Convert land measurements instantly between Sq. Ft, Sq. Yards, Gaj, Acres, Hectares, and Sq. Meters."
       />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
@@ -308,34 +467,34 @@ const AreaConverter = () => {
 
         {/* Header */}
         <div className="text-center mb-6 sm:mb-10">
-         <div className="relative inline-block mb-2 sm:mb-3">
-  <button
-    onClick={() => setShowMenu(!showMenu)}
-    className="bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
-  >
-    {language === 'en' ? 'Presented by www.kharsan.com' : 'ખારસણ ડોટ કોમ દ્વારા પ્રસ્તુત'}
-  </button>
+          <div className="relative inline-block mb-2 sm:mb-3">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+            >
+              {language === 'en' ? 'Presented by www.kharsan.com' : 'ખારસણ ડોટ કોમ દ્વારા પ્રસ્તુત'}
+            </button>
 
-  {showMenu && (
-    <>
-      <div
-        className="fixed inset-0 z-40"
-        onClick={() => setShowMenu(false)}
-      />
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowMenu(false)}
+                />
 
-      <div className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white border rounded-lg shadow-lg z-50 min-w-[180px]">
-        <a
-          href="https://www.kharsan.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-center px-4 py-3 text-sm font-medium hover:bg-gray-100"
-        >
-          {language === 'en' ? '🌐 Visit Website' : '🌐 વેબસાઇટની મુલાકાત લો'}
-        </a>
-      </div>
-    </>
-  )}
-</div>
+                <div className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white border rounded-lg shadow-lg z-50 min-w-[180px]">
+                  <a
+                    href="https://www.kharsan.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center px-4 py-3 text-sm font-medium hover:bg-gray-100"
+                  >
+                    {language === 'en' ? '🌐 Visit Website' : '🌐 વેબસાઇટની મુલાકાત લો'}
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
           <h1 className="text-2xl sm:text-4xl font-bold text-[#1a2340] mb-1 sm:mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
             {t('tools_page.converter_title')}
           </h1>
@@ -357,22 +516,19 @@ const AreaConverter = () => {
           {/* Reorder Toggle */}
           <button
             onClick={() => setReorderEnabled(prev => !prev)}
-            className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 font-bold rounded-lg sm:rounded-xl transition-all shadow-sm text-xs sm:text-sm border-2 ${
-              reorderEnabled
+            className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 font-bold rounded-lg sm:rounded-xl transition-all shadow-sm text-xs sm:text-sm border-2 ${reorderEnabled
                 ? 'bg-[#c9a84c] border-[#c9a84c] text-white shadow-[0_0_12px_rgba(201,168,76,0.4)]'
                 : 'bg-white border-[#e2d9c5] text-[#1a2340] hover:border-[#c9a84c] hover:text-[#c9a84c]'
-            }`}
+              }`}
             title={reorderEnabled ? 'Click to lock unit order' : 'Click to enable drag reordering'}
           >
             <GripVertical size={14} />
             <span>{language === 'en' ? 'Reorder Units' : 'એકમોનો ક્રમ બદલો'}</span>
             {/* Toggle pill */}
-            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-300 ${
-              reorderEnabled ? 'bg-white/30' : 'bg-[#e2d9c5]'
-            }`}>
-              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-300 ${
-                reorderEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
-              }`} />
+            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-300 ${reorderEnabled ? 'bg-white/30' : 'bg-[#e2d9c5]'
+              }`}>
+              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-300 ${reorderEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+                }`} />
             </span>
           </button>
 
@@ -392,8 +548,8 @@ const AreaConverter = () => {
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
             {[
               { key: 'hectare', label: language === 'en' ? 'Hectare' : 'હેક્ટર' },
-              { key: 'aare',    label: language === 'en' ? 'Aare' : 'આરે' },
-              { key: 'sqm',     label: language === 'en' ? 'Sq. Meter' : 'ચોરસ મીટર' },
+              { key: 'aare', label: language === 'en' ? 'Aare' : 'આરે' },
+              { key: 'sqm', label: language === 'en' ? 'Sq. Meter' : 'ચોરસ મીટર' },
             ].map(({ key, label }) => (
               <div key={key} className="flex flex-col items-center bg-[#faf7f0] border border-[#e2d9c5] rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1">
                 <span className="text-[8px] sm:text-[9px] font-extrabold text-[#b8933a] uppercase tracking-widest mb-0.5 sm:mb-1">{label}</span>
@@ -414,12 +570,68 @@ const AreaConverter = () => {
               <span className="text-[10px] font-bold text-[#b8933a] bg-[#fdf8ee] border border-[#e2d9c5] rounded-lg px-3 py-1">
                 ∑ {language === 'en' ? 'Combined =' : 'સંયુક્ત ='} {(
                   (parseFloat(topInputs.hectare) || 0) * toBase.hectare +
-                  (parseFloat(topInputs.aare)    || 0) * toBase.aare +
-                  (parseFloat(topInputs.sqm)     || 0) * toBase.sqm
+                  (parseFloat(topInputs.aare) || 0) * toBase.aare +
+                  (parseFloat(topInputs.sqm) || 0) * toBase.sqm
                 ).toFixed(3).replace(/\.?0+$/, '')} {language === 'en' ? 'Guntha' : 'ગુન્ટા'}
               </span>
             </div>
           )}
+
+          {/* Price Calculator Input */}
+          <div className="bg-[#faf7f0] border border-[#e2d9c5] rounded-xl p-3 sm:p-4 mb-4 sm:mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              {/* Field 1: Total Price */}
+              <div className="text-left">
+                <label className="block text-[10px] sm:text-xs font-extrabold text-[#b8933a] uppercase tracking-wider mb-1">
+                  {language === 'en' ? 'Total Land Price (₹)' : 'જમીનની કુલ કિંમત (₹)'}
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-[#1a2340] font-extrabold text-sm sm:text-base">₹</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={totalPrice}
+                    onChange={(e) => handleTotalPriceChange(e.target.value)}
+                    className="w-full h-11 pl-8 pr-3 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none transition-all bg-white text-[#1a2340] placeholder:text-[#d0c5b0]"
+                    placeholder={language === 'en' ? 'Enter total price' : 'કુલ કિંમત દાખલ કરો'}
+                  />
+                </div>
+              </div>
+
+              {/* Field 2: Rate per Unit */}
+              <div className="text-left">
+                <label className="block text-[10px] sm:text-xs font-extrabold text-[#b8933a] uppercase tracking-wider mb-1">
+                  {language === 'en' ? `Price per 1 ${getShortLabel(priceUnit)} (₹)` : `૧ ${getShortLabel(priceUnit)} નો ભાવ (₹)`}
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex items-center flex-1">
+                    <span className="absolute left-3 text-[#1a2340] font-extrabold text-sm sm:text-base">₹</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={unitRate}
+                      onChange={(e) => handleUnitRateChange(e.target.value)}
+                      className="w-full h-11 pl-8 pr-3 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none transition-all bg-white text-[#1a2340] placeholder:text-[#d0c5b0]"
+                      placeholder={language === 'en' ? `Enter price per 1 ${getShortLabel(priceUnit)}` : `૧ ${getShortLabel(priceUnit)} નો ભાવ`}
+                    />
+                  </div>
+                  <select
+                    value={priceUnit}
+                    onChange={(e) => handlePriceUnitChange(e.target.value)}
+                    className="px-2 sm:px-3 h-11 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none bg-white text-[#1a2340] shrink-0"
+                  >
+                    {orderedUnits.map(unit => (
+                      <option key={unit.value} value={unit.value}>
+                        {language === 'en' ? `per ${getShortLabel(unit.value)}` : `પ્રતિ ${getShortLabel(unit.value)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
 
           {/* Reorder hint banner */}
           {reorderEnabled && (
@@ -437,13 +649,23 @@ const AreaConverter = () => {
                   value={unit}
                   className="flex items-center justify-between group bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-[#e2d9c5] hover:border-[#c9a84c] transition-colors cursor-grab active:cursor-grabbing shadow-sm"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
-                    <div className="text-[#c9a84c] p-1">
-                      <GripVertical size={16} />
+                  <div className="flex-1 min-w-0 pr-2 text-left">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="text-[#c9a84c] p-1 shrink-0">
+                        <GripVertical size={16} />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
+                          {unitLabels[language]?.[unit.value] || unit.label}
+                        </label>
+                        {totalPrice && values.guntha && parseFloat(values.guntha) > 0 && (
+                          <span className="text-[10px] sm:text-xs font-semibold mt-0.5 whitespace-nowrap">
+                            <span className="text-[#1a2340]">1 {getShortLabel(unit.value)} = </span>
+                            <span className="text-slate-500 font-bold">{formatCurrency(calculateUnitPrice(unit.value))}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
-                      {unitLabels[language]?.[unit.value] || unit.label}
-                    </label>
                   </div>
                   <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
                     <input
@@ -468,14 +690,24 @@ const AreaConverter = () => {
                   key={unit.value}
                   className="flex items-center justify-between bg-white rounded-lg sm:rounded-xl p-1 sm:p-2 border border-transparent hover:border-[#e2d9c5] transition-colors"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
-                    {/* Locked icon replaces drag handle */}
-                    <div className="text-[#d1d5db] p-1">
-                      <GripVertical size={16} />
+                  <div className="flex-1 min-w-0 pr-2 text-left">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {/* Locked icon replaces drag handle */}
+                      <div className="text-[#d1d5db] p-1 shrink-0">
+                        <GripVertical size={16} />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
+                          {unitLabels[language]?.[unit.value] || unit.label}
+                        </label>
+                        {totalPrice && values.guntha && parseFloat(values.guntha) > 0 && (
+                          <span className="text-[10px] sm:text-xs font-semibold mt-0.5 whitespace-nowrap">
+                            <span className="text-[#BC9A47] font-bold">1 {getShortLabel(unit.value)} = </span>
+                            <span className="text-blue-800 font-bold">{formatCurrency(calculateUnitPrice(unit.value))}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <label className="text-[13px] sm:text-base font-bold text-[#1a2340] truncate">
-                      {unitLabels[language]?.[unit.value] || unit.label}
-                    </label>
                   </div>
                   <div className="w-[120px] sm:w-96 relative shrink-0 flex items-center gap-2">
                     <input

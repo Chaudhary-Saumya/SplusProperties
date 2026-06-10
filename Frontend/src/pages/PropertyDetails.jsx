@@ -17,6 +17,7 @@ import DetailSkeleton from '../components/DetailSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { getWebsiteBaseUrl } from '../utils/url';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -289,13 +290,13 @@ const PropertyDetails = () => {
 
     const handleWhatsApp = () => {
         const phone = listing.createdBy?.phone || '';
-        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing.title} (${window.location.href}). Can we discuss further?`);
+        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing.title} (${getWebsiteBaseUrl()}/listings/${cleanId}). Can we discuss further?`);
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     };
 
     const handleShareOptions = async (e) => {
         if (e) e.stopPropagation();
-        const listingUrl = `${window.location.origin}/listings/${cleanId}`;
+        const listingUrl = `${getWebsiteBaseUrl()}/listings/${cleanId}`;
         const shareData = {
             title: listing?.title || 'Kharsan Properties',
             text: listing ? `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}` : '',
@@ -516,7 +517,7 @@ const PropertyDetails = () => {
                                             zoomControl={true}
                                             style={{ height: '100%', width: '100%' }}
                                         >
-                                            <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                            <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
                                             <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
                                                 <Popup>{listing.title}</Popup>
                                             </Marker>
@@ -807,7 +808,7 @@ const PropertyDetails = () => {
                                         style={{ height: '100%', width: '100%' }}
                                         scrollWheelZoom={false}
                                     >
-                                        <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                        <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
                                         <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
                                             <Popup>
                                                 <div className="font-bold text-slate-900">{listing.title}</div>
@@ -1242,7 +1243,7 @@ const PropertyDetails = () => {
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             {/* WhatsApp */}
                             <a
-                                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${listing?.title || 'Property'} - ${listing?.location || ''}: ${window.location.origin}/listings/${cleanId}`)}`}
+                                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${listing?.title || 'Property'} - ${listing?.location || ''}: ${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 transition-all text-emerald-800"
@@ -1255,7 +1256,7 @@ const PropertyDetails = () => {
 
                             {/* Twitter / X */}
                             <a
-                                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${listing?.title || 'Property'} in ${listing?.location || ''}`)}&url=${encodeURIComponent(`${window.location.origin}/listings/${cleanId}`)}`}
+                                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${listing?.title || 'Property'} in ${listing?.location || ''}`)}&url=${encodeURIComponent(`${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all text-slate-800"
@@ -1270,7 +1271,7 @@ const PropertyDetails = () => {
 
                             {/* Facebook */}
                             <a
-                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/listings/${cleanId}`)}`}
+                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 hover:bg-blue-50 transition-all text-blue-800"
@@ -1286,7 +1287,7 @@ const PropertyDetails = () => {
                             {/* Copy Link */}
                             <button
                                 onClick={() => {
-                                    navigator.clipboard.writeText(`${window.location.origin}/listings/${cleanId}`);
+                                    navigator.clipboard.writeText(`${getWebsiteBaseUrl()}/listings/${cleanId}`);
                                     toast.success(t('property_details.link_copied') || 'Listing link copied to clipboard');
                                     setShowShareModal(false);
                                 }}

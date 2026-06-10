@@ -43,6 +43,26 @@ const VerifyOTP = () => {
             inputRefs[index - 1].current.focus();
     };
 
+    const handlePaste = (e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text');
+        // Filter out non-numeric characters and get first 6 digits
+        const numericData = pastedData.replace(/[^0-9]/g, '').substring(0, 6);
+        if (!numericData) return;
+
+        const newOtp = [...otp];
+        for (let i = 0; i < 6; i++) {
+            newOtp[i] = numericData[i] || '';
+        }
+        setOtp(newOtp);
+
+        // Focus the last filled input or the 6th input box
+        const focusIndex = Math.min(numericData.length, 5);
+        if (inputRefs[focusIndex]?.current) {
+            inputRefs[focusIndex].current.focus();
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const otpString = otp.join('');
@@ -151,6 +171,7 @@ const VerifyOTP = () => {
                                             value={digit}
                                             onChange={(e) => handleChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}
+                                            onPaste={handlePaste}
                                             className={`w-11 h-14 text-center text-2xl font-black rounded-xl border-2 outline-none transition-all bg-[#f8f5ee]/60 text-[#1a2340]
                                                 ${digit
                                                     ? 'border-[#c9a84c] bg-[#c9a84c]/5 shadow-md shadow-[#c9a84c]/10'

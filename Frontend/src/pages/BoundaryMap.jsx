@@ -19,36 +19,40 @@ import {
 import 'leaflet/dist/leaflet.css';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { getWebsiteBaseUrl } from '../utils/url';
 
 // ── Leaflet marker fix ───────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
 const TILES = {
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: 'Satellite' },
-  hybrid:    { url: 'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', label: 'Hybrid' },
-  road:      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Road' },
+  hybrid: { url: 'https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', label: 'Hybrid' },
+  road: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Road' },
 };
 
 const COLORS = [
-  { name: 'Gold',    value: '#c9a84c' },
-  { name: 'Green',   value: '#10b981' },
-  { name: 'Blue',    value: '#0ea5e9' },
-  { name: 'Red',     value: '#ef4444' },
-  { name: 'Orange',  value: '#f59e0b' },
-  { name: 'Purple',  value: '#a855f7' },
-  { name: 'White',   value: '#ffffff' },
+  { name: 'Gold', value: '#c9a84c' },
+  { name: 'Green', value: '#10b981' },
+  { name: 'Blue', value: '#0ea5e9' },
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f59e0b' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'White', value: '#ffffff' },
 ];
 
 // ─── Guided step hints (using translation keys) ───────────────────
 const STEPS = {
-  idle:    { icon: '👆', title: 'boundary_map.step_idle_title', subtitle: 'boundary_map.step_idle_sub' },
+  idle: { icon: '👆', title: 'boundary_map.step_idle_title', subtitle: 'boundary_map.step_idle_sub' },
   drawing: { icon: '📍', title: 'boundary_map.step_drawing_title', subtitle: 'boundary_map.step_drawing_sub' },
-  done:    { icon: '✅', title: 'boundary_map.step_done_title', subtitle: 'boundary_map.step_done_sub' },
+  done: { icon: '✅', title: 'boundary_map.step_done_title', subtitle: 'boundary_map.step_done_sub' },
 };
 
 const BoundaryMap = () => {
@@ -58,33 +62,34 @@ const BoundaryMap = () => {
 
   const { t, language, toggleLanguage } = useLanguage();
 
-  const [center,        setCenter]        = useState([28.6139, 77.2090]);
-  const [polygons,      setPolygons]      = useState([{ points: [], color: '#c9a84c', label: 'Plot 1', area: null }]);
-  const [activeIndex,   setActiveIndex]   = useState(0);
-  const [unit,          setUnit]          = useState('acres');
-  const [isDrawing,     setIsDrawing]     = useState(false);
-  const [tileMode,      setTileMode]      = useState('satellite');
-  const [loading,       setLoading]       = useState(false);
-  const [saving,        setSaving]        = useState(false);
-  const [shareUrl,      setShareUrl]      = useState(null);
-  const [searchQuery,   setSearchQuery]   = useState('');
+  const [center, setCenter] = useState([28.6139, 77.2090]);
+  const [polygons, setPolygons] = useState([{ points: [], color: '#c9a84c', label: 'Plot 1', area: null }]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [unit, setUnit] = useState('acres');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [tileMode, setTileMode] = useState('satellite');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [shareUrl, setShareUrl] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchOpen,    setSearchOpen]    = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Bottom sheet state: 'peek' | 'half' | 'full'
-  const [sheetState,    setSheetState]    = useState('peek');
+  const [sheetState, setSheetState] = useState('peek');
   // Active tab in sheet: 'plots' | 'tools' | 'export'
-  const [activeTab,     setActiveTab]     = useState('plots');
+  const [activeTab, setActiveTab] = useState('plots');
   // Share modal
-  const [showShare,     setShowShare]     = useState(false);
-  const [copied,        setCopied]        = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
 
   // Tutorial overlay
-  const [showTutorial,  setShowTutorial]  = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialSlide, setTutorialSlide] = useState(0);
 
-  const mapRef    = useRef();
-  const sheetRef  = useRef();
+  const mapRef = useRef();
+  const sheetRef = useRef();
   const dragStart = useRef(null);
 
   useEffect(() => {
@@ -98,6 +103,18 @@ const BoundaryMap = () => {
     setShowTutorial(false);
     localStorage.setItem('hasSeenMapTour', 'true');
   };
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktop) {
+      setSheetState('full');
+    }
+  }, [isDesktop]);
 
   useEffect(() => {
     if (editId) fetchMapData(editId);
@@ -125,12 +142,12 @@ const BoundaryMap = () => {
       if (points.length < 3) return null;
       const coords = points.map(p => [p.lng, p.lat]);
       coords.push(coords[0]);
-      const poly     = turf.polygon([coords]);
-      const sqm      = turf.area(poly);
+      const poly = turf.polygon([coords]);
+      const sqm = turf.area(poly);
       return {
-        sqm:   Math.round(sqm).toLocaleString('en-IN'),
-        sqft:  Math.round(sqm * 10.76391).toLocaleString('en-IN'),
-        sqyd:  Math.round(sqm * 1.19599).toLocaleString('en-IN'),
+        sqm: Math.round(sqm).toLocaleString('en-IN'),
+        sqft: Math.round(sqm * 10.76391).toLocaleString('en-IN'),
+        sqyd: Math.round(sqm * 1.19599).toLocaleString('en-IN'),
         acres: (sqm / 4046.86).toLocaleString('en-IN', { maximumFractionDigits: 3 }),
       };
     } catch { return null; }
@@ -143,7 +160,7 @@ const BoundaryMap = () => {
       const upd = [...prev];
       const cur = { ...upd[activeIndex] };
       cur.points = [...cur.points, centerLatLng];
-      cur.area   = calculateArea(cur.points);
+      cur.area = calculateArea(cur.points);
       upd[activeIndex] = cur;
       return upd;
     });
@@ -204,7 +221,7 @@ const BoundaryMap = () => {
           const upd = [...prev];
           const cur = { ...upd[activeIndex] };
           cur.points = [...cur.points, e.latlng];
-          cur.area   = calculateArea(cur.points);
+          cur.area = calculateArea(cur.points);
           upd[activeIndex] = cur;
           return upd;
         });
@@ -223,17 +240,17 @@ const BoundaryMap = () => {
       const cur = { ...upd[pIdx] };
       cur.points = [...cur.points];
       cur.points[ptIdx] = ll;
-      cur.area   = calculateArea(cur.points);
-      upd[pIdx]  = cur;
+      cur.area = calculateArea(cur.points);
+      upd[pIdx] = cur;
       return upd;
     });
   };
 
   const startDrawing = () => { setIsDrawing(true); setSheetState('peek'); };
-  const stopDrawing  = () => setIsDrawing(false);
+  const stopDrawing = () => setIsDrawing(false);
 
   const addNewPlot = () => {
-    const n   = polygons.length + 1;
+    const n = polygons.length + 1;
     const arr = [...polygons, { points: [], color: COLORS[n % COLORS.length].value, label: `Plot ${n}`, area: null }];
     setPolygons(arr);
     setActiveIndex(arr.length - 1);
@@ -265,7 +282,7 @@ const BoundaryMap = () => {
       const cur = { ...upd[activeIndex] };
       if (!cur.points.length) return prev;
       cur.points = cur.points.slice(0, -1);
-      cur.area   = calculateArea(cur.points);
+      cur.area = calculateArea(cur.points);
       upd[activeIndex] = cur;
       return upd;
     });
@@ -321,7 +338,7 @@ const BoundaryMap = () => {
       try {
         const canvas = await html2canvas(document.querySelector('.leaflet-container'), { useCORS: true, scale: 0.5, logging: false });
         thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-      } catch {}
+      } catch { }
 
       const mapState = {
         title: 'Land Plot Boundary Map',
@@ -338,7 +355,7 @@ const BoundaryMap = () => {
 
       const res = await axios.post('/api/maps', mapState);
       if (res.data.success) {
-        const url = `${window.location.origin}/m/${res.data.data.shareId}`;
+        const url = `${getWebsiteBaseUrl()}/m/${res.data.data.shareId}`;
         setShareUrl(url);
         setShowShare(true);
         if (!res.data.data.createdBy) {
@@ -356,12 +373,12 @@ const BoundaryMap = () => {
     polygons.forEach(p => {
       if (p.points.length < 3) return;
       const coords = [...p.points, p.points[0]].map(pt => `${pt.lng},${pt.lat},0`).join(' ');
-      kml += `\n<Placemark><name>${p.label}</name><Style><PolyStyle><color>7f${p.color.replace('#','').split('').reverse().join('')}</color></PolyStyle></Style><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
+      kml += `\n<Placemark><name>${p.label}</name><Style><PolyStyle><color>7f${p.color.replace('#', '').split('').reverse().join('')}</color></PolyStyle></Style><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
     });
     kml += `\n</Document>\n</kml>`;
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
     a.href = url; a.download = 'land-plots.kml'; a.click();
     URL.revokeObjectURL(url);
   };
@@ -371,27 +388,63 @@ const BoundaryMap = () => {
     if (!mapEl) return toast.error('Map not found');
     const toastId = toast.loading(t('boundary_map.generating_report'));
     try {
-      const canvas  = await html2canvas(mapEl, { useCORS: true, scale: 2, logging: false, backgroundColor: '#1a2340' });
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const doc     = new jsPDF();
-      const date    = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-      doc.setFillColor(26, 35, 64); doc.rect(0, 0, 210, 45, 'F');
+      const canvas = await html2canvas(mapEl, { useCORS: true, scale: 2, logging: false, backgroundColor: '#1a2340' });
+
+      // Helper function to crop the canvas to a 1.8 aspect ratio (matching the 180x100 PDF image box)
+      const cropCanvasToAspectRatio = (sourceCanvas, targetRatio = 1.8) => {
+        const sw = sourceCanvas.width;
+        const sh = sourceCanvas.height;
+        let dw, dh;
+        if (sw / sh > targetRatio) {
+          dh = sh;
+          dw = sh * targetRatio;
+        } else {
+          dw = sw;
+          dh = sw / targetRatio;
+        }
+        const sx = (sw - dw) / 2;
+        const sy = (sh - dh) / 2;
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = dw;
+        croppedCanvas.height = dh;
+        const ctx = croppedCanvas.getContext('2d');
+        ctx.drawImage(sourceCanvas, sx, sy, dw, dh, 0, 0, dw, dh);
+        return croppedCanvas;
+      };
+
+      const croppedCanvas = cropCanvasToAspectRatio(canvas, 1.8);
+      const imgData = croppedCanvas.toDataURL('image/jpeg', 1.0);
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      // Blue Header Bar (fills entire page width)
+      doc.setFillColor(26, 35, 64); doc.rect(0, 0, pageWidth, 45, 'F');
+
+      // Header Text (centered dynamically)
       doc.setTextColor(201, 168, 76); doc.setFontSize(26); doc.setFont('helvetica', 'bold');
-      doc.text('Kharsan Properties', 105, 22, { align: 'center' });
+      doc.text('Kharsan Properties', pageWidth / 2, 22, { align: 'center' });
       doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'normal');
-      doc.text('PREMIUM LAND MAPPING SOLUTIONS', 105, 30, { align: 'center', charSpace: 2 });
-      doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', 105, 38, { align: 'center' });
+      doc.text('PREMIUM LAND MAPPING SOLUTIONS', pageWidth / 2, 30, { align: 'center' });
+      doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', pageWidth / 2, 38, { align: 'center' });
+
+      // Map Image (centered dynamically)
       doc.setDrawColor(201, 168, 76); doc.setLineWidth(1.5);
-      doc.rect(14, 54, 182, 102, 'D');
-      doc.addImage(imgData, 'JPEG', 15, 55, 180, 100);
+      doc.rect((pageWidth - 182) / 2, 54, 182, 102, 'D');
+      doc.addImage(imgData, 'JPEG', (pageWidth - 180) / 2, 55, 180, 100);
+
+      // Property Breakdown Header
       doc.setTextColor(26, 35, 64); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
       doc.text('Property Breakdown', 20, 175);
       doc.setDrawColor(26, 35, 64); doc.setLineWidth(0.5); doc.line(20, 178, 80, 178);
+
       let y = 188;
       doc.setFillColor(248, 245, 238); doc.rect(20, y - 5, 170, 8, 'F');
       doc.setFontSize(9); doc.setTextColor(26, 35, 64);
       doc.text('PLOT NAME', 25, y); doc.text('ACRES', 80, y); doc.text('SQ FT', 120, y); doc.text('SQ YARDS', 160, y);
       y += 10;
+
       polygons.forEach(p => {
         if (!p.area) return;
         if (y > 270) { doc.addPage(); y = 20; }
@@ -401,16 +454,36 @@ const BoundaryMap = () => {
         doc.setFillColor(p.color); doc.circle(22, y - 1, 1, 'F');
         y += 8;
       });
+
       const total = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0).toFixed(3);
       y += 5; doc.setDrawColor(230); doc.line(20, y - 5, 190, y - 5);
       doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text(`TOTAL: ${total} ACRES`, 105, y + 5, { align: 'center' });
+      doc.text(`TOTAL: ${total} ACRES`, pageWidth / 2, y + 5, { align: 'center' });
+
+      // Footer (centered dynamically)
       doc.setFontSize(8); doc.setTextColor(150);
-      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only.`, 105, 288, { align: 'center' });
-      doc.text(`Generated: ${date}`, 105, 292, { align: 'center' });
-      doc.save(`Kharsan-Boundary-${Date.now()}.pdf`);
+      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only.`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      doc.text(`Generated: ${date}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
+
+      const filename = `Kharsan-Boundary-${Date.now()}.pdf`;
+      if (Capacitor.isNativePlatform()) {
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const result = await Filesystem.writeFile({
+          path: filename,
+          data: pdfBase64,
+          directory: Directory.Cache
+        });
+        await Share.share({
+          title: 'Share Property Report',
+          text: 'Here is your Land Plot Boundary Report',
+          url: result.uri
+        });
+      } else {
+        doc.save(filename);
+      }
       toast.update(toastId, { render: t('boundary_map.report_downloaded'), type: 'success', isLoading: false, autoClose: 3000 });
-    } catch {
+    } catch (err) {
+      console.error('PDF export error:', err);
       toast.update(toastId, { render: t('boundary_map.report_failed'), type: 'error', isLoading: false, autoClose: 3000 });
     }
   };
@@ -424,7 +497,7 @@ const BoundaryMap = () => {
 
   // Current step state for hint bar
   const activePoly = polygons[activeIndex];
-  const hintState  = isDrawing
+  const hintState = isDrawing
     ? (activePoly?.points?.length >= 3 ? 'done' : 'drawing')
     : 'idle';
 
@@ -460,6 +533,22 @@ const BoundaryMap = () => {
         .tab-inactive { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
         ::-webkit-scrollbar { display: none; }
         * { scrollbar-width: none; }
+
+        @media (min-width: 768px) {
+          .map-control-panel {
+            top: 24px !important;
+            bottom: 24px !important;
+            right: 24px !important;
+            left: auto !important;
+            width: 380px !important;
+            height: calc(100vh - 48px) !important;
+            border-radius: 24px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            transform: none !important;
+            animation: none !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+          }
+        }
       `}</style>
 
       {/* ═══════════════ FULL SCREEN MAP ═══════════════ */}
@@ -491,7 +580,7 @@ const BoundaryMap = () => {
                 eventHandlers={{ click: () => setActiveIndex(pIdx) }}
               >
                 {!isDrawing && poly.area && (
-                  <Tooltip direction="center" offset={[0,0]} opacity={1} permanent className="custom-tooltip">
+                  <Tooltip direction="center" offset={[0, 0]} opacity={1} permanent className="custom-tooltip">
                     <div className="text-center">
                       <div style={{ color: poly.color }} className="font-black">{poly.label}</div>
                       <div className="text-white/70 text-[10px]">
@@ -509,7 +598,7 @@ const BoundaryMap = () => {
                 </Popup>
               </Polygon>
             )}
-            
+
             {/* Real-time edge dimensions displayed on map */}
             {renderEdgeLabels(poly)}
 
@@ -542,7 +631,7 @@ const BoundaryMap = () => {
       )}
 
       {/* ═══════════════ TOP LEFT: BACK, LANG & HELP BUTTONS ═══════════════ */}
-      <div className="absolute top-3 left-3 z-[1001] flex items-center gap-2 max-w-[calc(100vw-80px)] overflow-x-auto">
+      <div className="absolute top-3 left-3 md:top-6 md:left-6 z-[1001] flex items-center gap-2 max-w-[calc(100vw-80px)] overflow-x-auto">
         <button
           onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
           className="h-11 px-4 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-2.5 text-white shadow-2xl active:scale-95 transition-all shrink-0"
@@ -607,17 +696,16 @@ const BoundaryMap = () => {
       )}
 
       {/* ═══════════════ FLOATING ACTION BUTTONS (Left Side) ═══════════════ */}
-      <div 
-        className="absolute left-3 z-[1001] flex flex-col gap-2.5 transition-all duration-300" 
-        style={{ bottom: isDrawing ? '90px' : `calc(${sheetHeights[sheetState]} + 16px)` }}
+      <div
+        className="absolute left-3 md:left-6 z-[1001] flex flex-col gap-2.5 transition-all duration-300"
+        style={{ bottom: isDrawing ? '90px' : (isDesktop ? '24px' : `calc(${sheetHeights[sheetState]} + 16px)`) }}
       >
         {/* GPS */}
         <button
           onClick={getLocation}
           title={t('boundary_map.navigate_my_location')}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl border transition-all active:scale-90 ${
-            loading ? 'bg-[#c9a84c] border-[#c9a84c]/50' : 'bg-[#1a2340]/95 border-white/10 backdrop-blur-xl'
-          }`}
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl border transition-all active:scale-90 ${loading ? 'bg-[#c9a84c] border-[#c9a84c]/50' : 'bg-[#1a2340]/95 border-white/10 backdrop-blur-xl'
+            }`}
         >
           {loading
             ? <div className="w-4 h-4 border-2 border-[#1a2340] border-t-transparent rounded-full animate-spin" />
@@ -657,7 +745,7 @@ const BoundaryMap = () => {
       {isDrawing && (
         <div className="absolute bottom-[24px] left-0 right-0 z-[1001] flex justify-center px-4 pointer-events-auto">
           <div className="flex items-center gap-3.5 px-4 py-2.5 bg-[#101828]/95 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
-            
+
             {/* Undo Button */}
             <button
               onClick={undoLastPoint}
@@ -693,11 +781,10 @@ const BoundaryMap = () => {
       {/* ═══════════════ HINT BAR (shows when drawing) ═══════════════ */}
       {(isDrawing || hintState !== 'idle') && (
         <div className="absolute top-[68px] left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl border backdrop-blur-xl text-[11px] font-bold transition-all ${
-            hintState === 'done'
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl border backdrop-blur-xl text-[11px] font-bold transition-all ${hintState === 'done'
               ? 'bg-[#101828]/95 border-emerald-500/30 text-emerald-400'
               : 'bg-[#101828]/95 border-[#c9a84c]/30 text-[#c9a84c]'
-          }`}>
+            }`}>
             <span className="text-xs">{STEPS[hintState].icon}</span>
             <span className="font-black uppercase tracking-wider">{t(STEPS[hintState].title)}</span>
             {activePoly?.points?.length > 0 && (
@@ -717,58 +804,73 @@ const BoundaryMap = () => {
       {/* ═══════════════ BOTTOM SHEET ═══════════════ */}
       <div
         ref={sheetRef}
-        className="absolute bottom-0 left-0 right-0 z-[1002] bg-[#101828] sheet-enter"
+        className="map-control-panel absolute bottom-0 left-0 right-0 z-[1002] bg-[#101828] sheet-enter"
         style={{
-          height: isDrawing ? '0px' : sheetHeights[sheetState],
+          height: isDrawing && !isDesktop ? '0px' : (isDesktop ? 'calc(100vh - 48px)' : sheetHeights[sheetState]),
           transition: 'all 0.35s cubic-bezier(0.32,0.72,0,1)',
-          borderRadius: '24px 24px 0 0',
+          borderRadius: isDesktop ? '24px' : '24px 24px 0 0',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          borderTop: isDrawing ? 'none' : '1px solid rgba(255,255,255,0.1)',
-          boxShadow: isDrawing ? 'none' : '0 -20px 60px rgba(0,0,0,0.6)'
+          borderTop: isDrawing && !isDesktop ? 'none' : '1px solid rgba(255,255,255,0.1)',
+          boxShadow: isDrawing && !isDesktop ? 'none' : '0 -20px 60px rgba(0,0,0,0.6)'
         }}
-        onTouchStart={onSheetTouchStart}
-        onTouchEnd={onSheetTouchEnd}
+        onTouchStart={isDesktop ? undefined : onSheetTouchStart}
+        onTouchEnd={isDesktop ? undefined : onSheetTouchEnd}
       >
-        {/* Drag Handle & Summary Header */}
-        <div 
-          onClick={() => { if (sheetState === 'peek') setSheetState('half'); }}
-          className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-pointer select-none"
-        >
-          <div className="w-12 h-1.5 bg-white/10 rounded-full mb-3 shrink-0" />
-          
-          {sheetState === 'peek' && (
-            <div className="w-full flex items-center justify-between px-5 py-1">
-              <div className="flex flex-col">
-                <span className="text-white/40 text-[9px] font-black uppercase tracking-widest text-left">
-                  {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'}
-                </span>
-                <span className="text-white font-black text-sm">
-                  {totalArea > 0 
-                    ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}` 
-                    : t('boundary_map.no_boundary')}
-                </span>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); startDrawing(); }}
-                className="h-10 px-5 bg-[#c9a84c] text-[#1a2340] rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-lg"
-              >
-                <PenLine size={13} />
-                <span>{t('boundary_map.start_drawing')}</span>
-              </button>
+        {/* Desktop-only Header */}
+        {isDesktop && (
+          <div className="px-6 py-5 border-b border-white/5 shrink-0 flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-black text-base tracking-tight">{t('boundary_map.title')}</h3>
+              <p className="text-[#c9a84c] text-[10px] font-black uppercase tracking-widest mt-1">
+                {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'} · {totalArea > 0 ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}` : t('boundary_map.no_boundary')}
+              </p>
             </div>
-          )}
+            <div className="text-2xl">🏞️</div>
+          </div>
+        )}
 
-          {sheetState !== 'peek' && (
-            <div className="text-white/30 text-[9px] font-black uppercase tracking-widest pb-1">
-              {t('boundary_map.title')}
-            </div>
-          )}
-        </div>
+        {/* Drag Handle & Summary Header */}
+        {!isDesktop && (
+          <div
+            onClick={() => { if (sheetState === 'peek') setSheetState('half'); }}
+            className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-pointer select-none"
+          >
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mb-3 shrink-0" />
+
+            {sheetState === 'peek' && (
+              <div className="w-full flex items-center justify-between px-5 py-1">
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] font-black uppercase tracking-widest text-left">
+                    {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'}
+                  </span>
+                  <span className="text-white font-black text-sm">
+                    {totalArea > 0
+                      ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}`
+                      : t('boundary_map.no_boundary')}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); startDrawing(); }}
+                  className="h-10 px-5 bg-[#c9a84c] text-[#1a2340] rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-lg"
+                >
+                  <PenLine size={13} />
+                  <span>{t('boundary_map.start_drawing')}</span>
+                </button>
+              </div>
+            )}
+
+            {sheetState !== 'peek' && (
+              <div className="text-white/30 text-[9px] font-black uppercase tracking-widest pb-1">
+                {t('boundary_map.title')}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab Bar - only shows when expanded */}
-        {sheetState !== 'peek' && (
+        {(sheetState !== 'peek' || isDesktop) && (
           <div className="flex gap-2 px-4 pb-2 shrink-0">
             {[
               { id: 'plots', label: `📍 ${t('boundary_map.plots_tab')}`, count: polygons.length },
@@ -778,9 +880,8 @@ const BoundaryMap = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
-                  activeTab === tab.id ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/5 text-white/40'
-                }`}
+                className={`flex-1 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${activeTab === tab.id ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/5 text-white/40'
+                  }`}
               >
                 {tab.label}
                 {tab.count !== undefined && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${activeTab === tab.id ? 'bg-[#1a2340]/20' : 'bg-white/10'}`}>{tab.count}</span>}
@@ -790,7 +891,7 @@ const BoundaryMap = () => {
         )}
 
         {/* Sheet Content (scrollable) - only shows when expanded */}
-        {sheetState !== 'peek' && (
+        {(sheetState !== 'peek' || isDesktop) && (
           <div className="flex-1 overflow-y-auto px-4 pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
 
             {/* ── PLOTS TAB ── */}
@@ -812,11 +913,10 @@ const BoundaryMap = () => {
                   <div
                     key={idx}
                     onClick={() => setActiveIndex(idx)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                      activeIndex === idx
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${activeIndex === idx
                         ? 'bg-white/[0.06] border-white/20 shadow-lg'
                         : 'bg-white/[0.03] border-white/5 active:bg-white/[0.06]'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Color indicator */}
@@ -866,6 +966,31 @@ const BoundaryMap = () => {
                       </div>
                     )}
 
+                    {/* Start/Done Drawing Toggle */}
+                    {activeIndex === idx && (
+                      <div className="mt-3 pt-3 border-t border-white/5 flex gap-2" onClick={e => e.stopPropagation()}>
+                        {!isDrawing ? (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); startDrawing(); }}
+                            className="flex-1 py-2 bg-[#c9a84c] hover:bg-[#b8943e] text-[#1a2340] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                          >
+                            <PenLine size={12} />
+                            <span>{t('boundary_map.start_drawing')}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); stopDrawing(); }}
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                          >
+                            <Check size={12} />
+                            <span>Done Drawing</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Segment Lengths - show only for active */}
                     {activeIndex === idx && poly.points.length >= 2 && (
                       <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5" onClick={e => e.stopPropagation()}>
@@ -880,8 +1005,8 @@ const BoundaryMap = () => {
                                 {t('boundary_map.side_label').replace('{index}', `${seg.from}→${seg.to}`)}
                               </span>
                               <span className="text-[#c9a84c] font-black">
-                                {unit === 'acres' || unit === 'sqyd' 
-                                  ? `${seg.meters} m (${seg.feet} ft)` 
+                                {unit === 'acres' || unit === 'sqyd'
+                                  ? `${seg.meters} m (${seg.feet} ft)`
                                   : `${seg.feet} ft`}
                               </span>
                             </div>
@@ -929,16 +1054,15 @@ const BoundaryMap = () => {
                       <button
                         key={key}
                         onClick={() => setTileMode(key)}
-                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${
-                          tileMode === key ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
-                        }`}
+                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${tileMode === key ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
+                          }`}
                       >
                         <span className="text-lg">{key === 'satellite' ? '🛰' : key === 'hybrid' ? '🌍' : '🗺'}</span>
                         <span>
-                          {key === 'satellite' 
-                            ? (language === 'gu' ? 'સેટેલાઇટ' : 'Satellite') 
-                            : key === 'hybrid' 
-                              ? (language === 'gu' ? 'હાઇબ્રિડ' : 'Hybrid') 
+                          {key === 'satellite'
+                            ? (language === 'gu' ? 'સેટેલાઇટ' : 'Satellite')
+                            : key === 'hybrid'
+                              ? (language === 'gu' ? 'હાઇબ્રિડ' : 'Hybrid')
                               : (language === 'gu' ? 'રોડ નકશો' : 'Road Map')}
                         </span>
                       </button>
@@ -952,22 +1076,21 @@ const BoundaryMap = () => {
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { value: 'acres', emoji: '🌾' },
-                      { value: 'sqft',  emoji: '📐' },
-                      { value: 'sqyd',  emoji: '📏' },
+                      { value: 'sqft', emoji: '📐' },
+                      { value: 'sqyd', emoji: '📏' },
                     ].map(u => (
                       <button
                         key={u.value}
                         onClick={() => setUnit(u.value)}
-                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${
-                          unit === u.value ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
-                        }`}
+                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${unit === u.value ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
+                          }`}
                       >
                         <span className="text-lg">{u.emoji}</span>
                         <span>
-                          {u.value === 'acres' 
-                            ? t('tools_page.acre') 
-                            : u.value === 'sqft' 
-                              ? t('tools_page.sqft') 
+                          {u.value === 'acres'
+                            ? t('tools_page.acre')
+                            : u.value === 'sqft'
+                              ? t('tools_page.sqft')
                               : t('tools_page.sqyrd')}
                         </span>
                       </button>
@@ -1078,9 +1201,8 @@ const BoundaryMap = () => {
                 </div>
                 <button
                   onClick={copyLink}
-                  className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
-                    copied ? 'bg-emerald-500 text-white' : 'bg-[#c9a84c] text-[#1a2340]'
-                  }`}
+                  className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${copied ? 'bg-emerald-500 text-white' : 'bg-[#c9a84c] text-[#1a2340]'
+                    }`}
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                 </button>
