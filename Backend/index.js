@@ -65,7 +65,8 @@ const allowedOrigins = [
   "http://10.0.2.2:5000",
   "http://10.0.2.2",
   "https://properties.kharsan.com",
-  "https://kharsanproperties.vercel.app"
+  "https://kharsanproperties.vercel.app",
+  "https://splus-properties.vercel.app"
 ];
 
 app.use(cors({
