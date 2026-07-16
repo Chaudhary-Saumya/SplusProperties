@@ -14,7 +14,11 @@ const {
     getNearbyListings,
     getMyTokenedListings,
     getMyListings,
-    getSellerProfile
+    getSellerProfile,
+    recordWhatsappClick,
+    recordCallClick,
+    recordShare,
+    recordDwellTime
 } = require('../controllers/listingController');
 
 const { getReviews, addReview } = require('../controllers/reviewController');
@@ -52,6 +56,10 @@ router.route('/:id')
     .delete(protect, authorize('Seller', 'Broker', 'Admin'), deleteListing);
 
 router.route('/:id/view').post(recordView);
+router.route('/:id/whatsapp').post(recordWhatsappClick);
+router.route('/:id/call').post(recordCallClick);
+router.route('/:id/share').post(recordShare);
+router.route('/:id/dwell').post(recordDwellTime);
 
 router.route('/:id/request-verification')
     .patch(protect, requireCompleteProfile, authorize('Seller', 'Broker', 'Admin'), requestVerification);

@@ -2,6 +2,20 @@ const Listing = require('../models/Listing');
 const User = require('../models/User');
 const asyncHandler = require('../middlewares/async');
 const searchService = require('../services/searchService');
+const jwt = require('jsonwebtoken');
+
+const getMildUser = (req) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) return null;
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return null;
+    }
+};
 
 // Helper to calculate distance in KM between two coordinates
 const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
@@ -180,8 +194,136 @@ exports.getMyListings = asyncHandler(async (req, res, next) => {
 // @route   POST /api/listings/:id/view
 // @access  Public
 exports.recordView = asyncHandler(async (req, res, next) => {
-    const listing = await Listing.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+    const listingId = req.params.id;
+    const user = getMildUser(req);
+    const sessionId = req.body.sessionId || req.ip;
+
+    const listing = await Listing.findById(listingId);
     if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+
+    // Increment overall views
+    listing.views = (listing.views || 0) + 1;
+    listing.lastInteractionAt = Date.now();
+
+    // Check if unique view in last 24h
+    const query = {
+        actionType: 'VIEW',
+        'actionDetails.listingId': listingId,
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    };
+    if (user) {
+        query.userId = user.id;
+    } else {
+        query.sessionId = sessionId;
+    }
+
+    const UserActivity = require('../models/UserActivity');
+    const existing = await UserActivity.findOne(query);
+    if (!existing) {
+        listing.uniqueViews = (listing.uniqueViews || 0) + 1;
+        // Record UserActivity
+        await UserActivity.create({
+            userId: user ? user.id : undefined,
+            sessionId,
+            actionType: 'VIEW',
+            actionDetails: { listingId }
+        });
+    }
+
+    await listing.save();
+    res.status(200).json({ success: true });
+});
+
+// @desc    Record Whatsapp Click
+// @route   POST /api/listings/:id/whatsapp
+// @access  Public
+exports.recordWhatsappClick = asyncHandler(async (req, res, next) => {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+
+    listing.whatsappClicks = (listing.whatsappClicks || 0) + 1;
+    listing.contacts = (listing.contacts || 0) + 1;
+    listing.lastInteractionAt = Date.now();
+    await listing.save();
+
+    // Log user activity
+    const user = getMildUser(req);
+    const UserActivity = require('../models/UserActivity');
+    await UserActivity.create({
+        userId: user ? user.id : undefined,
+        sessionId: req.body.sessionId || req.ip,
+        actionType: 'CONTACT',
+        actionDetails: { listingId: listing._id, platform: 'WhatsApp' }
+    });
+
+    res.status(200).json({ success: true });
+});
+
+// @desc    Record Call Click
+// @route   POST /api/listings/:id/call
+// @access  Public
+exports.recordCallClick = asyncHandler(async (req, res, next) => {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+
+    listing.phoneClicks = (listing.phoneClicks || 0) + 1;
+    listing.contacts = (listing.contacts || 0) + 1;
+    listing.lastInteractionAt = Date.now();
+    await listing.save();
+
+    // Log user activity
+    const user = getMildUser(req);
+    const UserActivity = require('../models/UserActivity');
+    await UserActivity.create({
+        userId: user ? user.id : undefined,
+        sessionId: req.body.sessionId || req.ip,
+        actionType: 'CONTACT',
+        actionDetails: { listingId: listing._id, platform: 'Phone' }
+    });
+
+    res.status(200).json({ success: true });
+});
+
+// @desc    Record Listing Share
+// @route   POST /api/listings/:id/share
+// @access  Public
+exports.recordShare = asyncHandler(async (req, res, next) => {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+
+    listing.shares = (listing.shares || 0) + 1;
+    listing.lastInteractionAt = Date.now();
+    await listing.save();
+
+    res.status(200).json({ success: true });
+});
+
+// @desc    Record Dwell Time / View Duration
+// @route   POST /api/listings/:id/dwell
+// @access  Public
+exports.recordDwellTime = asyncHandler(async (req, res, next) => {
+    const { duration } = req.body;
+    if (!duration || isNaN(duration)) {
+        return res.status(400).json({ success: false, error: 'Duration is required' });
+    }
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+
+    const currentAvg = listing.averageViewingTime || 0;
+    const currentViews = listing.views || 1;
+
+    // Calculate moving average
+    listing.averageViewingTime = Math.round(((currentAvg * (currentViews - 1)) + Number(duration)) / currentViews);
+
+    // If viewing time is < 5 seconds, count as bounce
+    if (Number(duration) < 5) {
+        listing.bounceCount = (listing.bounceCount || 0) + 1;
+    }
+
+    listing.lastInteractionAt = Date.now();
+    await listing.save();
+
     res.status(200).json({ success: true });
 });
 

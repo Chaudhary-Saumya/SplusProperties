@@ -97,6 +97,30 @@ const userSchema = new mongoose.Schema({
         enum: ['Active', 'Disabled', 'Suspended'],
         default: 'Active'
     },
+    trustScore: {
+        type: Number,
+        default: 50
+    },
+    completedDeals: {
+        type: Number,
+        default: 0
+    },
+    ratingsAverage: {
+        type: Number,
+        default: 4.0
+    },
+    responseTime: {
+        type: Number,
+        default: 120 // minutes
+    },
+    identityVerified: {
+        type: Boolean,
+        default: false
+    },
+    documentVerified: {
+        type: Boolean,
+        default: false
+    },
     otp: String,        // stores hashed OTP
     otpExpire: Date
 }, { timestamps: true });

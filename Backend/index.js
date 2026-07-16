@@ -193,4 +193,13 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    
+    // Start background ranking score updater (every 1 hour)
+    const { updateAllScores } = require('./services/rankingService');
+    setTimeout(() => {
+        updateAllScores().catch(err => console.error('Error in initial ranking calculation:', err));
+    }, 5000);
+    setInterval(() => {
+        updateAllScores().catch(err => console.error('Error in periodic ranking calculation:', err));
+    }, 60 * 60 * 1000);
 });

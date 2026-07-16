@@ -346,8 +346,8 @@ const Search = () => {
                         type="button"
                         onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Plot' ? '' : 'Plot', plotType: 'None', landType: 'None' }))}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Plot'
-                                ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-                                : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
+                            ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
+                            : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
                             }`}
                     >
                         {t('search_page.plots')}
@@ -356,8 +356,8 @@ const Search = () => {
                         type="button"
                         onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Land' ? '' : 'Land', plotType: 'None', landType: 'None' }))}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Land'
-                                ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-                                : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
+                            ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
+                            : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
                             }`}
                     >
                         {t('search_page.lands')}
@@ -421,12 +421,12 @@ const Search = () => {
             <FilterSection title={t('search_page.budget')} defaultOpen={false}>
                 <div className="space-y-2">
                     <div className="relative">
-                       <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
-                       <input type="number" placeholder={t('search_page.min_price')} value={filters.minPrice} onChange={e => setFilters(p => ({ ...p, minPrice: e.target.value }))} className={`${inputClass} pl-7`} />
+                        <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
+                        <input type="number" placeholder={t('search_page.min_price')} value={filters.minPrice} onChange={e => setFilters(p => ({ ...p, minPrice: e.target.value }))} className={`${inputClass} pl-7`} />
                     </div>
                     <div className="relative">
-                       <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
-                       <input type="number" placeholder={t('search_page.max_price')} value={filters.maxPrice} onChange={e => setFilters(p => ({ ...p, maxPrice: e.target.value }))} className={`${inputClass} pl-7`} />
+                        <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
+                        <input type="number" placeholder={t('search_page.max_price')} value={filters.maxPrice} onChange={e => setFilters(p => ({ ...p, maxPrice: e.target.value }))} className={`${inputClass} pl-7`} />
                     </div>
                 </div>
             </FilterSection>
@@ -502,9 +502,9 @@ const Search = () => {
 
     return (
         <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
-            <SEO 
-                title={t('search_page.title')} 
-                description={t('search_page.description')} 
+            <SEO
+                title={t('search_page.title')}
+                description={t('search_page.description')}
             />
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
@@ -697,9 +697,9 @@ const Search = () => {
                                                 />
                                             ) : (listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
                                                 <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                                                    <MapContainer 
-                                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} 
-                                                        zoom={14} 
+                                                    <MapContainer
+                                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
+                                                        zoom={14}
                                                         zoomControl={false}
                                                         dragging={false}
                                                         doubleClickZoom={false}

@@ -1,9 +1,8 @@
 const Listing = require('../models/Listing');
+const { parseSearchQuery } = require('../utils/searchParser');
 
 /**
  * Builds the MongoDB Atlas Search ($search) aggregation pipeline stage.
- * @param {Object} params - Search and filter parameters
- * @returns {Object} Atlas Search stage object
  */
 const buildAtlasSearchStage = (params) => {
     const {
@@ -180,8 +179,6 @@ const buildAtlasSearchStage = (params) => {
 
 /**
  * Builds the fallback standard Mongoose $match query object.
- * @param {Object} params - Search and filter parameters
- * @returns {Object} Mongoose query object
  */
 const buildFallbackMatchQuery = (params) => {
     const {
@@ -281,56 +278,165 @@ const buildFallbackMatchQuery = (params) => {
 
 /**
  * Searches properties utilizing MongoDB Atlas Search with fallback to Mongoose aggregation.
- * @param {Object} params - Search filters and pagination info
- * @returns {Object} Results matching query along with count/metadata
  */
 exports.searchProperties = async (params) => {
     const page = parseInt(params.page, 10) || 1;
     const limit = parseInt(params.limit, 10) || 12;
     const startIndex = (page - 1) * limit;
-    const sortBy = params.sort || '-createdAt';
+    
+    // 15 Dynamic Sorting Modes selection mapping
+    // Default to 'recommended' (dynamic rankingScore)
+    const sortBy = params.sort || 'recommended';
 
-    // Decide if we should try Atlas Search
-    // Real-time search terms or geospatial coordinates trigger Atlas Search
+    // ── Semantic search parsing integration ──
+    if (params.search) {
+        const parsed = parseSearchQuery(params.search);
+        if (parsed.maxPrice && !params.maxPrice) params.maxPrice = parsed.maxPrice;
+        if (parsed.minPrice && !params.minPrice) params.minPrice = parsed.minPrice;
+        if (parsed.plotType && !params.plotType) params.plotType = parsed.plotType;
+        if (parsed.landType && !params.landType) params.landType = parsed.landType;
+        if (parsed.minArea && !params.minArea) params.minArea = parsed.minArea;
+        if (parsed.location && !params.city) params.city = parsed.location;
+    }
+
     const useAtlasSearch = !!(params.search || (params.lat && params.lng));
-
     let pipeline = [];
 
+    // Base match/search stage
     if (useAtlasSearch) {
         pipeline.push({ $search: buildAtlasSearchStage(params) });
     } else {
         pipeline.push({ $match: buildFallbackMatchQuery(params) });
     }
 
-    // Dynamic scoring / field mapping for trending score
-    if (sortBy === 'trending') {
+    // Lookup user creators early so we can sort by creator's trustScore
+    pipeline.push({
+        $lookup: {
+            from: 'users',
+            localField: 'createdBy',
+            foreignField: '_id',
+            as: 'createdBy'
+        }
+    });
+    pipeline.push({ $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } });
+
+    // Inject best value computation helper if requested
+    if (sortBy === 'best_value') {
         pipeline.push({
             $addFields: {
-                trendingScore: {
-                    $add: [
-                        { $multiply: [{ $ifNull: ["$contacts", 0] }, 10] },
-                        { $multiply: [{ $ifNull: ["$favoritesCount", 0] }, 5] },
-                        { $ifNull: ["$views", 0] }
+                bestValueScore: {
+                    $cond: [
+                        { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
+                        0,
+                        { $divide: ["$numericArea", "$price"] }
                     ]
                 }
             }
         });
     }
 
-    // Sort order definition
-    if (sortBy === 'trending') {
-        pipeline.push({ $sort: { trendingScore: -1 } });
-    } else if (sortBy === '-createdAt') {
-        pipeline.push({ $sort: { createdAt: -1 } });
-    } else if (sortBy === 'price') {
-        pipeline.push({ $sort: { price: 1 } });
-    } else if (sortBy === '-price') {
-        pipeline.push({ $sort: { price: -1 } });
-    } else if (sortBy === '-numericArea') {
-        pipeline.push({ $sort: { numericArea: -1 } });
-    } else {
-        pipeline.push({ $sort: { createdAt: -1 } });
+    // Sort order definition matching all 15 sort modes
+    const sortStage = {};
+    switch (sortBy) {
+        case 'recommended':
+            sortStage.rankingScore = -1;
+            break;
+        case 'trending':
+            sortStage.trendingScore = -1;
+            break;
+        case 'featured':
+            sortStage.isFeatured = -1;
+            sortStage.rankingScore = -1;
+            break;
+        case 'newest':
+            sortStage.createdAt = -1;
+            break;
+        case 'price':
+        case 'price_asc':
+            sortStage.price = 1;
+            break;
+        case '-price':
+        case 'price_desc':
+            sortStage.price = -1;
+            break;
+        case 'best_value':
+            sortStage.bestValueScore = -1;
+            break;
+        case 'most_viewed':
+            sortStage.views = -1;
+            break;
+        case 'most_contacted':
+            sortStage.phoneClicks = -1;
+            sortStage.whatsappClicks = -1;
+            sortStage.contacts = -1;
+            break;
+        case 'recently_updated':
+            sortStage.updatedAt = -1;
+            break;
+        case 'verified_first':
+            sortStage.listingType = -1; // Verified is string, basic is Basic
+            sortStage.rankingScore = -1;
+            break;
+        case 'premium_first':
+            sortStage.isFeatured = -1;
+            sortStage.rankingScore = -1;
+            break;
+        case 'largest_area':
+            sortStage.numericArea = -1;
+            break;
+        case 'smallest_area':
+            sortStage.numericArea = 1;
+            break;
+        case 'highest_rated_sellers':
+            sortStage['createdBy.trustScore'] = -1;
+            sortStage.rankingScore = -1;
+            break;
+        default:
+            sortStage.rankingScore = -1;
+            break;
     }
+
+    // Attach dynamic geospatial distance calculations if center coordinates are supplied
+    if (params.lat && params.lng) {
+        const userLat = parseFloat(params.lat);
+        const userLng = parseFloat(params.lng);
+        pipeline.push({
+            $addFields: {
+                distance: {
+                    $multiply: [
+                        6371, // Earth radius in km
+                        {
+                            $acos: {
+                                $add: [
+                                    {
+                                        $multiply: [
+                                            { $sin: { $multiply: [userLat, Math.PI / 180] } },
+                                            { $sin: { $multiply: [{ $first: "$geoSpatialLocation.coordinates" }, Math.PI / 180] } }
+                                        ]
+                                    },
+                                    {
+                                        $multiply: [
+                                            { $cos: { $multiply: [userLat, Math.PI / 180] } },
+                                            { $cos: { $multiply: [{ $first: "$geoSpatialLocation.coordinates" }, Math.PI / 180] } },
+                                            { $cos: { $subtract: [{ $multiply: [{ $last: "$geoSpatialLocation.coordinates" }, Math.PI / 180] }, { $multiply: [userLng, Math.PI / 180] }] } }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+        
+        // If sorting nearby, override sort parameters
+        if (sortBy === 'nearby') {
+            delete sortStage.rankingScore;
+            sortStage.distance = 1;
+        }
+    }
+
+    pipeline.push({ $sort: sortStage });
 
     // Facet configuration for metadata and records
     pipeline.push({
@@ -339,15 +445,6 @@ exports.searchProperties = async (params) => {
             data: [
                 { $skip: startIndex },
                 { $limit: limit },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'createdBy',
-                        foreignField: '_id',
-                        as: 'createdBy'
-                    }
-                },
-                { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
                 {
                     $project: {
                         'createdBy.password': 0,
@@ -365,58 +462,46 @@ exports.searchProperties = async (params) => {
         let data = result[0]?.data || [];
         let total = result[0]?.metadata[0]?.total || 0;
 
-        // Smart fallback: If Atlas Search was requested but returned 0 matches,
-        // it may be that the Atlas Search Index is empty or still building.
-        // We verify if there are matches in the database via standard query fallback.
+        // If Atlas Search returned 0 matches, run fallback query
         if (useAtlasSearch && data.length === 0) {
             const fallbackQuery = buildFallbackMatchQuery(params);
             const fallbackCount = await Listing.countDocuments(fallbackQuery);
             if (fallbackCount > 0) {
-                console.info(`Atlas Search returned 0 matches, but fallback query matches ${fallbackCount} documents. Falling back to Mongoose matching.`);
+                console.info(`Atlas Search returned 0 matches. Recovering with Mongoose matching.`);
                 const fallbackPipeline = [
-                    { $match: fallbackQuery }
+                    { $match: fallbackQuery },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            localField: 'createdBy',
+                            foreignField: '_id',
+                            as: 'createdBy'
+                        }
+                    },
+                    { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } }
                 ];
 
-                if (sortBy === 'trending') {
+                if (sortBy === 'best_value') {
                     fallbackPipeline.push({
                         $addFields: {
-                            trendingScore: {
-                                $add: [
-                                    { $multiply: [{ $ifNull: ["$contacts", 0] }, 10] },
-                                    { $multiply: [{ $ifNull: ["$favoritesCount", 0] }, 5] },
-                                    { $ifNull: ["$views", 0] }
+                            bestValueScore: {
+                                $cond: [
+                                    { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
+                                    0,
+                                    { $divide: ["$numericArea", "$price"] }
                                 ]
                             }
                         }
                     });
-                    fallbackPipeline.push({ $sort: { trendingScore: -1 } });
-                } else if (sortBy === '-createdAt') {
-                    fallbackPipeline.push({ $sort: { createdAt: -1 } });
-                } else if (sortBy === 'price') {
-                    fallbackPipeline.push({ $sort: { price: 1 } });
-                } else if (sortBy === '-price') {
-                    fallbackPipeline.push({ $sort: { price: -1 } });
-                } else if (sortBy === '-numericArea') {
-                    fallbackPipeline.push({ $sort: { numericArea: -1 } });
-                } else {
-                    fallbackPipeline.push({ $sort: { createdAt: -1 } });
                 }
 
+                fallbackPipeline.push({ $sort: sortStage });
                 fallbackPipeline.push({
                     $facet: {
                         metadata: [{ $count: "total" }],
                         data: [
                             { $skip: startIndex },
                             { $limit: limit },
-                            {
-                                $lookup: {
-                                    from: 'users',
-                                    localField: 'createdBy',
-                                    foreignField: '_id',
-                                    as: 'createdBy'
-                                }
-                            },
-                            { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
                             {
                                 $project: {
                                     'createdBy.password': 0,
@@ -445,54 +530,42 @@ exports.searchProperties = async (params) => {
             limit
         };
     } catch (error) {
-        // If Atlas Search failed (e.g. index doesn't exist yet on local test databases)
         if (useAtlasSearch && error.name === 'MongoServerError') {
-            console.warn("Atlas Search failed. Recovering using Mongoose match fallback:", error.message);
-            // Re-run execution using pure Match fallback
+            console.warn("Atlas Search failed. Running fallback matching:", error.message);
             const fallbackPipeline = [
-                { $match: buildFallbackMatchQuery(params) }
+                { $match: buildFallbackMatchQuery(params) },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'createdBy',
+                        foreignField: '_id',
+                        as: 'createdBy'
+                    }
+                },
+                { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } }
             ];
 
-            if (sortBy === 'trending') {
+            if (sortBy === 'best_value') {
                 fallbackPipeline.push({
                     $addFields: {
-                        trendingScore: {
-                            $add: [
-                                { $multiply: [{ $ifNull: ["$contacts", 0] }, 10] },
-                                { $multiply: [{ $ifNull: ["$favoritesCount", 0] }, 5] },
-                                { $ifNull: ["$views", 0] }
+                        bestValueScore: {
+                            $cond: [
+                                { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
+                                0,
+                                { $divide: ["$numericArea", "$price"] }
                             ]
                         }
                     }
                 });
-                fallbackPipeline.push({ $sort: { trendingScore: -1 } });
-            } else if (sortBy === '-createdAt') {
-                fallbackPipeline.push({ $sort: { createdAt: -1 } });
-            } else if (sortBy === 'price') {
-                fallbackPipeline.push({ $sort: { price: 1 } });
-            } else if (sortBy === '-price') {
-                fallbackPipeline.push({ $sort: { price: -1 } });
-            } else if (sortBy === '-numericArea') {
-                fallbackPipeline.push({ $sort: { numericArea: -1 } });
-            } else {
-                fallbackPipeline.push({ $sort: { createdAt: -1 } });
             }
 
+            fallbackPipeline.push({ $sort: sortStage });
             fallbackPipeline.push({
                 $facet: {
                     metadata: [{ $count: "total" }],
                     data: [
                         { $skip: startIndex },
                         { $limit: limit },
-                        {
-                            $lookup: {
-                                from: 'users',
-                                localField: 'createdBy',
-                                foreignField: '_id',
-                                as: 'createdBy'
-                            }
-                        },
-                        { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
                         {
                             $project: {
                                 'createdBy.password': 0,
@@ -519,15 +592,12 @@ exports.searchProperties = async (params) => {
             };
         }
 
-        // Throw other errors
         throw error;
     }
 };
 
 /**
  * Real-time autocomplete query for search boxes.
- * @param {String} q - Search keyword
- * @returns {Array} List of matched listing suggestions
  */
 exports.getSearchSuggestions = async (q) => {
     try {
@@ -537,41 +607,11 @@ exports.getSearchSuggestions = async (q) => {
                     index: "default",
                     compound: {
                         should: [
-                            {
-                                autocomplete: {
-                                    query: q,
-                                    path: "title",
-                                    fuzzy: { maxEdits: 1, prefixLength: 1 }
-                                }
-                            },
-                            {
-                                autocomplete: {
-                                    query: q,
-                                    path: "city",
-                                    fuzzy: { maxEdits: 1, prefixLength: 1 }
-                                }
-                            },
-                            {
-                                autocomplete: {
-                                    query: q,
-                                    path: "locality",
-                                    fuzzy: { maxEdits: 1, prefixLength: 1 }
-                                }
-                            },
-                            {
-                                autocomplete: {
-                                    query: q,
-                                    path: "location",
-                                    fuzzy: { maxEdits: 1, prefixLength: 1 }
-                                }
-                            },
-                            {
-                                autocomplete: {
-                                    query: q,
-                                    path: "areaName",
-                                    fuzzy: { maxEdits: 1, prefixLength: 1 }
-                                }
-                            }
+                            { autocomplete: { query: q, path: "title", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+                            { autocomplete: { query: q, path: "city", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+                            { autocomplete: { query: q, path: "locality", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+                            { autocomplete: { query: q, path: "location", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+                            { autocomplete: { query: q, path: "areaName", fuzzy: { maxEdits: 1, prefixLength: 1 } } }
                         ]
                     }
                 }
@@ -590,11 +630,8 @@ exports.getSearchSuggestions = async (q) => {
                 }
             }
         ]);
-        if (results && results.length > 0) {
-            return results;
-        }
+        if (results && results.length > 0) return results;
         
-        // Fallback if Atlas Search runs but indexes are empty/building
         return await Listing.find({
             status: { $ne: 'Inactive' },
             $or: [
@@ -608,7 +645,6 @@ exports.getSearchSuggestions = async (q) => {
         .limit(8)
         .select('title location price listingType images area plotNumber areaName');
     } catch (err) {
-        console.warn("Atlas Search suggestions failed, running fallback regex matching:", err.message);
         return await Listing.find({
             status: { $ne: 'Inactive' },
             $or: [

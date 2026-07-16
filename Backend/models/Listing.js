@@ -173,10 +173,69 @@ const listingSchema = new mongoose.Schema({
     numericArea: {
         type: Number,
         default: 0
+    },
+    uniqueViews: {
+        type: Number,
+        default: 0
+    },
+    whatsappClicks: {
+        type: Number,
+        default: 0
+    },
+    phoneClicks: {
+        type: Number,
+        default: 0
+    },
+    shares: {
+        type: Number,
+        default: 0
+    },
+    averageViewingTime: {
+        type: Number,
+        default: 0 // in seconds
+    },
+    bounceCount: {
+        type: Number,
+        default: 0
+    },
+    spamReports: {
+        type: Number,
+        default: 0
+    },
+    isDuplicate: {
+        type: Boolean,
+        default: false
+    },
+    completionPercentage: {
+        type: Number,
+        default: 0
+    },
+    rankingScore: {
+        type: Number,
+        default: 0
+    },
+    qualityScore: {
+        type: Number,
+        default: 0
+    },
+    engagementScore: {
+        type: Number,
+        default: 0
+    },
+    freshnessScore: {
+        type: Number,
+        default: 0
+    },
+    trendingScore: {
+        type: Number,
+        default: 0
+    },
+    lastInteractionAt: {
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true
-
 });
 
 // Advanced Discovery & Performance Indexes
@@ -199,6 +258,10 @@ listingSchema.index({ reviews: 1 });
 listingSchema.index({ city: 1, locality: 1 });
 listingSchema.index({ propertyType: 1, plotType: 1, landType: 1 });
 listingSchema.index({ price: 1, numericArea: 1 });
+listingSchema.index({ rankingScore: -1 });
+listingSchema.index({ trendingScore: -1 });
+listingSchema.index({ qualityScore: -1 });
+listingSchema.index({ isDuplicate: 1 });
 
 // Generate slug and extract numeric area before saving
 listingSchema.pre('save', async function() {

@@ -14,7 +14,7 @@ import {
   FileText, Maximize2, Minimize2, Trash2, PenLine, StopCircle,
   AreaChart, Navigation, Layers, Plus, Palette, Share2, Copy, Check,
   ExternalLink, Search, ArrowRight, ArrowLeft, ChevronUp, ChevronDown,
-  CheckCircle2, Info, Pencil, Eye, EyeOff
+  CheckCircle2, Info, Pencil, Eye, EyeOff, LandPlot, SlidersHorizontal, Globe
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import SEO from '../components/SEO';
@@ -23,6 +23,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { getWebsiteBaseUrl } from '../utils/url';
+import { savePdfCrossPlatform } from '../utils/pdfDownloader';
 
 // ── Leaflet marker fix ───────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -49,10 +50,11 @@ const COLORS = [
 ];
 
 // ─── Guided step hints (using translation keys) ───────────────────
-const STEPS = {
-  idle: { icon: '👆', title: 'boundary_map.step_idle_title', subtitle: 'boundary_map.step_idle_sub' },
-  drawing: { icon: '📍', title: 'boundary_map.step_drawing_title', subtitle: 'boundary_map.step_drawing_sub' },
-  done: { icon: '✅', title: 'boundary_map.step_done_title', subtitle: 'boundary_map.step_done_sub' },
+// Icons are rendered inline using Lucide components (no emojis)
+const STEP_KEYS = {
+  idle: { iconName: 'pointer', title: 'boundary_map.step_idle_title', subtitle: 'boundary_map.step_idle_sub' },
+  drawing: { iconName: 'pin', title: 'boundary_map.step_drawing_title', subtitle: 'boundary_map.step_drawing_sub' },
+  done: { iconName: 'check', title: 'boundary_map.step_done_title', subtitle: 'boundary_map.step_done_sub' },
 };
 
 const BoundaryMap = () => {
@@ -67,7 +69,7 @@ const BoundaryMap = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [unit, setUnit] = useState('acres');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [tileMode, setTileMode] = useState('satellite');
+  const [tileMode, setTileMode] = useState('hybrid');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState(null);
@@ -97,6 +99,20 @@ const BoundaryMap = () => {
     if (!hasSeen) {
       setShowTutorial(true);
     }
+  }, []);
+
+  // ── Auto-request GPS location on mount (unless editing a saved map) ──
+  useEffect(() => {
+    if (editId) return; // Don't auto-locate when loading a saved map
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = [pos.coords.latitude, pos.coords.longitude];
+        setCenter(loc);
+        if (mapRef.current) mapRef.current.flyTo(loc, 18, { duration: 1.5 });
+      },
+      () => { /* silently ignore if denied */ },
+      { enableHighAccuracy: true }
+    );
   }, []);
 
   const closeTutorial = () => {
@@ -247,7 +263,11 @@ const BoundaryMap = () => {
   };
 
   const startDrawing = () => { setIsDrawing(true); setSheetState('peek'); };
-  const stopDrawing = () => setIsDrawing(false);
+  const stopDrawing = () => {
+    setIsDrawing(false);
+    // After drawing stops, expand sheet to show results + next steps
+    if (!isDesktop) setSheetState('half');
+  };
 
   const addNewPlot = () => {
     const n = polygons.length + 1;
@@ -386,11 +406,45 @@ const BoundaryMap = () => {
   const exportPDF = async () => {
     const mapEl = document.querySelector('.leaflet-container');
     if (!mapEl) return toast.error('Map not found');
-    const toastId = toast.loading(t('boundary_map.generating_report'));
-    try {
-      const canvas = await html2canvas(mapEl, { useCORS: true, scale: 2, logging: false, backgroundColor: '#1a2340' });
+    const toastId = toast.loading('Generating Report...');
 
-      // Helper function to crop the canvas to a 1.8 aspect ratio (matching the 180x100 PDF image box)
+    const originalGetComputedStyle = window.getComputedStyle;
+    // Monkey patch getComputedStyle to sanitize oklab/oklch values on the fly
+    window.getComputedStyle = function(el, pseudoEl) {
+      const style = originalGetComputedStyle(el, pseudoEl);
+      return new Proxy(style, {
+        get(target, prop) {
+          const val = target[prop];
+          if (typeof val === 'string' && (val.includes('oklab') || val.includes('oklch'))) {
+            return val
+              .replace(/oklab\([^)]+\)/g, 'rgb(26, 35, 64)')
+              .replace(/oklch\([^)]+\)/g, 'rgb(26, 35, 64)');
+          }
+          if (typeof val === 'function') {
+            return val.bind(target);
+          }
+          return val;
+        }
+      });
+    };
+
+    try {
+      // Delay to allow map tiles to settle
+      await new Promise(r => setTimeout(r, 800));
+
+      const canvas = await html2canvas(mapEl, {
+        useCORS: true,
+        allowTaint: false, // Prevents security errors with external tiles
+        scale: 1.5,
+        logging: false,
+        backgroundColor: '#1a2340',
+        imageTimeout: 20000,
+        ignoreElements: (element) => {
+          // Ignore Leaflet zoom and layers controls to avoid oklab elements and keep map clean
+          return element.classList.contains('leaflet-control');
+        }
+      });
+
       const cropCanvasToAspectRatio = (sourceCanvas, targetRatio = 1.8) => {
         const sw = sourceCanvas.width;
         const sh = sourceCanvas.height;
@@ -413,28 +467,32 @@ const BoundaryMap = () => {
       };
 
       const croppedCanvas = cropCanvasToAspectRatio(canvas, 1.8);
-      const imgData = croppedCanvas.toDataURL('image/jpeg', 1.0);
+
+      let imgData = null;
+      try {
+        imgData = croppedCanvas.toDataURL('image/jpeg', 0.8);
+      } catch (e) {
+        console.error("Map capture failed", e);
+      }
+
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      // Blue Header Bar (fills entire page width)
       doc.setFillColor(26, 35, 64); doc.rect(0, 0, pageWidth, 45, 'F');
-
-      // Header Text (centered dynamically)
       doc.setTextColor(201, 168, 76); doc.setFontSize(26); doc.setFont('helvetica', 'bold');
       doc.text('Kharsan Properties', pageWidth / 2, 22, { align: 'center' });
       doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'normal');
       doc.text('PREMIUM LAND MAPPING SOLUTIONS', pageWidth / 2, 30, { align: 'center' });
       doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', pageWidth / 2, 38, { align: 'center' });
 
-      // Map Image (centered dynamically)
-      doc.setDrawColor(201, 168, 76); doc.setLineWidth(1.5);
-      doc.rect((pageWidth - 182) / 2, 54, 182, 102, 'D');
-      doc.addImage(imgData, 'JPEG', (pageWidth - 180) / 2, 55, 180, 100);
+      if (imgData) {
+        doc.setDrawColor(201, 168, 76); doc.setLineWidth(1.2);
+        doc.rect((pageWidth - 182) / 2, 54, 182, 102, 'D');
+        doc.addImage(imgData, 'JPEG', (pageWidth - 180) / 2, 55, 180, 100);
+      }
 
-      // Property Breakdown Header
       doc.setTextColor(26, 35, 64); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
       doc.text('Property Breakdown', 20, 175);
       doc.setDrawColor(26, 35, 64); doc.setLineWidth(0.5); doc.line(20, 178, 80, 178);
@@ -460,31 +518,22 @@ const BoundaryMap = () => {
       doc.setFontSize(12); doc.setFont('helvetica', 'bold');
       doc.text(`TOTAL: ${total} ACRES`, pageWidth / 2, y + 5, { align: 'center' });
 
-      // Footer (centered dynamically)
       doc.setFontSize(8); doc.setTextColor(150);
       doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only.`, pageWidth / 2, pageHeight - 10, { align: 'center' });
       doc.text(`Generated: ${date}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
 
       const filename = `Kharsan-Boundary-${Date.now()}.pdf`;
-      if (Capacitor.isNativePlatform()) {
-        const pdfBase64 = doc.output('datauristring').split(',')[1];
-        const result = await Filesystem.writeFile({
-          path: filename,
-          data: pdfBase64,
-          directory: Directory.Cache
-        });
-        await Share.share({
-          title: 'Share Property Report',
-          text: 'Here is your Land Plot Boundary Report',
-          url: result.uri
-        });
-      } else {
-        doc.save(filename);
-      }
+      await savePdfCrossPlatform(doc, filename, {
+        shareTitle: 'Share Property Report',
+        shareText: 'Here is your Land Plot Boundary Report',
+      });
       toast.update(toastId, { render: t('boundary_map.report_downloaded'), type: 'success', isLoading: false, autoClose: 3000 });
     } catch (err) {
       console.error('PDF export error:', err);
       toast.update(toastId, { render: t('boundary_map.report_failed'), type: 'error', isLoading: false, autoClose: 3000 });
+    } finally {
+      // Restore getComputedStyle
+      window.getComputedStyle = originalGetComputedStyle;
     }
   };
 
@@ -500,6 +549,15 @@ const BoundaryMap = () => {
   const hintState = isDrawing
     ? (activePoly?.points?.length >= 3 ? 'done' : 'drawing')
     : 'idle';
+  const stepData = STEP_KEYS[hintState];
+
+  // Icon map for hint bar steps
+  const StepIcon = ({ name, ...props }) => {
+    if (name === 'pointer') return <MapPin {...props} />;
+    if (name === 'pin') return <Target {...props} />;
+    if (name === 'check') return <CheckCircle2 {...props} />;
+    return null;
+  };
 
   // Sheet heights: peek = just handle + controls, half = 45vh, full = 90vh
   const sheetHeights = { peek: 'calc(env(safe-area-inset-bottom, 0px) + 90px)', half: '50dvh', full: '90dvh' };
@@ -561,7 +619,7 @@ const BoundaryMap = () => {
         dragging={true}
         renderer={L.canvas()}
       >
-        <TileLayer url={TILES[tileMode].url} attribution="" maxZoom={21} />
+        <TileLayer url={TILES[tileMode].url} attribution="" maxZoom={21} crossOrigin={true} />
         <MapEvents />
 
         {polygons.map((poly, pIdx) => (
@@ -643,7 +701,7 @@ const BoundaryMap = () => {
           onClick={toggleLanguage}
           className="h-11 px-4 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-2 text-white shadow-2xl active:scale-95 transition-all font-black text-xs uppercase shrink-0"
         >
-          <span className="text-[#c9a84c]">🌐</span>
+          <Globe size={14} className="text-[#c9a84c]" />
           {language === 'en' ? 'ગુજરાતી' : 'English'}
         </button>
         <button
@@ -688,7 +746,7 @@ const BoundaryMap = () => {
                 disabled={searchLoading}
                 className="w-full py-4 bg-[#c9a84c] text-[#1a2340] font-black text-sm uppercase tracking-widest disabled:opacity-50 transition-all active:scale-98"
               >
-                {searchLoading ? t('search_page.searching') || 'Searching...' : `🔍  ${t('boundary_map.search_btn')}`}
+                <span className="flex items-center justify-center gap-2">{searchLoading ? (t('search_page.searching') || 'Searching...') : <><Search size={14} /> {t('boundary_map.search_btn')}</>}</span>
               </button>
             </div>
           </form>
@@ -785,8 +843,8 @@ const BoundaryMap = () => {
               ? 'bg-[#101828]/95 border-emerald-500/30 text-emerald-400'
               : 'bg-[#101828]/95 border-[#c9a84c]/30 text-[#c9a84c]'
             }`}>
-            <span className="text-xs">{STEPS[hintState].icon}</span>
-            <span className="font-black uppercase tracking-wider">{t(STEPS[hintState].title)}</span>
+            <StepIcon name={stepData.iconName} size={14} />
+            <span className="font-black uppercase tracking-wider">{t(stepData.title)}</span>
             {activePoly?.points?.length > 0 && (
               <span className="text-white/40 px-1.5 py-0.5 bg-white/5 rounded-full text-[9px] font-bold">
                 {activePoly.points.length} pts
@@ -827,7 +885,7 @@ const BoundaryMap = () => {
                 {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'} · {totalArea > 0 ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}` : t('boundary_map.no_boundary')}
               </p>
             </div>
-            <div className="text-2xl">🏞️</div>
+            <Map size={24} className="text-[#c9a84c]" />
           </div>
         )}
 
@@ -873,9 +931,9 @@ const BoundaryMap = () => {
         {(sheetState !== 'peek' || isDesktop) && (
           <div className="flex gap-2 px-4 pb-2 shrink-0">
             {[
-              { id: 'plots', label: `📍 ${t('boundary_map.plots_tab')}`, count: polygons.length },
-              { id: 'tools', label: `🛠 ${t('boundary_map.tools_tab')}` },
-              { id: 'export', label: `📤 ${t('boundary_map.export_tab')}` },
+              { id: 'plots', icon: <MapPin size={13} />, label: t('boundary_map.plots_tab'), count: polygons.length },
+              { id: 'tools', icon: <SlidersHorizontal size={13} />, label: t('boundary_map.tools_tab') },
+              { id: 'export', icon: <Download size={13} />, label: t('boundary_map.export_tab') },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -883,7 +941,7 @@ const BoundaryMap = () => {
                 className={`flex-1 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${activeTab === tab.id ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/5 text-white/40'
                   }`}
               >
-                {tab.label}
+                {tab.icon} {tab.label}
                 {tab.count !== undefined && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${activeTab === tab.id ? 'bg-[#1a2340]/20' : 'bg-white/10'}`}>{tab.count}</span>}
               </button>
             ))}
@@ -904,7 +962,7 @@ const BoundaryMap = () => {
                       <div className="text-[10px] text-white/40 font-black uppercase tracking-widest">{t('boundary_map.total_area')}</div>
                       <div className="text-[#c9a84c] text-xl font-black">{totalArea.toFixed(3)} <span className="text-sm font-bold opacity-60">{t('tools_page.acre').toLowerCase()}</span></div>
                     </div>
-                    <div className="text-3xl">🏞️</div>
+                    <AreaChart size={28} className="text-[#c9a84c]" />
                   </div>
                 )}
 
@@ -1017,6 +1075,62 @@ const BoundaryMap = () => {
                   </div>
                 ))}
 
+                {/* ── NEXT STEPS CARD — shows when any plot has a completed boundary ── */}
+                {totalArea > 0 && !isDrawing && (
+                  <div className="bg-gradient-to-br from-[#c9a84c]/15 to-[#c9a84c]/5 border border-[#c9a84c]/30 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-400" />
+                      <span className="text-white font-black text-xs uppercase tracking-widest">
+                        {language === 'en' ? 'Boundary Complete' : 'સીમા પૂર્ણ થઈ'}
+                      </span>
+                    </div>
+                    <p className="text-white/50 text-[11px] leading-relaxed">
+                      {language === 'en'
+                        ? 'Your land boundary has been drawn. You can now save & share the map link, or download a PDF report.'
+                        : 'તમારી જમીનની સીમા દોરાઈ ગઈ છે. હવે તમે નકશાની લિંક સેવ કરી શેર કરી શકો છો, અથવા PDF રીપોર્ટ ડાઉનલોડ કરી શકો છો.'}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setActiveTab('export'); handleSaveAndShare(); }}
+                        disabled={saving}
+                        className="flex-1 py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+                      >
+                        <Share2 size={14} />
+                        {language === 'en' ? 'Save & Share' : 'સેવ અને શેર'}
+                      </button>
+                      <button
+                        onClick={exportPDF}
+                        className="flex-1 py-3 bg-white/[0.06] border border-white/15 text-white rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all"
+                      >
+                        <FileText size={14} className="text-[#c9a84c]" />
+                        {language === 'en' ? 'PDF Report' : 'PDF રીપોર્ટ'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state — no boundary drawn yet, show clear guide */}
+                {totalArea === 0 && !isDrawing && polygons.every(p => p.points.length === 0) && (
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 text-center space-y-3">
+                    <Navigation size={28} className="text-[#c9a84c] mx-auto" />
+                    <div className="text-white font-black text-sm">
+                      {language === 'en' ? 'Ready to Measure Your Land' : 'જમીન માપવા તૈયાર'}
+                    </div>
+                    <p className="text-white/40 text-xs leading-relaxed">
+                      {language === 'en'
+                        ? 'Navigate to your land location on the map, then tap "Start Drawing" below to mark boundary corners.'
+                        : 'નકશા પર તમારી જમીન શોધો, પછી સીમાના ખૂણા નક્કી કરવા નીચે "દોરવાનું શરૂ કરો" દબાવો.'}
+                    </p>
+                    <button
+                      onClick={startDrawing}
+                      className="w-full py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+                    >
+                      <PenLine size={14} />
+                      {t('boundary_map.start_drawing')}
+                    </button>
+                  </div>
+                )}
+
                 {/* Add new plot */}
                 <button
                   onClick={addNewPlot}
@@ -1057,7 +1171,7 @@ const BoundaryMap = () => {
                         className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${tileMode === key ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
                           }`}
                       >
-                        <span className="text-lg">{key === 'satellite' ? '🛰' : key === 'hybrid' ? '🌍' : '🗺'}</span>
+                        {key === 'satellite' ? <Satellite size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} /> : key === 'hybrid' ? <Layers size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} /> : <Map size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} />}
                         <span>
                           {key === 'satellite'
                             ? (language === 'gu' ? 'સેટેલાઇટ' : 'Satellite')
@@ -1075,9 +1189,9 @@ const BoundaryMap = () => {
                   <div className="text-[10px] text-white/30 font-black uppercase tracking-widest mb-2 px-1">{t('boundary_map.measurement_unit')}</div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { value: 'acres', emoji: '🌾' },
-                      { value: 'sqft', emoji: '📐' },
-                      { value: 'sqyd', emoji: '📏' },
+                      { value: 'acres', icon: <LandPlot size={18} /> },
+                      { value: 'sqft', icon: <Maximize2 size={18} /> },
+                      { value: 'sqyd', icon: <Ruler size={18} /> },
                     ].map(u => (
                       <button
                         key={u.value}
@@ -1085,7 +1199,7 @@ const BoundaryMap = () => {
                         className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${unit === u.value ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
                           }`}
                       >
-                        <span className="text-lg">{u.emoji}</span>
+                        <span className={unit === u.value ? 'text-[#1a2340]' : 'text-[#c9a84c]'}>{u.icon}</span>
                         <span>
                           {u.value === 'acres'
                             ? t('tools_page.acre')
@@ -1227,7 +1341,7 @@ const BoundaryMap = () => {
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <h3 className="text-white font-black text-lg flex items-center gap-2">
-                  <span>🗺️</span> {t('boundary_map.tutorial_title')}
+                  <Map size={20} className="text-[#c9a84c]" /> {t('boundary_map.tutorial_title')}
                 </h3>
                 <button onClick={closeTutorial} className="text-white/30 hover:text-white p-1">
                   <X size={20} />
@@ -1239,28 +1353,28 @@ const BoundaryMap = () => {
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col items-center text-center space-y-3 min-h-[220px] justify-center">
                   {tutorialSlide === 0 && (
                     <>
-                      <div className="text-4xl animate-bounce">🔍</div>
+                      <div className="animate-bounce"><Search size={36} className="text-[#c9a84c]" /></div>
                       <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step1_title')}</div>
                       <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step1_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 1 && (
                     <>
-                      <div className="text-4xl animate-pulse">🎯</div>
+                      <div className="animate-pulse"><Target size={36} className="text-[#c9a84c]" /></div>
                       <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step2_title')}</div>
                       <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step2_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 2 && (
                     <>
-                      <div className="text-4xl">📏</div>
+                      <div><Ruler size={36} className="text-[#c9a84c]" /></div>
                       <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step3_title')}</div>
                       <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step3_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 3 && (
                     <>
-                      <div className="text-4xl">💾</div>
+                      <div><Download size={36} className="text-[#c9a84c]" /></div>
                       <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step4_title')}</div>
                       <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step4_desc')}</p>
                     </>

@@ -1,6 +1,9 @@
 import React from 'react';
 import { toast } from 'react-toastify';
 import { X, CheckCircle2, Printer, Download, Shield, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import { Capacitor } from '@capacitor/core';
+import { savePdfCrossPlatform } from '../utils/pdfDownloader';
 
 const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
     if (!isOpen || !receiptData) return null;
@@ -88,49 +91,243 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
 </html>`;
 
     /* ── Print the receipt modal ── */
-    const handlePrintReceipt = () => window.print();
-
-    /* ── Open Agreement in new tab + auto trigger print (Save as PDF) ── */
-    const handleDownloadAgreement = () => {
-        try {
-            const html = getAgreementDocument();
-            const newWin = window.open('', '_blank');
-            if (!newWin) {
-                toast.error('Popup blocked — please allow popups and try again.');
-                return;
-            }
-            newWin.document.open();
-            newWin.document.write(html);
-            newWin.document.close();
-            newWin.focus();
-            // Small delay to let the page render before print dialog
-            setTimeout(() => {
-                newWin.print();
-            }, 800);
-            toast.info('Use "Save as PDF" in the print dialog to download the agreement.');
-        } catch (err) {
-            console.error('Agreement open error:', err);
-            toast.error('Could not open agreement. Try the Download button instead.');
+    const handlePrintReceipt = () => {
+        if (Capacitor.isNativePlatform()) {
+            // On native, print is not available — generate a receipt PDF instead
+            handleDownloadReceiptPDF();
+        } else {
+            window.print();
         }
     };
 
-    /* ── Fallback: download raw HTML file (user opens in browser → print as PDF) ── */
-    const handleDownloadHTML = () => {
+    /* ── Helper: build the Agreement to Sell PDF using jsPDF ── */
+    const buildAgreementPDF = (doc) => {
+        const pw = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        const contentWidth = pw - margin * 2;
+        let y = 20;
+
+        // Title
+        doc.setFont('times', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('AGREEMENT TO SELL (TOKEN AGREEMENT)', pw / 2, y, { align: 'center' });
+        y += 2;
+        doc.setLineWidth(0.5);
+        doc.line(margin + 20, y, pw - margin - 20, y);
+        y += 12;
+
+        // Body helper
+        const addParagraph = (text, options = {}) => {
+            const fontSize = options.fontSize || 11;
+            const fontStyle = options.fontStyle || 'normal';
+            doc.setFont('times', fontStyle);
+            doc.setFontSize(fontSize);
+            const lines = doc.splitTextToSize(text, contentWidth);
+            const lineHeight = fontSize * 0.5;
+            // Check if we need a new page
+            if (y + lines.length * lineHeight > 275) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.text(lines, margin, y);
+            y += lines.length * lineHeight + 4;
+        };
+
+        const addSectionTitle = (text) => {
+            y += 4;
+            doc.setFont('times', 'bold');
+            doc.setFontSize(12);
+            doc.text(text, margin, y);
+            y += 8;
+        };
+
+        addParagraph(`This Agreement to Sell is made and executed at ${propertyLocation} on this ${agreementDate}.`);
+
+        addSectionTitle('BETWEEN');
+        addParagraph(`${sellerName} (hereinafter referred to as the "SELLER")`, { fontStyle: 'bold' });
+        doc.setFont('times', 'bold');
+        doc.setFontSize(11);
+        doc.text('AND', pw / 2, y, { align: 'center' });
+        y += 8;
+        addParagraph(`${buyerName} (hereinafter referred to as the "BUYER")`, { fontStyle: 'bold' });
+
+        addSectionTitle('WHEREAS');
+        addParagraph(`1. The Seller is the lawful and absolute owner of the property situated at ${propertyLocation}.`);
+        addParagraph('2. The Seller has agreed to sell and the Buyer has agreed to purchase the said property.');
+
+        addSectionTitle('TOTAL SALE CONSIDERATION');
+        addParagraph(`Rs. ${Number(receiptData.amount || 0).toLocaleString('en-IN')} (Rupees only)`);
+
+        addSectionTitle('TOKEN PAYMENT (CONFIRMATION)');
+        addParagraph(`On this day, the Buyer has paid a token amount of ${amountText} to the Seller as confirmation of this deal. The Seller hereby acknowledges receipt of the same.`);
+
+        addSectionTitle('BALANCE PAYMENT');
+        addParagraph('The remaining amount shall be paid by the Buyer at the time of final registration.');
+
+        addSectionTitle('NOTE');
+        addParagraph('This agreement confirms that the Buyer has given token money to the Seller for the above property.');
+
+        // Signatures
+        y += 20;
+        if (y > 240) { doc.addPage(); y = 30; }
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, margin + 60, y);
+        doc.line(pw - margin - 60, y, pw - margin, y);
+        y += 5;
+        doc.setFont('times', 'normal');
+        doc.setFontSize(10);
+        doc.text('Seller Signature', margin + 10, y);
+        doc.text('Buyer Signature', pw - margin - 50, y);
+
+        // Witnesses
+        y += 20;
+        doc.setFont('times', 'bold');
+        doc.setFontSize(11);
+        doc.text('WITNESSES', margin, y);
+        y += 8;
+        doc.setFont('times', 'normal');
+        doc.text('1. __________________________', margin, y);
+        y += 8;
+        doc.text('2. __________________________', margin, y);
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Agreement to Sell - ${receiptNumber} | Kharsan Properties`, pw / 2, 290, { align: 'center' });
+        }
+    };
+
+    /* ── Download Agreement as a real PDF (works on web + Android) ── */
+    const handleDownloadAgreement = async () => {
+        const toastId = toast.loading('Generating Agreement PDF...');
         try {
-            const html = getAgreementDocument();
-            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Agreement_to_Sell_${receiptNumber}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success('Downloaded! Open the file in Chrome and print as PDF.');
+            const doc = new jsPDF();
+            buildAgreementPDF(doc);
+            const filename = `Agreement_to_Sell_${receiptNumber}.pdf`;
+            await savePdfCrossPlatform(doc, filename, {
+                shareTitle: 'Agreement to Sell',
+                shareText: `Token Agreement - ${propertyTitle}`,
+            });
+            toast.update(toastId, { render: 'Agreement PDF downloaded!', type: 'success', isLoading: false, autoClose: 3000 });
         } catch (err) {
-            console.error(err);
-            toast.error('Download failed.');
+            console.error('Agreement PDF error:', err);
+            toast.update(toastId, { render: 'Failed to generate agreement PDF.', type: 'error', isLoading: false, autoClose: 3000 });
+        }
+    };
+
+    /* ── Download Receipt as a real PDF (works on web + Android) ── */
+    const handleDownloadReceiptPDF = async () => {
+        const toastId = toast.loading('Generating Receipt PDF...');
+        try {
+            const doc = new jsPDF();
+            const pw = doc.internal.pageSize.getWidth();
+            const margin = 15;
+            let y = 15;
+
+            // Header bar
+            doc.setFillColor(26, 35, 64);
+            doc.rect(0, 0, pw, 38, 'F');
+            doc.setTextColor(201, 168, 76);
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Kharsan Properties', pw / 2, 18, { align: 'center' });
+            doc.setFontSize(9);
+            doc.setTextColor(255, 255, 255);
+            doc.text('TRANSACTION RECEIPT · PAYMENT VERIFIED', pw / 2, 27, { align: 'center' });
+            doc.setFontSize(8);
+            doc.text(`Receipt #${receiptNumber}`, pw / 2, 34, { align: 'center' });
+
+            y = 48;
+
+            // Amount banner
+            doc.setFillColor(26, 35, 64);
+            doc.roundedRect(margin, y, pw - margin * 2, 20, 3, 3, 'F');
+            doc.setTextColor(201, 168, 76);
+            doc.setFontSize(8);
+            doc.text('AMOUNT PAID', margin + 5, y + 8);
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Rs. ${Number(receiptData.amount || 0).toLocaleString('en-IN')}`, margin + 5, y + 16);
+            doc.setFontSize(8);
+            doc.setTextColor(201, 168, 76);
+            doc.text('TOKEN PAID', pw - margin - 5, y + 12, { align: 'right' });
+            y += 28;
+
+            // Helper for rows
+            const addRow = (label, value) => {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(107, 114, 128);
+                doc.text(label, margin, y);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(26, 35, 64);
+                const valLines = doc.splitTextToSize(String(value), pw - margin * 2 - 55);
+                doc.text(valLines, margin + 55, y);
+                y += Math.max(valLines.length * 5, 6) + 2;
+            };
+
+            // Property details
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(156, 163, 175);
+            doc.text('PROPERTY DETAILS', margin, y);
+            y += 6;
+            addRow('Property', propertyTitle);
+            addRow('Location', propertyLocation);
+            addRow('Date & Time', createdAtText);
+
+            y += 4;
+            doc.setDrawColor(226, 232, 240);
+            doc.line(margin, y, pw - margin, y);
+            y += 6;
+
+            // Seller & Buyer
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(156, 163, 175);
+            doc.text('PARTIES', margin, y);
+            y += 6;
+            addRow('Seller', sellerName);
+            addRow('Seller Phone', sellerPhone);
+            addRow('Seller Email', sellerEmail);
+            y += 2;
+            addRow('Buyer', buyerName);
+            addRow('Buyer Phone', buyerPhone);
+            addRow('Buyer Email', buyerEmail);
+
+            y += 4;
+            doc.line(margin, y, pw - margin, y);
+            y += 6;
+
+            // Payment details
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(156, 163, 175);
+            doc.text('PAYMENT GATEWAY DETAILS', margin, y);
+            y += 6;
+            addRow('Gateway', 'Razorpay P2P (Verified)');
+            addRow('Order ID', orderId);
+            addRow('Transaction ID', transactionId);
+
+            // Footer
+            doc.setFontSize(7);
+            doc.setTextColor(150);
+            doc.text(`Kharsan Properties Authenticated | Verified at ${agreementTime}`, pw / 2, 285, { align: 'center' });
+
+            const filename = `Receipt_${receiptNumber}.pdf`;
+            await savePdfCrossPlatform(doc, filename, {
+                shareTitle: 'Transaction Receipt',
+                shareText: `Payment Receipt - ${propertyTitle}`,
+            });
+            toast.update(toastId, { render: 'Receipt PDF downloaded!', type: 'success', isLoading: false, autoClose: 3000 });
+        } catch (err) {
+            console.error('Receipt PDF error:', err);
+            toast.update(toastId, { render: 'Failed to generate receipt PDF.', type: 'error', isLoading: false, autoClose: 3000 });
         }
     };
 
@@ -253,7 +450,7 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                         <div className="bg-[#fffbf0] border border-[#c9a84c]/50 rounded-xl p-3 mb-5 flex items-start gap-2">
                             <FileText size={14} className="text-[#c9a84c] flex-shrink-0 mt-0.5" />
                             <p className="text-[10px] text-[#b8933a] font-600 leading-relaxed">
-                                <strong className="font-black">Agreement to Sell</strong> — Click <em>"Agreement PDF"</em> to open the legal token agreement document. In the browser print dialog, choose <strong>"Save as PDF"</strong> to download it.
+                                <strong className="font-black">Agreement to Sell</strong> — Click <em>"Agreement PDF"</em> to download the legal token agreement document. Click <em>"Receipt PDF"</em> to download the payment receipt.
                             </p>
                         </div>
 
@@ -285,12 +482,12 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                                 <FileText size={13} /> Agreement PDF
                             </button>
 
-                            {/* Download HTML fallback */}
+                            {/* Download Receipt PDF */}
                             <button
-                                onClick={handleDownloadHTML}
+                                onClick={handleDownloadReceiptPDF}
                                 className="flex-1 py-3 bg-[#c9a84c] hover:bg-[#b8933a] text-[#1a1200] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all uppercase tracking-widest shadow-md"
                             >
-                                <Download size={13} /> Download
+                                <Download size={13} /> Receipt PDF
                             </button>
                         </div>
                     </div>

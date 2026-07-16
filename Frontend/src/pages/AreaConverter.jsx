@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Copy, CopyCheck, History, Zap, ArrowLeftRight, RotateCcw, Download, GripVertical } from 'lucide-react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
+import { toast } from 'react-toastify';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { savePdfCrossPlatform } from '../utils/pdfDownloader';
 
 const AreaConverter = () => {
   const { language, t } = useLanguage();
@@ -279,13 +281,15 @@ const AreaConverter = () => {
     });
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     // Check if there's any data to export
     const hasData = Object.values(values).some(val => val !== '' && val !== '0');
     if (!hasData) {
-      alert('Please enter a value to convert before exporting.');
+      toast.warning(language === 'en' ? 'Please enter a value to convert before exporting.' : 'નિકાસ કરતાં પહેલાં રૂપાંતરિત કરવા માટે મૂલ્ય દાખલ કરો.');
       return;
     }
+    const toastId = toast.loading(language === 'en' ? 'Generating PDF...' : 'PDF બનાવી રહ્યા છીએ...');
+    try {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -441,8 +445,17 @@ const AreaConverter = () => {
       );
     }
 
-    // Save the PDF
-    doc.save(`area-conversion-${new Date().getTime()}.pdf`);
+    // Save the PDF (cross-platform: works on both web & Android)
+    const filename = `area-conversion-${new Date().getTime()}.pdf`;
+    await savePdfCrossPlatform(doc, filename, {
+      shareTitle: 'Area Conversion Report',
+      shareText: 'Here is your area conversion report',
+    });
+    toast.update(toastId, { render: language === 'en' ? 'PDF downloaded!' : 'PDF ડાઉનલોડ થયું!', type: 'success', isLoading: false, autoClose: 3000 });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.update(toastId, { render: language === 'en' ? 'PDF export failed' : 'PDF નિકાસ નિષ્ફળ', type: 'error', isLoading: false, autoClose: 3000 });
+    }
   };
 
   return (
