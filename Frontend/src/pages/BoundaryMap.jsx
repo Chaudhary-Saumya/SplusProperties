@@ -487,6 +487,27 @@ const BoundaryMap = () => {
       doc.text('PREMIUM LAND MAPPING SOLUTIONS', pageWidth / 2, 30, { align: 'center' });
       doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', pageWidth / 2, 38, { align: 'center' });
 
+      // "Powered by Kharsan Properties" in top-right of Navy header block
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const poweredLabel = 'Powered by ';
+      const companyLabel = 'Kharsan Properties';
+      const pWidth = doc.getTextWidth(poweredLabel);
+      const cWidth = doc.getTextWidth(companyLabel);
+      const totalPWidth = pWidth + cWidth;
+      const poweredX = pageWidth - 15 - totalPWidth; // 15mm from right edge
+      const poweredY = 10;
+
+      doc.setTextColor(200, 200, 200); // light gray on dark navy
+      doc.text(poweredLabel, poweredX, poweredY);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(201, 168, 76); // Gold
+      doc.text(companyLabel, poweredX + pWidth, poweredY);
+
+      // Link redirecting to properties.kharsan.com
+      doc.link(poweredX, poweredY - 3, totalPWidth, 5, { url: 'https://properties.kharsan.com' });
+
       if (imgData) {
         doc.setDrawColor(201, 168, 76); doc.setLineWidth(1.2);
         doc.rect((pageWidth - 182) / 2, 54, 182, 102, 'D');
@@ -518,11 +539,34 @@ const BoundaryMap = () => {
       doc.setFontSize(12); doc.setFont('helvetica', 'bold');
       doc.text(`TOTAL: ${total} ACRES`, pageWidth / 2, y + 5, { align: 'center' });
 
-      doc.setFontSize(8); doc.setTextColor(150);
-      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only.`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      doc.text(`Generated: ${date}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
+      // Footer divider line
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(20, pageHeight - 18, pageWidth - 20, pageHeight - 18);
 
-      const filename = `Kharsan-Boundary-${Date.now()}.pdf`;
+      // Play Store notice (clickable, center-aligned gray text)
+      doc.setFontSize(8.5);
+      doc.setTextColor(156, 163, 175); // Gray #9ca3af
+      doc.setFont('helvetica', 'bold');
+      const playText = 'Kharsan Properties App is available on Google Play Store';
+      const playWidth = doc.getTextWidth(playText);
+      doc.text(playText, pageWidth / 2, pageHeight - 11, { align: 'center' });
+      doc.link(pageWidth / 2 - playWidth / 2, pageHeight - 14, playWidth, 4, { url: 'https://play.google.com/store/apps/details?id=com.kharsan.properties' });
+
+      // Legal & Date line
+      doc.setFontSize(7.5);
+      doc.setTextColor(156, 163, 175);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only · Generated: ${date}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+      // Save filename with formatted date
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const yyyy = today.getFullYear();
+      const dateStr = `${dd}_${mm}_${yyyy}`;
+      const filename = `Kharsan_Properties_Report_${dateStr}.pdf`;
+
       await savePdfCrossPlatform(doc, filename, {
         shareTitle: 'Share Property Report',
         shareText: 'Here is your Land Plot Boundary Report',

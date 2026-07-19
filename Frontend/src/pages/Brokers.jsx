@@ -20,7 +20,7 @@ const BrokerCard = ({ broker, onClick, t }) => (
     >
         {/* Subtle background pattern */}
         <div className="absolute top-0 right-0 w-24 h-24 bg-[#c9a84c]/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
-        
+
         {/* Header: Avatar & Status */}
         <div className="flex items-start justify-between mb-4 sm:mb-6 relative z-10">
             <div className="relative">
@@ -31,7 +31,7 @@ const BrokerCard = ({ broker, onClick, t }) => (
                     <ShieldCheck size={12} className="text-[#15803d] sm:w-3.5 sm:h-3.5" />
                 </div>
             </div>
-            
+
             <div className="flex flex-col items-end">
                 <span className="text-[8px] sm:text-[9px] font-black text-[#15803d] bg-[#15803d]/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-widest border border-[#15803d]/20">
                     {t('brokers.verified')}
@@ -125,15 +125,15 @@ const Brokers = () => {
     });
 
     const brokers = brokersData || [];
-    const filteredBrokers = brokers.filter(b => 
+    const filteredBrokers = brokers.filter(b =>
         b.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
         <div className="min-h-screen bg-[#fcfaf5]">
-            <SEO 
-                title="Verified Real Estate Brokers & Agents" 
-                description="Connect with authorized real estate agents and land brokers who can assist with physical site visits and registry verification." 
+            <SEO
+                title="Verified Real Estate Brokers & Agents"
+                description="Connect with authorized real estate agents and land brokers who can assist with physical site visits and registry verification."
             />
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
@@ -155,21 +155,21 @@ const Brokers = () => {
 
                 {/* ── Page Header ── */}
                 <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-16">
-                    <motion.span 
+                    <motion.span
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="inline-block bg-[#c9a84c]/10 border border-[#c9a84c]/30 text-[#b8933a] text-[11px] font-black uppercase tracking-[0.2em] px-5 py-2 rounded-full mb-4 sm:mb-6 shadow-sm"
                     >
                         {t('brokers.verified_ecosystem')}
                     </motion.span>
-                    <motion.h1 
+                    <motion.h1
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="text-2xl sm:text-6xl font-black text-[#1a2340] mb-4 sm:mb-6 premium-text tracking-tight"
                     >
                         {t('brokers.connect_with_elite').split('Elite')[0]}<span className="text-[#c9a84c]">{t('brokers.elite_brokers')}</span>
                     </motion.h1>
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
@@ -186,7 +186,7 @@ const Brokers = () => {
                         <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-[#c9a84c] group-focus-within:scale-110 transition-transform duration-300">
                             <Search size={18} />
                         </div>
-                        <input 
+                        <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -226,7 +226,7 @@ const Brokers = () => {
                 ) : isError ? (
                     <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
                 ) : filteredBrokers.length > 0 ? (
-                    <motion.div 
+                    <motion.div
                         initial="hidden"
                         animate="visible"
                         variants={{

@@ -465,7 +465,7 @@ const Navbar = () => {
               <svg viewBox="0 0 500 500" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
                 {/* Background Accent - Soft Blue/Grey Rect */}
                 <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
-                
+
                 {/* Architectural Lines - Dark Navy */}
                 <g stroke="#1a2340" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
                   {/* Left building part */}
@@ -477,24 +477,24 @@ const Navbar = () => {
                   {/* Base line for center */}
                   <path d="M190 320 H295" strokeWidth="12" />
                 </g>
-                
+
                 {/* Branding Text */}
-                <text 
-                  x="250" 
-                  y="415" 
-                  textAnchor="middle" 
-                  className="logo-text-svg" 
-                  fill="#c9a84c" 
+                <text
+                  x="250"
+                  y="415"
+                  textAnchor="middle"
+                  className="logo-text-svg"
+                  fill="#c9a84c"
                   style={{ fontSize: '82px', fontWeight: '900', fontFamily: 'Nunito Sans, sans-serif' }}
                 >
                   KHARSAN
                 </text>
-                <text 
-                  x="250" 
-                  y="470" 
-                  textAnchor="middle" 
-                  className="logo-text-svg" 
-                  fill="#1a2340" 
+                <text
+                  x="250"
+                  y="470"
+                  textAnchor="middle"
+                  className="logo-text-svg"
+                  fill="#1a2340"
                   style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px', fontFamily: 'Nunito Sans, sans-serif' }}
                 >
                   PROPERTIES
@@ -649,7 +649,7 @@ const Navbar = () => {
           <Link to="/about" className="mob-item" onClick={() => setIsOpen(false)}>{t('navbar.about')}</Link>
 
           {/* Properties Dropdown */}
-          <button 
+          <button
             className={`mob-accordion-header ${mobileSections.properties ? 'active' : ''}`}
             onClick={() => toggleMobileSection('properties')}
           >
@@ -669,7 +669,7 @@ const Navbar = () => {
           )}
 
           {/* Tools Dropdown */}
-          <button 
+          <button
             className={`mob-accordion-header ${mobileSections.tools ? 'active' : ''}`}
             onClick={() => toggleMobileSection('tools')}
           >
@@ -689,7 +689,7 @@ const Navbar = () => {
           {isAuthenticated && (
             <>
               {/* My Account Dropdown */}
-              <button 
+              <button
                 className={`mob-accordion-header ${mobileSections.account ? 'active' : ''}`}
                 onClick={() => toggleMobileSection('account')}
               >
@@ -704,7 +704,7 @@ const Navbar = () => {
               )}
 
               {/* Dashboard Dropdown */}
-              <button 
+              <button
                 className={`mob-accordion-header ${mobileSections.dashboard ? 'active' : ''}`}
                 onClick={() => toggleMobileSection('dashboard')}
               >

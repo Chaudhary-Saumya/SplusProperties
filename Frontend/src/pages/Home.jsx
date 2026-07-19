@@ -334,17 +334,17 @@ const Footer = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   return (
-    <footer className="bg-[#1a2340] text-white pt-16 pb-10 px-6 border-t-[5px] border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
+    <footer className="bg-[#1a2340] text-white pt-10 pb-6 md:pt-16 md:pb-10 px-6 border-t-[5px] border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-16">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 mb-10 md:mb-16">
           
           {/* Left Side: Logo */}
           <div className="lg:w-1/3 flex flex-col items-center lg:items-start text-center lg:text-left">
             <div 
               onClick={() => { window.scrollTo(0,0); navigate('/'); }}
-              className="cursor-pointer mb-6 transform scale-90 md:scale-100 lg:origin-left"
+              className="cursor-pointer mb-4 md:mb-6 transform scale-90 md:scale-100 lg:origin-left"
             >
-              <svg viewBox="0 0 500 500" className="h-[70px] md:h-[90px] w-auto mx-auto lg:mx-0" xmlns="http://www.w3.org/2000/svg">
+              <svg viewBox="0 0 500 500" className="h-[60px] md:h-[90px] w-auto mx-auto lg:mx-0" xmlns="http://www.w3.org/2000/svg">
                 <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
                 <g stroke="#fff" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
                   <path d="M25 320 H90 V225 L190 150" />
@@ -356,67 +356,67 @@ const Footer = () => {
                 <text x="250" y="470" textAnchor="middle" fill="#fff" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px' }}>PROPERTIES</text>
               </svg>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed mb-8 max-w-xs md:max-w-sm mx-auto lg:mx-0">
+            <p className="text-white/50 text-xs md:text-sm leading-relaxed mb-6 md:mb-8 max-w-xs md:max-w-sm mx-auto lg:mx-0">
               {t('footer.desc')}
             </p>
             <div className="flex gap-4 justify-center lg:justify-start">
-              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <Globe size={18} />
+              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
+                <Globe size={16} />
               </a>
-              <a href="mailto:support@kharsan.com" title="Email" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <Mail size={18} />
+              <a href="mailto:support@kharsan.com" title="Email" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
+                <Mail size={16} />
               </a>
-              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <MessageCircle size={18} />
+              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
+                <MessageCircle size={16} />
               </a>
             </div>
           </div>
 
           {/* Right Side: Links */}
-          <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6 text-center sm:text-left mt-4 lg:mt-0">
+          <div className="lg:w-2/3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 text-left mt-4 lg:mt-0">
             {/* Quick Links */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.explore')}</h4>
-              <div className="flex flex-col gap-3">
-                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.home')}</Link>
-                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.about_us')}</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.trending_plots')}</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.verified_sellers')}</Link>
+              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.explore')}</h4>
+              <div className="flex flex-col gap-2 md:gap-3">
+                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.home')}</Link>
+                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.about_us')}</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.trending_plots')}</Link>
+                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.verified_sellers')}</Link>
               </div>
             </div>
 
             {/* Services */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.services')}</h4>
-              <div className="flex flex-col gap-3">
-                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.buy_property')}</Link>
-                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.sell_property')}</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.land_mapping')}</Link>
-                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.broker_connect')}</Link>
+              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.services')}</h4>
+              <div className="flex flex-col gap-2 md:gap-3">
+                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.buy_property')}</Link>
+                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.sell_property')}</Link>
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.land_mapping')}</Link>
+                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.broker_connect')}</Link>
               </div>
             </div>
 
             {/* Tools */}
             <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.smart_tools')}</h4>
-              <div className="flex flex-col gap-3">
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.boundary_map')}</Link>
-                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.area_converter')}</Link>
-                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-sm font-semibold">{t('footer.saved_boundaries')}</Link>
+              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.smart_tools')}</h4>
+              <div className="flex flex-col gap-2 md:gap-3">
+                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.boundary_map')}</Link>
+                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.area_converter')}</Link>
+                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.saved_boundaries')}</Link>
               </div>
             </div>
 
             {/* Contact */}
-            <div>
-              <h4 className="text-[#c9a84c] text-sm font-extrabold uppercase tracking-[1.5px] mb-5">{t('footer.contact')}</h4>
-              <div className="flex flex-col gap-4 items-center sm:items-start">
-                <a href="mailto:support@kharsan.com" className="flex gap-3 items-center group">
-                  <Mail size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold break-all">support@kharsan.com</span>
+            <div className="col-span-1">
+              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.contact')}</h4>
+              <div className="flex flex-col gap-3 md:gap-4 items-start">
+                <a href="mailto:support@kharsan.com" className="flex gap-2.5 items-center group">
+                  <Mail size={14} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-[10.5px] sm:text-xs md:text-sm font-semibold break-all">support@kharsan.com</span>
                 </a>
-                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="flex gap-3 items-center group">
-                  <Globe size={16} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-sm font-semibold break-all">properties.kharsan.com</span>
+                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="flex gap-2.5 items-center group">
+                  <Globe size={14} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
+                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-[10.5px] sm:text-xs md:text-sm font-semibold break-all">properties.kharsan.com</span>
                 </a>
               </div>
             </div>
@@ -424,14 +424,14 @@ const Footer = () => {
         </div>
 
         {/* Bottom Strip */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
-          <p className="text-white/40 text-sm font-semibold">
+        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 text-center md:text-left">
+          <p className="text-white/40 text-xs md:text-sm font-semibold">
             © {new Date().getFullYear()} {t('footer.rights_reserved')}
           </p>
-          <div className="flex flex-wrap justify-center gap-6">
-            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.privacy_policy')}</Link>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.terms_of_service')}</a>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-xs font-bold">{t('footer.cookie_policy')}</a>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.privacy_policy')}</Link>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.terms_of_service')}</a>
+            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.cookie_policy')}</a>
           </div>
         </div>
       </div>
@@ -600,32 +600,50 @@ const MobileEntrance = () => {
           {language === 'en' ? 'Quick Access' : 'ઝડપી ઍક્સેસ'}
         </p>
         <div className="grid grid-cols-2 gap-3.5">
-          {cards.map((card, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.06 }}
-              onClick={() => navigate(card.link)}
-              className="bg-white border border-[#e2d9c5] active:border-[#c9a84c] active:scale-[0.97] transition-all rounded-[22px] p-4 flex flex-col justify-between aspect-square cursor-pointer shadow-sm hover:shadow-md"
-            >
-              {/* Top icon */}
-              <div className="w-10 h-10 rounded-2xl bg-[#f8f5ee] border border-[#e2d9c5]/60 flex items-center justify-center shadow-sm">
-                {card.icon}
-              </div>
+          {cards.map((card, index) => {
+            const isAreaConverter = card.link === '/area-converter';
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.06 }}
+                onClick={() => navigate(card.link)}
+                className={`relative active:scale-[0.97] transition-all rounded-[22px] p-4 flex flex-col justify-between aspect-square cursor-pointer shadow-sm hover:shadow-md ${
+                  isAreaConverter
+                    ? 'bg-[#fdfaf2] border-2 border-[#c9a84c] shadow-[0_6px_20px_rgba(201,168,76,0.12)]'
+                    : 'bg-white border border-[#e2d9c5] active:border-[#c9a84c]'
+                }`}
+              >
+                {/* Popular Badge for Area Converter */}
+                {isAreaConverter && (
+                  <span className="absolute top-3.5 right-3.5 bg-[#c9a84c] text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">
+                    {language === 'en' ? 'Popular' : 'પ્રખ્યાત'}
+                  </span>
+                )}
 
-              {/* Title and subtitle */}
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[#1a2340] font-black text-[14px] leading-tight flex items-center gap-0.5">
-                  {card.title}
-                  <ChevronRight size={12} className="text-[#c9a84c] opacity-80 ml-0.5" />
-                </span>
-                <span className="text-[#6b7280] text-[10.5px] font-semibold leading-tight">
-                  {card.desc}
-                </span>
-              </div>
-            </motion.div>
-          ))}
+                {/* Top icon */}
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border ${
+                  isAreaConverter
+                    ? 'bg-[#c9a84c]/15 border-[#c9a84c]/30'
+                    : 'bg-[#f8f5ee] border-[#e2d9c5]/60'
+                }`}>
+                  {card.icon}
+                </div>
+
+                {/* Title and subtitle */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[#1a2340] font-black text-[14px] leading-tight flex items-center gap-0.5">
+                    {card.title}
+                    <ChevronRight size={12} className="text-[#c9a84c] opacity-80 ml-0.5" />
+                  </span>
+                  <span className="text-[#6b7280] text-[10.5px] font-semibold leading-tight">
+                    {card.desc}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </div>

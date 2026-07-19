@@ -55,9 +55,9 @@ const ListingCard = ({ listing, sellerPhone, wishlist, toggleWishlist, seller })
                     />
                 ) : hasCoords ? (
                     <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                        <MapContainer 
-                            center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} 
-                            zoom={14} 
+                        <MapContainer
+                            center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
+                            zoom={14}
                             zoomControl={false}
                             dragging={false}
                             doubleClickZoom={false}
@@ -256,7 +256,7 @@ const SellerProfile = () => {
 
     useEffect(() => {
         if (isAuthenticated && currentUser?.favorites) {
-            const ids = currentUser.favorites.map(fav => 
+            const ids = currentUser.favorites.map(fav =>
                 typeof fav === 'string' ? fav : (fav?._id || fav?.id)
             ).filter(Boolean);
             setWishlist(new Set(ids));
@@ -326,7 +326,7 @@ const SellerProfile = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl" />)}
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl" />)}
                     </div>
                 </div>
                 <div className="space-y-4">

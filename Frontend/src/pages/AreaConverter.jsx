@@ -295,20 +295,41 @@ const AreaConverter = () => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Add title
-    doc.setFontSize(24);
+    // "Powered by Kharsan Properties" in top-right
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const poweredLabel = 'Powered by ';
+    const companyLabel = 'Kharsan Properties';
+    const pWidth = doc.getTextWidth(poweredLabel);
+    const cWidth = doc.getTextWidth(companyLabel);
+    const totalPWidth = pWidth + cWidth;
+    const poweredX = pageWidth - 20 - totalPWidth;
+    const poweredY = 12;
+
+    doc.setTextColor(100, 116, 139); // Gray
+    doc.text(poweredLabel, poweredX, poweredY);
+
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(201, 168, 76); // Gold
-    doc.text('Area Conversion Report', pageWidth / 2, 20, { align: 'center' });
+    doc.text(companyLabel, poweredX + pWidth, poweredY);
 
-    // Add subtitle
-    doc.setFontSize(10);
+    // Link redirecting to properties.kharsan.com
+    doc.link(poweredX, poweredY - 3, totalPWidth, 5, { url: 'https://properties.kharsan.com' });
+
+    // Add report title (centered since logo is removed)
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(201, 168, 76); // Gold
+    doc.text('Area Conversion Report', pageWidth / 2, 22, { align: 'center' });
+
+    // Add subtitle (centered)
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(26, 35, 64); // Navy
     doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, 28, { align: 'center' });
 
-    // Add line
-    doc.setDrawColor(201, 168, 76);
+    // Add gold decorative line under header block
+    doc.setDrawColor(201, 168, 76); // Gold
     doc.setLineWidth(0.8);
     doc.line(20, 32, pageWidth - 20, 32);
 
@@ -322,19 +343,29 @@ const AreaConverter = () => {
     const col2Width = 50;
     const col3Width = 40;
     const startX = 20;
+    const tableStartY = yPos - 5; // y = 35
 
-    // Table header
-    doc.setFillColor(26, 35, 64); // Navy
-    doc.rect(startX, yPos - 5, col1Width + col2Width + col3Width, lineHeight + 2, 'F');
+    // Table header background (Navy)
+    doc.setFillColor(26, 35, 64);
+    doc.rect(startX, tableStartY, col1Width + col2Width + col3Width, lineHeight + 2, 'F');
 
+    // Table header text (properly aligned)
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
+    
+    // Column 1 Header: Unit Name (Left-aligned)
     doc.text('Unit Name', startX + 3, yPos + 2);
-    doc.text('Value', startX + col1Width + 3, yPos + 2);
-    doc.text('Unit', startX + col1Width + col2Width + 3, yPos + 2);
+    
+    // Column 2 Header: Value (Right-aligned)
+    const valHeaderWidth = doc.getTextWidth('Value');
+    doc.text('Value', startX + col1Width + col2Width - 5 - valHeaderWidth, yPos + 2);
+    
+    // Column 3 Header: Unit (Center-aligned)
+    const unitHeaderWidth = doc.getTextWidth('Unit');
+    doc.text('Unit', startX + col1Width + col2Width + (col3Width / 2) - (unitHeaderWidth / 2), yPos + 2);
 
-    yPos += lineHeight + 3;
+    yPos += lineHeight + 2;
 
     // Table rows
     doc.setFontSize(10);
@@ -362,11 +393,11 @@ const AreaConverter = () => {
       doc.setFont('helvetica', 'bold');
       const valueText = values[unit.value];
       const valueWidth = doc.getTextWidth(valueText);
-      doc.text(valueText, startX + col1Width + col2Width - 3 - valueWidth, yPos + 2);
+      doc.text(valueText, startX + col1Width + col2Width - 5 - valueWidth, yPos + 2);
 
       // Unit code (center)
       doc.setFont('helvetica', 'normal');
-      const unitCode = unit.value.replace('_', ' ').toUpperCase();
+      const unitCode = unit.value.replace('vigha', 'bigha').replace('_', ' ').toUpperCase();
       const unitCodeWidth = doc.getTextWidth(unitCode);
       doc.text(unitCode, startX + col1Width + col2Width + (col3Width / 2) - (unitCodeWidth / 2), yPos + 2);
 
@@ -376,77 +407,123 @@ const AreaConverter = () => {
     // Add border around table
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
-    doc.rect(startX, 37, col1Width + col2Width + col3Width, yPos - 37);
+    doc.rect(startX, tableStartY, col1Width + col2Width + col3Width, yPos - tableStartY);
 
     // Add Pricing Valuation if provided
     const calculatedTotal = parseFloat(totalPrice);
     if (totalPrice && calculatedTotal > 0 && values.guntha && parseFloat(values.guntha) > 0) {
       yPos += 15;
-      if (yPos > pageHeight - 60) {
+      // Height of pricing box is 45mm, needs safe padding
+      if (yPos > pageHeight - 65) {
         doc.addPage();
-        yPos = 20;
+        yPos = 25;
       }
 
-      // Section title
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(201, 168, 76); // Gold
-      doc.text('Valuation & Unit Rates', startX, yPos);
+      // Pricing Valuation card container
+      doc.setFillColor(250, 249, 245); // #faf9f5 light warm color
+      doc.setDrawColor(201, 168, 76); // Gold #c9a84c border
+      doc.setLineWidth(0.3);
+      doc.rect(startX, yPos - 5, col1Width + col2Width + col3Width, 45, 'FD');
 
-      yPos += 8;
-      doc.setFontSize(10);
+      // Card Title: Valuation & Unit Rates
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(26, 35, 64); // Navy
+      doc.setTextColor(201, 168, 76);
+      doc.text('Valuation & Unit Rates', startX + 5, yPos + 2);
 
+      // Card Divider Line
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(startX + 5, yPos + 5, startX + col1Width + col2Width + col3Width - 5, yPos + 5);
+
+      // Total Property Price
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 35, 64);
       const totalFormatted = 'Rs. ' + calculatedTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-      doc.text(`Total Property Price: ${totalFormatted}`, startX, yPos);
+      doc.text(`Total Property Price: ${totalFormatted}`, startX + 5, yPos + 11);
 
-      yPos += 6;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139); // Gray
-      doc.text('Equivalent rates for major units:', startX, yPos);
+      // Subtitle
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'oblique');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Equivalent rates for major units:', startX + 5, yPos + 17);
 
-      yPos += 6;
+      // Rates list split in two columns
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(26, 35, 64);
+      doc.setFontSize(9.5);
 
-      const ratesToPrint = ['guntha', 'hectare', 'aare', 'acre', 'sqft'];
-      ratesToPrint.forEach((uKey) => {
+      const formatRateValue = (val) => {
+        if (val % 1 === 0) {
+          return val.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        } else if (val < 1) {
+          return val.toLocaleString('en-IN', { maximumFractionDigits: 4, minimumFractionDigits: 2 });
+        } else {
+          return val.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+        }
+      };
+
+      // Left Column items
+      const leftRates = ['guntha', 'hectare', 'aare'];
+      leftRates.forEach((uKey, idx) => {
         const uLabel = orderedUnits.find(ou => ou.value === uKey)?.label || uKey;
         const cleanLabel = uLabel.replace(/\([^)]*\)/g, '').split('/')[0].trim();
         const uPrice = calculateUnitPrice(uKey);
+        const formattedPrice = formatRateValue(uPrice);
+        doc.text(`• Rate per 1 ${cleanLabel}: Rs. ${formattedPrice}`, startX + 8, yPos + 23 + idx * 6);
+      });
 
-        let formattedPrice = '';
-        if (uPrice % 1 === 0) {
-          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-        } else if (uPrice < 1) {
-          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 4, minimumFractionDigits: 2 });
-        } else {
-          formattedPrice = uPrice.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
-        }
-
-        doc.text(`* Rate per 1 ${cleanLabel}: Rs. ${formattedPrice}`, startX + 5, yPos);
-        yPos += 5;
+      // Right Column items
+      const rightRates = ['acre', 'sqft'];
+      rightRates.forEach((uKey, idx) => {
+        const uLabel = orderedUnits.find(ou => ou.value === uKey)?.label || uKey;
+        const cleanLabel = uLabel.replace(/\([^)]*\)/g, '').split('/')[0].trim();
+        const uPrice = calculateUnitPrice(uKey);
+        const formattedPrice = formatRateValue(uPrice);
+        doc.text(`• Rate per 1 ${cleanLabel}: Rs. ${formattedPrice}`, startX + 95, yPos + 23 + idx * 6);
       });
     }
 
-    // Footer
+    // Footer with gray line, properties.kharsan.com website, play store message, and page count
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.setFont('helvetica', 'normal');
-      doc.text(
-        `Page ${i} of ${pageCount} | LandSelling Area Converter`,
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: 'center' }
-      );
+      
+       // Footer divider line
+       doc.setDrawColor(226, 232, 240);
+       doc.setLineWidth(0.3);
+       doc.line(20, pageHeight - 18, pageWidth - 20, pageHeight - 18);
+ 
+       // Play Store notice (clickable, center-aligned gray text)
+       doc.setFontSize(8.5);
+       doc.setTextColor(156, 163, 175); // Gray #9ca3af
+       doc.setFont('helvetica', 'bold');
+       const playText = 'Kharsan Properties App is available on Google Play Store';
+       const playWidth = doc.getTextWidth(playText);
+       doc.text(playText, pageWidth / 2, pageHeight - 11, { align: 'center' });
+       doc.link(pageWidth / 2 - playWidth / 2, pageHeight - 14, playWidth, 4, { url: 'https://play.google.com/store/apps/details?id=com.kharsan.properties' });
+ 
+       // Page numbers (smaller text)
+       doc.setFontSize(7.5);
+       doc.setTextColor(156, 163, 175);
+       doc.setFont('helvetica', 'normal');
+       doc.text(
+         `Page ${i} of ${pageCount}`,
+         pageWidth / 2,
+         pageHeight - 5,
+         { align: 'center' }
+       );
     }
 
     // Save the PDF (cross-platform: works on both web & Android)
-    const filename = `area-conversion-${new Date().getTime()}.pdf`;
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const dateStr = `${dd}_${mm}_${yyyy}`;
+    const filename = `Kharsan_Properties_Report_${dateStr}.pdf`;
+
     await savePdfCrossPlatform(doc, filename, {
       shareTitle: 'Area Conversion Report',
       shareText: 'Here is your area conversion report',
@@ -615,10 +692,10 @@ const AreaConverter = () => {
               {/* Field 2: Rate per Unit */}
               <div className="text-left">
                 <label className="block text-[10px] sm:text-xs font-extrabold text-[#b8933a] uppercase tracking-wider mb-1">
-                  {language === 'en' ? `Price per 1 ${getShortLabel(priceUnit)} (₹)` : `૧ ${getShortLabel(priceUnit)} નો ભાવ (₹)`}
+                  {language === 'en' ? 'Price per 1 (₹)' : '૧ નો ભાવ (₹)'}
                 </label>
                 <div className="flex gap-2">
-                  <div className="relative flex items-center flex-1">
+                  <div className="relative flex items-center flex-1 order-2 sm:order-1">
                     <span className="absolute left-3 text-[#1a2340] font-extrabold text-sm sm:text-base">₹</span>
                     <input
                       type="number"
@@ -626,13 +703,13 @@ const AreaConverter = () => {
                       value={unitRate}
                       onChange={(e) => handleUnitRateChange(e.target.value)}
                       className="w-full h-11 pl-8 pr-3 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none transition-all bg-white text-[#1a2340] placeholder:text-[#d0c5b0]"
-                      placeholder={language === 'en' ? `Enter price per 1 ${getShortLabel(priceUnit)}` : `૧ ${getShortLabel(priceUnit)} નો ભાવ`}
+                      placeholder={language === 'en' ? 'Enter rate' : 'ભાવ દાખલ કરો'}
                     />
                   </div>
                   <select
                     value={priceUnit}
                     onChange={(e) => handlePriceUnitChange(e.target.value)}
-                    className="px-2 sm:px-3 h-11 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none bg-white text-[#1a2340] shrink-0"
+                    className="px-2 sm:px-3 h-11 border-2 border-[#e2d9c5] focus:border-[#c9a84c] rounded-lg text-xs sm:text-sm font-bold focus:outline-none bg-white text-[#1a2340] shrink-0 order-1 sm:order-2"
                   >
                     {orderedUnits.map(unit => (
                       <option key={unit.value} value={unit.value}>

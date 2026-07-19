@@ -1050,7 +1050,7 @@ const PropertyDetails = () => {
                             </div>
 
                             {/* Token Reservation Card */}
-                            {listing.isBookingEnabled && listing.tokenAmount > 0 && (
+                            {listing.isBookingEnabled && listing.tokenAmount > 0 && (systemSettings?.isInstantBookingEnabled !== false || listing.isTokened) && (
                                 <div className={`rounded-3xl p-6 border shadow-md transition-all ${listing.isTokened
                                     ? 'bg-emerald-50/50 border-emerald-100'
                                     : systemSettings?.isInstantBookingEnabled === false

@@ -165,9 +165,30 @@ const LayoutWrapper = ({ children }) => {
   );
 };
 
+import { App as CapacitorApp } from '@capacitor/app';
+
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // ── Capacitor Back Button Handling ─────────────────────────────
+    // This logic ensures the app goes back in history instead of exiting
+    // on every back button press.
+    const backListener = CapacitorApp.addListener('backButton', () => {
+      if (location.pathname === '/') {
+        // If we are on the home page, exit the app
+        CapacitorApp.exitApp();
+      } else {
+        // Otherwise, go back one step in history
+        navigate(-1);
+      }
+    });
+
+    return () => {
+      backListener.then(l => l.remove());
+    };
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
