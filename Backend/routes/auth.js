@@ -12,6 +12,9 @@ const {
     logout,
     googleLogin,
     completeProfile,
+    sendPhoneOTP,
+    verifyPhoneOTP,
+    toggleBrokerRole,
     addPaymentAccount,
     updatePaymentAccount,
     deletePaymentAccount,
@@ -57,34 +60,33 @@ router.post('/register', [
     check('name', 'Name is required').not().isEmpty(),
     check('email', 'Please include a valid email').isEmail(),
     check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
-    check('role', 'Role must be Buyer, Seller, or Broker').isIn(['Buyer', 'Seller', 'Broker']),
     validate
 ], register);
 
 router.post('/login', [
-    check('email', 'Please include a valid email').isEmail(),
+    check('email', 'Please enter your registered email or phone number').not().isEmpty(),
     check('password', 'Password is required').exists(),
     validate
 ], login);
 
 router.post('/verify-otp', otpVerifyLimiter, [
-    check('email', 'Email is required').isEmail(),
+    check('email', 'Email is required').not().isEmpty(),
     check('otp', 'OTP must be 6 digits').isLength({ min: 6, max: 6 }),
     validate
 ], verifyOTP);
 
 router.post('/resend-otp', otpResendLimiter, [
-    check('email', 'Email is required').isEmail(),
+    check('email', 'Email is required').not().isEmpty(),
     validate
 ], resendOTP);
 
 router.post('/forgot-password', forgotPasswordLimiter, [
-    check('email', 'Please include a valid email').isEmail(),
+    check('email', 'Please enter your registered email or phone number').not().isEmpty(),
     validate
 ], forgotPassword);
 
 router.post('/reset-password', [
-    check('email', 'Please include a valid email').isEmail(),
+    check('email', 'Email or phone is required').not().isEmpty(),
     check('otp', 'OTP must be 6 digits').isLength({ min: 6, max: 6 }),
     check('newPassword', 'Password must be 6 or more characters').isLength({ min: 6 }),
     validate
@@ -97,6 +99,9 @@ router.post('/favorites/:id', protect, toggleFavorite);
 // Profile & Sessions
 router.put('/updatedetails', protect, updateDetails);
 router.put('/complete-profile', protect, completeProfile);
+router.post('/send-phone-otp', protect, sendPhoneOTP);
+router.post('/verify-phone-otp', protect, verifyPhoneOTP);
+router.put('/toggle-broker', protect, toggleBrokerRole);
 router.put('/updatepassword', protect, updatePassword);
 router.get('/sessions', protect, getSessions);
 router.delete('/sessions/:id', protect, revokeSession);

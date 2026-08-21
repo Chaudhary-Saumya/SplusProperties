@@ -66,8 +66,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['Buyer', 'Seller', 'Broker', 'Admin'],
-        default: 'Buyer'
+        enum: ['User', 'Buyer', 'Seller', 'Broker', 'Admin'],
+        default: 'User'
     },
     phone: {
         type: String,
@@ -79,6 +79,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         unique: true,
         sparse: true
+    },
+    profileImage: {
+        type: String,
+        default: ''
     },
     favorites: [{
         type: mongoose.Schema.ObjectId,
@@ -121,9 +125,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    tokenVersion: {
+        type: Number,
+        default: 0
+    },
     otp: String,        // stores hashed OTP
     otpExpire: Date
 }, { timestamps: true });
+
 
 // Encrypt password before save
 userSchema.pre('save', async function() {

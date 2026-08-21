@@ -194,12 +194,22 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     
-    // Start background ranking score updater (every 1 hour)
+    // Start background ranking score updater (every 30 minutes)
     const { updateAllScores } = require('./services/rankingService');
+    
+    // Initial run after 5 second boot delay
     setTimeout(() => {
-        updateAllScores().catch(err => console.error('Error in initial ranking calculation:', err));
+        console.log(`[${new Date().toISOString()}] Running initial ranking calculation...`);
+        updateAllScores().then(result => {
+            if (result.success) {
+                console.log(`[${new Date().toISOString()}] Initial ranking complete: ${result.count} listings, ${result.elapsedSeconds}s`);
+            }
+        }).catch(err => console.error('Error in initial ranking calculation:', err));
     }, 5000);
+
+    // Recurring: every 30 minutes
     setInterval(() => {
+        console.log(`[${new Date().toISOString()}] Running scheduled ranking calculation...`);
         updateAllScores().catch(err => console.error('Error in periodic ranking calculation:', err));
-    }, 60 * 60 * 1000);
+    }, 30 * 60 * 1000);
 });

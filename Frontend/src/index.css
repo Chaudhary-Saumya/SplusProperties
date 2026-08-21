@@ -26,14 +26,98 @@
 
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
+    animation: fadeIn 0.3s ease-out forwards;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  @keyframes slideLeft {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .animate-slide-left {
+    animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 }
+
+/* Production Dual Range Slider */
+.range-slider-input {
+  pointer-events: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.range-slider-input::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+  height: 100%;
+}
+
+.range-slider-input::-moz-range-track {
+  background: transparent;
+  border: none;
+  height: 100%;
+}
+
+.range-slider-input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1a2340;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.range-slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.range-slider-input::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.25);
+}
+
+.range-slider-input.max-thumb::-webkit-slider-thumb {
+  background: #c9a84c;
+}
+
+.range-slider-input::-moz-range-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1a2340;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.range-slider-input::-moz-range-thumb:hover {
+  transform: scale(1.18);
+}
+
+.range-slider-input::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.25);
+}
+
+.range-slider-input.max-thumb::-moz-range-thumb {
+  background: #c9a84c;
+}
+
 
 @media print {
   body {

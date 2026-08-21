@@ -25,7 +25,8 @@ const ForgotPassword = () => {
             await forgotPassword(email);
             setStep(2);
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to send OTP. Please check your email.');
+            const serverMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to send OTP. Please check your email or phone number.';
+            setError(serverMsg);
         } finally {
             setLoading(false);
         }

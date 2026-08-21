@@ -46,8 +46,9 @@ const Register = () => {
         setError(null);
         setLoading(true);
         try {
-            await register(formData);
-            navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
+            const data = await register(formData);
+            if (data?.user?.role === 'Admin' || formData.role === 'Admin') navigate('/admin');
+            else navigate('/');
         } catch (err) {
             // Check for specific backend message first, then error field, then fallback
             const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.';
@@ -85,22 +86,16 @@ const Register = () => {
 
     const roles = [
         { 
-            value: 'Buyer',  
-            label: language === 'en' ? 'Buyer' : 'ખરીદનાર', 
-            desc: language === 'en' ? 'I want to buy / explore properties' : 'મારે જમીન ખરીદવી છે / જોવી છે',  
-            icon: '🏠' 
-        },
-        { 
-            value: 'Seller', 
-            label: language === 'en' ? 'Seller / Land Owner' : 'વેચનાર / જમીન માલિક', 
-            desc: language === 'en' ? 'I want to list my property' : 'મારે મારી જમીન લિસ્ટ/વેચવી છે',          
-            icon: '📋' 
+            value: 'User',  
+            label: language === 'en' ? 'Individual User / Owner' : 'વ્યક્તિગત વપરાશકર્તા / માલિક', 
+            desc: language === 'en' ? 'Explore, buy, or post your own land/plots' : 'જમીન ખરીદો, જુઓ અથવા લિસ્ટ કરો',  
+            icon: '🏡' 
         },
         { 
             value: 'Broker', 
-            label: language === 'en' ? 'Broker / Agent' : 'બ્રોકર / એજન્ટ',     
-            desc: language === 'en' ? 'I manage properties for clients' : 'હું ગ્રાહકો માટે પ્રોપર્ટી મેનેજ કરું છું',     
-            icon: '🤝' 
+            label: language === 'en' ? 'Real Estate Agent / Broker' : 'રિયલ એસ્ટેટ એજન્ટ / બ્રોકર',     
+            desc: language === 'en' ? 'Manage client listings with Verified Broker Stamp' : 'વરિફાઇડ બ્રોકર સ્ટેમ્પ સાથે મિલકત મેનેજ કરો',     
+            icon: '🏷️' 
         },
     ];
 
@@ -111,6 +106,7 @@ const Register = () => {
                     isOpen={showCompleteModal}
                     user={user}
                     onComplete={handleProfileComplete}
+                    onClose={() => setShowCompleteModal(false)}
                     error={error}
                 />
             )}

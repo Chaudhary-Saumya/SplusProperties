@@ -1,220 +1,233 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Home, Briefcase, Phone, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Briefcase, Phone, CheckCircle2, ShieldCheck, KeyRound, ArrowLeft, RefreshCw, X, AlertCircle } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { auth, RecaptchaVerifier, signInWithPhoneNumber } from '../config/firebase';
 
-const CompleteProfileModal = ({ isOpen, user, onComplete, error }) => {
+const CompleteProfileModal = ({ isOpen, user, onComplete, onClose, error: externalError }) => {
+    const [dismissed, setDismissed] = useState(false);
     const [formData, setFormData] = useState({
-        role: user?.role || 'Buyer',
-        phone: user?.phone || ''
+        role: (user?.role === 'Broker' || user?.role === 'Admin') ? user.role : 'User',
+        phone: user?.phone || '',
+        otp: ''
     });
     const [submitting, setSubmitting] = useState(false);
+    const [localError, setLocalError] = useState(null);
 
-    if (!isOpen) return null;
+    /* OTP Code commented out for now as requested
+    const [step, setStep] = useState(1);
+    const [sendingOTP, setSendingOTP] = useState(false);
+    const [verifyingOTP, setVerifyingOTP] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [confirmationResult, setConfirmationResult] = useState(null);
 
-    const roles = [
-        { id: 'Buyer',  label: 'Buy Property',    desc: 'I want to explore & buy plots',    icon: ShoppingCart },
-        { id: 'Seller', label: 'Sell Property',    desc: 'I want to list my land / plots',   icon: Home },
-        { id: 'Broker', label: 'Broker / Agent',   desc: 'I manage properties for clients',  icon: Briefcase },
-    ];
+    useEffect(() => {
+        return () => {
+            if (window.recaptchaVerifier) {
+                try {
+                    window.recaptchaVerifier.clear();
+                    window.recaptchaVerifier = null;
+                } catch (e) {
+                    // ignore
+                }
+            }
+        };
+    }, []);
+    */
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        await onComplete(formData);
-        setSubmitting(false);
+    if (!isOpen || dismissed) return null;
+
+    const handleClose = () => {
+        setDismissed(true);
+        if (onClose) onClose();
     };
 
+    const roles = [
+        { 
+            id: 'User',   
+            label: 'Individual Property Owner / Buyer',   
+            desc: 'Buy land & plots, or post your own properties freely', 
+            icon: Home,
+            colorClass: 'bg-blue-50 text-blue-600 border-blue-100'
+        },
+        { 
+            id: 'Broker', 
+            label: 'Real Estate Broker / Agent', 
+            desc: 'Manage client listings with Verified Agent Stamp', 
+            icon: Briefcase,
+            colorClass: 'bg-indigo-50 text-indigo-600 border-indigo-100'
+        },
+    ];
+
+    // Direct registration / profile completion without OTP verification
+    const handleSubmitProfile = async (e) => {
+        e.preventDefault();
+        setLocalError(null);
+
+        const cleanPhone = formData.phone.replace(/\D/g, '');
+        if (cleanPhone.length !== 10) {
+            setLocalError('Please enter a valid 10-digit mobile number.');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await onComplete({
+                role: formData.role,
+                phone: cleanPhone
+            });
+            toast.success('Profile completed & registered successfully!');
+        } catch (err) {
+            setLocalError(err.response?.data?.error || err.response?.data?.message || 'Failed to complete profile.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    /* Commented out OTP functions for future reference:
+    const initRecaptcha = () => { ... };
+    const handleSendOTP = async (e) => { ... };
+    const handleVerifyOTP = async (e) => { ... };
+    const handleResendOTP = async () => { ... };
+    */
+
+    const displayError = localError || externalError;
+
     return (
-        <>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
-                .cpm-overlay {
-                    position: fixed; inset: 0; z-index: 100;
-                    display: flex; align-items: center; justify-content: center;
-                    padding: 16px;
-                    background: rgba(15, 22, 40, 0.72);
-                    backdrop-filter: blur(6px);
-                    font-family: 'Nunito Sans', sans-serif;
-                }
-                .cpm-card {
-                    background: #fff;
-                    width: 100%; max-width: 460px;
-                    border-radius: 20px;
-                    overflow: hidden;
-                    box-shadow: 0 32px 64px rgba(15,22,40,0.35);
-                }
-                /* Gold top accent */
-                .cpm-top-bar {
-                    height: 4px;
-                    background: linear-gradient(90deg, #c9a84c, #f0d080, #c9a84c);
-                }
-                .cpm-body { padding: 28px 28px 24px; }
+        <div 
+            onClick={(e) => {
+                if (e.target === e.currentTarget) handleClose();
+            }}
+            className="fixed inset-0 z-[99999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 font-['Inter',sans-serif] animate-fade-in"
+        >
+            <div onClick={(e) => e.stopPropagation()} className="bg-white max-w-md w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 relative overflow-hidden">
+                {/* Invisible reCAPTCHA container for Firebase */}
+                <div id="recaptcha-container"></div>
 
-                /* Header */
-                .cpm-header { text-align: center; margin-bottom: 22px; }
-                .cpm-icon-wrap {
-                    width: 44px; height: 44px; border-radius: 12px;
-                    background: #1a2340; display: inline-flex;
-                    align-items: center; justify-content: center;
-                    margin-bottom: 12px;
-                }
-                .cpm-title {
-                    font-family: 'Playfair Display', serif;
-                    font-size: 22px; font-weight: 700; color: #1a2340;
-                    margin: 0 0 4px;
-                }
-                .cpm-sub { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0; }
+                {/* Top Accent Gradient Bar */}
+                <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-500 absolute top-0 left-0" />
 
-                /* Error */
-                .cpm-error {
-                    background: #fff0f0; border: 1px solid #fecaca;
-                    color: #dc2626; padding: 10px 14px; border-radius: 8px;
-                    font-size: 12px; font-weight: 600; margin-bottom: 16px;
-                }
+                {/* Prominent Close Button */}
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 z-50 w-9 h-9 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-xs group"
+                    aria-label="Close modal"
+                    title="Close Modal"
+                >
+                    <X size={18} className="group-hover:scale-110 transition-transform" />
+                </button>
 
-                /* Section label */
-                .cpm-label {
-                    display: block; font-size: 10px; font-weight: 800;
-                    color: #1a2340; text-transform: uppercase; letter-spacing: 1.5px;
-                    margin-bottom: 10px;
-                }
-
-                /* Role cards */
-                .cpm-roles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-                .cpm-role-btn {
-                    display: flex; align-items: center; gap: 12px;
-                    padding: 11px 14px; border-radius: 10px; cursor: pointer;
-                    border: 1.5px solid #e2d9c5; background: #fdfaf5;
-                    transition: all 0.15s; text-align: left; width: 100%;
-                }
-                .cpm-role-btn:hover { border-color: #1a2340; background: #f8f5ee; }
-                .cpm-role-btn.selected {
-                    border-color: #c9a84c; background: #fffbf0;
-                    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
-                }
-                .cpm-role-icon {
-                    width: 36px; height: 36px; border-radius: 9px;
-                    background: #1a2340; display: flex; align-items: center; justify-content: center;
-                    flex-shrink: 0; transition: background 0.15s;
-                }
-                .cpm-role-btn.selected .cpm-role-icon { background: #c9a84c; }
-                .cpm-role-text { flex: 1; min-width: 0; }
-                .cpm-role-name {
-                    font-size: 13px; font-weight: 800; color: #1a2340;
-                    display: block; margin-bottom: 1px;
-                }
-                .cpm-role-btn.selected .cpm-role-name { color: #b8933a; }
-                .cpm-role-desc { font-size: 11px; color: #9ca3af; font-weight: 500; display: block; }
-
-                /* Phone input */
-                .cpm-phone-wrap { margin-bottom: 18px; }
-                .cpm-input-row {
-                    position: relative; display: flex; align-items: center;
-                }
-                .cpm-input-icon {
-                    position: absolute; left: 12px; color: #9ca3af;
-                    display: flex; align-items: center;
-                }
-                .cpm-input {
-                    width: 100%; box-sizing: border-box;
-                    padding: 11px 14px 11px 38px;
-                    border-radius: 8px; border: 1.5px solid #e2d9c5;
-                    background: #fdfaf5; font-family: 'Nunito Sans', sans-serif;
-                    font-size: 13px; font-weight: 700; color: #1a2340;
-                    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-                }
-                .cpm-input::placeholder { color: #b0a898; font-weight: 500; }
-                .cpm-input:focus {
-                    border-color: #c9a84c;
-                    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
-                    background: #fff;
-                }
-
-                /* Submit button */
-                .cpm-submit {
-                    width: 100%; padding: 13px;
-                    border-radius: 10px; border: none; cursor: pointer;
-                    font-family: 'Nunito Sans', sans-serif;
-                    font-size: 13px; font-weight: 800;
-                    text-transform: uppercase; letter-spacing: 1px;
-                    transition: all 0.2s;
-                }
-                .cpm-submit:not(:disabled) {
-                    background: #1a2340; color: #fff;
-                }
-                .cpm-submit:not(:disabled):hover { background: #c9a84c; color: #1a1200; }
-                .cpm-submit:disabled { background: #e2d9c5; color: #b0a898; cursor: not-allowed; }
-            `}</style>
-
-            <div className="cpm-overlay">
-                <div className="cpm-card">
-                    <div className="cpm-top-bar" />
-                    <div className="cpm-body">
-
-                        {/* Header */}
-                        <div className="cpm-header">
-                            <div className="cpm-icon-wrap">
-                                <CheckCircle2 size={22} color="#c9a84c" />
-                            </div>
-                            <h2 className="cpm-title">Almost There!</h2>
-                            <p className="cpm-sub">Just a few details to complete your account</p>
-                        </div>
-
-                        {/* Error */}
-                        {error && <div className="cpm-error">⚠ {error}</div>}
-
-                        <form onSubmit={handleSubmit}>
-                            {/* Role selector */}
-                            <span className="cpm-label">I want to...</span>
-                            <div className="cpm-roles">
-                                {roles.map(role => (
-                                    <button
-                                        key={role.id}
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, role: role.id })}
-                                        className={`cpm-role-btn ${formData.role === role.id ? 'selected' : ''}`}
-                                    >
-                                        <div className="cpm-role-icon">
-                                            <role.icon size={17} color={formData.role === role.id ? '#1a1200' : '#c9a84c'} />
-                                        </div>
-                                        <div className="cpm-role-text">
-                                            <span className="cpm-role-name">{role.label}</span>
-                                            <span className="cpm-role-desc">{role.desc}</span>
-                                        </div>
-                                        {/* Selected indicator */}
-                                        {formData.role === role.id && (
-                                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9a84c', flexShrink: 0 }} />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Phone number */}
-                            {!user?.phone && (
-                                <div className="cpm-phone-wrap">
-                                    <span className="cpm-label">Phone Number</span>
-                                    <div className="cpm-input-row">
-                                        <span className="cpm-input-icon"><Phone size={15} /></span>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Enter your mobile number"
-                                            className="cpm-input"
-                                            value={formData.phone}
-                                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Submit */}
-                            <button type="submit" className="cpm-submit" disabled={submitting}>
-                                {submitting ? 'Setting up...' : 'Complete Setup →'}
-                            </button>
-                        </form>
+                {/* Header */}
+                <div className="text-center mb-6 pt-2">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs border border-blue-100">
+                        <ShieldCheck size={28} />
                     </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        Complete Your Profile
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                        Select account type & enter your 10-digit mobile number to complete registration.
+                    </p>
                 </div>
+
+                {/* Error Banner */}
+                {displayError && (
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-2xl text-xs font-bold mb-4 flex items-center gap-2.5 shadow-2xs">
+                        <AlertCircle size={18} className="text-rose-600 shrink-0" />
+                        <span>{displayError}</span>
+                    </div>
+                )}
+
+                {/* Account Type Selection & Mobile Phone Form */}
+                <form onSubmit={handleSubmitProfile} className="space-y-5">
+                    {/* Role selector */}
+                    <div>
+                        <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                            Select Account Type
+                        </label>
+                        <div className="space-y-2.5">
+                            {roles.map((r) => {
+                                const Icon = r.icon;
+                                const isSelected = formData.role === r.id;
+                                return (
+                                    <button
+                                        key={r.id}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, role: r.id })}
+                                        className={`w-full flex items-start gap-3.5 p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
+                                            isSelected
+                                                ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/20"
+                                                : "border-slate-200 bg-slate-50 hover:bg-slate-100/80"
+                                        }`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${r.colorClass}`}>
+                                            <Icon size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <span className={`text-xs font-extrabold ${isSelected ? "text-blue-900" : "text-slate-900"}`}>
+                                                    {r.label}
+                                                </span>
+                                                {isSelected && (
+                                                    <CheckCircle2 size={16} className="text-blue-600 shrink-0" />
+                                                )}
+                                            </div>
+                                            <span className="text-[11px] text-slate-500 font-medium block mt-0.5 line-clamp-2">
+                                                {r.desc}
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Mobile Phone Input */}
+                    <div>
+                        <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                            Mobile Phone Number
+                        </label>
+                        <div className="relative flex items-center">
+                            <div className="absolute left-3.5 text-xs font-bold text-slate-500 flex items-center gap-1 pointer-events-none">
+                                <Phone size={14} className="text-slate-400" />
+                                <span>+91</span>
+                            </div>
+                            <input
+                                type="tel"
+                                required
+                                maxLength={10}
+                                placeholder="Enter 10-digit mobile number"
+                                className="w-full pl-16 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all font-semibold text-slate-800 text-xs sm:text-sm placeholder:text-slate-400"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Direct Register / Save Button */}
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {submitting ? (
+                            <span className="flex items-center gap-2">
+                                <span className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                                Registering...
+                            </span>
+                        ) : (
+                            <span>Complete Registration & Continue →</span>
+                        )}
+                    </button>
+                </form>
+
+                {/* 
+                --- OPTIONAL OTP STEP (COMMENTED OUT FOR NOW) ---
+                {step === 2 && ( ... )}
+                */}
             </div>
-        </>
+        </div>
     );
 };
 

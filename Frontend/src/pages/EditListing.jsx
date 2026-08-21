@@ -183,7 +183,7 @@ const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }
 const EditListing = () => {
     const { id } = useParams();
     const { user } = useContext(AuthContext);
-    const { language } = useLanguage();
+    const { language, t } = useLanguage();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(true);
@@ -237,7 +237,10 @@ const EditListing = () => {
             try {
                 const res = await axios.get(`/api/listings/${id}`);
                 const data = res.data.data;
-                if (data.createdBy._id !== user?.id && data.createdBy._id !== user?._id && user?.role !== 'Admin') {
+                const ownerId = typeof data.createdBy === 'object' ? (data.createdBy?._id || data.createdBy?.id) : data.createdBy;
+                const currentUserId = user?.id || user?._id;
+                if (ownerId && currentUserId && ownerId.toString() !== currentUserId.toString() && user?.role !== 'Admin') {
+                    toast.error("You don't have permission to edit this listing.");
                     navigate('/dashboard');
                     return;
                 }
@@ -447,9 +450,9 @@ const EditListing = () => {
                         </button>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
-                                Edit <span className="text-[#c9a84c]">Property Listing</span>
+                                {t('edit_listing.title')}
                             </h1>
-                            <p className="text-white/50 font-medium mt-1 text-sm">Update your property details — changes go live instantly.</p>
+                            <p className="text-white/50 font-medium mt-1 text-sm">{t('edit_listing.subtitle')}</p>
                         </div>
                     </div>
                 </div>

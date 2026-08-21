@@ -36,7 +36,9 @@ import Register from './pages/Register';
 import PropertyDetails from './pages/PropertyDetails';
 import CreateListing from './pages/CreateListing';
 import EditListing from './pages/EditListing';
-import Dashboard from './pages/Dashboard';
+import MyListings from './pages/MyListings';
+import BuyerLeads from './pages/BuyerLeads';
+import AccountSettings from './pages/AccountSettings';
 import Favorites from './pages/Favorites';
 import MyVisits from './pages/MyVisits';
 import Search from './pages/Search';
@@ -56,6 +58,9 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DeleteAccount from './pages/DeleteAccount';
 import CompleteProfileModal from './components/CompleteProfileModal';
+import AppUpdateChecker from './components/AppUpdateChecker';
+import FirstTimeAppModal from './components/FirstTimeAppModal';
+
 
 import { AuthContext } from './context/AuthContext';
 import socket from './utils/socket';
@@ -123,17 +128,19 @@ function GlobalProfileCompletionGate() {
   const { user, loading, isAuthenticated, completeProfile } = useContext(AuthContext);
   const location = useLocation();
   const [error, setError] = useState(null);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   const hiddenPaths = ['/login', '/register', '/verify-otp', '/forgot-password'];
   const shouldHideModal = hiddenPaths.some(path => location.pathname.startsWith(path));
-  const shouldShowModal = !loading && isAuthenticated && !shouldHideModal && needsProfileCompletion(user);
+  const shouldShowModal = !loading && isAuthenticated && !shouldHideModal && !isDismissed && needsProfileCompletion(user);
 
   const handleProfileComplete = async (profileData) => {
     try {
       setError(null);
       await completeProfile(profileData);
     } catch (err) {
-      setError(err.response?.data?.error || 'Profile completion failed.');
+      const serverMsg = err.response?.data?.message || err.response?.data?.error || 'Profile completion failed. Please try again.';
+      setError(serverMsg);
       throw err;
     }
   };
@@ -145,6 +152,7 @@ function GlobalProfileCompletionGate() {
       isOpen={shouldShowModal}
       user={user}
       onComplete={handleProfileComplete}
+      onClose={() => setIsDismissed(true)}
       error={error}
     />
   );
@@ -221,7 +229,12 @@ function AppContent() {
             <Route path="/verify-otp" element={<VerifyOTP />} />
             <Route path="/listings/:id" element={<PropertyDetails />} />
             <Route path="/land/:location/:id" element={<PropertyDetails />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<Navigate to="/my-listings" replace />} />
+            <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+            <Route path="/my-properties" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+            <Route path="/buyer-leads" element={<ProtectedRoute><BuyerLeads /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+            <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
             <Route path="/my-visits" element={<ProtectedRoute><MyVisits /></ProtectedRoute>} />
             <Route path="/received-inquiries" element={<ProtectedRoute><ReceivedInquiries /></ProtectedRoute>} />
@@ -252,7 +265,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <AppUpdateChecker />
+        <FirstTimeAppModal />
         <SocketManager />
+
         <AnalyticsTracker />
         <ScrollToTopOnRouteChange />
         <ToastContainer

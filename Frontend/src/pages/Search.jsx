@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download, MessageCircle, Share2 } from 'lucide-react';
+import { MapPin, Search as SearchIcon, Filter, Navigation, Phone, X, Users, Eye, Heart, ChevronDown, SlidersHorizontal, Download, MessageCircle, Share2, ShieldCheck, CheckCircle2, ArrowUpRight, Plus, Sparkles, Building2, Layers } from 'lucide-react';
 import ListingSkeleton from '../components/ListingSkeleton';
 import ErrorBox from '../components/ErrorBox';
 import EmptyState from '../components/EmptyState';
@@ -34,18 +34,18 @@ L.Icon.Default.mergeOptions({
 const FilterSection = ({ title, children, defaultOpen = true }) => {
     const [open, setOpen] = useState(defaultOpen);
     return (
-        <div className="border-b border-[#f0ebe0] py-4">
+        <div className="border-b border-slate-100 py-3.5">
             <button
                 onClick={() => setOpen(!open)}
-                className="w-full flex items-center justify-between text-left"
+                className="w-full flex items-center justify-between text-left cursor-pointer"
             >
-                <span className="text-sm font-bold text-[#1a2340] uppercase tracking-wider">{title}</span>
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">{title}</span>
                 <ChevronDown
-                    size={16}
-                    className={`text-[#9ca3af] transition-transform ${open ? 'rotate-180' : ''}`}
+                    size={14}
+                    className={`text-slate-400 transition-transform ${open ? 'rotate-180 text-blue-600' : ''}`}
                 />
             </button>
-            {open && <div className="mt-3">{children}</div>}
+            {open && <div className="mt-2.5">{children}</div>}
         </div>
     );
 };
@@ -54,17 +54,117 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
 const Toggle = ({ checked, onChange }) => (
     <button
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex w-10 h-5 rounded-full transition-colors ${checked ? 'bg-[#c9a84c]' : 'bg-[#d1d5db]'}`}
+        className={`relative inline-flex w-10 h-5 rounded-full transition-colors cursor-pointer ${checked ? 'bg-[#2563eb]' : 'bg-slate-300'}`}
     >
         <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
     </button>
 );
 
+/* ─── Dual Range Slider Component ────────────────────────────────────────── */
+const DualRangeSlider = ({ min, max, step, minVal, maxVal, onChangeMin, onChangeMax, formatLabel, minBoundLabel, maxBoundLabel }) => {
+    const currentMin = minVal !== '' && minVal !== null && minVal !== undefined ? Number(minVal) : min;
+    const currentMax = maxVal !== '' && maxVal !== null && maxVal !== undefined ? Number(maxVal) : max;
+
+    const [activeThumb, setActiveThumb] = useState(null);
+
+    const minPercent = Math.max(0, Math.min(100, ((currentMin - min) / (max - min)) * 100));
+    const maxPercent = Math.max(0, Math.min(100, ((currentMax - min) / (max - min)) * 100));
+
+    let minZIndex = 40;
+    let maxZIndex = 40;
+
+    if (activeThumb === 'min') {
+        minZIndex = 60;
+        maxZIndex = 40;
+    } else if (activeThumb === 'max') {
+        minZIndex = 40;
+        maxZIndex = 60;
+    } else if (currentMin > max * 0.9) {
+        minZIndex = 60;
+        maxZIndex = 40;
+    }
+
+    return (
+        <div className="space-y-3 font-['Nunito_Sans',sans-serif]">
+            <div className="text-xs font-black text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-xl border border-blue-100 text-center">
+                {formatLabel(currentMin, currentMax)}
+            </div>
+
+            <div className="relative w-full h-7 flex items-center select-none py-1">
+                <div className="absolute w-full h-1.5 bg-slate-200 rounded-full" />
+                <div
+                    className="absolute h-1.5 bg-[#2563eb] rounded-full"
+                    style={{
+                        left: `${minPercent}%`,
+                        width: `${Math.max(0, maxPercent - minPercent)}%`
+                    }}
+                />
+
+                <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={currentMin}
+                    onMouseDown={() => setActiveThumb('min')}
+                    onTouchStart={() => setActiveThumb('min')}
+                    onChange={(e) => {
+                        const value = Math.min(Number(e.target.value), currentMax);
+                        onChangeMin(value === min ? '' : value);
+                    }}
+                    className="range-thumb absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto"
+                    style={{ zIndex: minZIndex }}
+                />
+
+                <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={currentMax}
+                    onMouseDown={() => setActiveThumb('max')}
+                    onTouchStart={() => setActiveThumb('max')}
+                    onChange={(e) => {
+                        const value = Math.max(Number(e.target.value), currentMin);
+                        onChangeMax(value === max ? '' : value);
+                    }}
+                    className="range-thumb absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto"
+                    style={{ zIndex: maxZIndex }}
+                />
+
+                <div
+                    className="absolute w-4 h-4 bg-white border-2 border-blue-600 rounded-full shadow-md pointer-events-none transition-transform"
+                    style={{ left: `calc(${minPercent}% - 8px)` }}
+                />
+
+                <div
+                    className="absolute w-4 h-4 bg-white border-2 border-blue-600 rounded-full shadow-md pointer-events-none transition-transform"
+                    style={{ left: `calc(${maxPercent}% - 8px)` }}
+                />
+            </div>
+
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                <span>{minBoundLabel}</span>
+                <span>{maxBoundLabel}</span>
+            </div>
+        </div>
+    );
+};
+
+const formatBudgetVal = (val, isMax = false) => {
+    if (val === 0) return '0';
+    if (val >= 10000000) return `${(val / 10000000).toFixed(1)} Cr`;
+    if (val >= 100000) return `${(val / 100000).toFixed(0)} Lakh`;
+    return val.toLocaleString('en-IN');
+};
+
+/* ─── Main Search Component ────────────────────────────────────────────────── */
 const Search = () => {
+    const { user, isAuthenticated } = useContext(AuthContext);
     const { t } = useLanguage();
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAuthenticated, user } = useContext(AuthContext);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [isVerifiedOnly, setIsVerifiedOnly] = useState(false);
@@ -82,22 +182,28 @@ const Search = () => {
         ownerType: '',
         roadTouch: false,
         cornerPlot: false,
-        isAgricultural: '', // '', 'true', 'false'
-        isFeatured: false
+        isAgricultural: '',
+        isFeatured: false,
+        gatedCommunity: false,
+        boundaryWall: false,
+        napiPermission: false,
+        minPricePerSqYd: '',
+        maxPricePerSqYd: '',
+        daysOnMarket: ''
     });
     const [debouncedFilters, setDebouncedFilters] = useState(filters);
     const [isGeoMode, setIsGeoMode] = useState(false);
     const [userCoords, setUserCoords] = useState(null);
     const [geoLoading, setGeoLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const [sortBy, setSortBy] = useState('-createdAt');
+    const [sortBy, setSortBy] = useState('recommended');
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [wishlist, setWishlist] = useState(new Set());
     const [accumulatedListings, setAccumulatedListings] = useState([]);
     const searchInputRef = useRef(null);
 
-    // ── Hydrate wishlist from authenticated user's saved favorites ──────────
+    // Hydrate wishlist from auth user
     useEffect(() => {
         if (isAuthenticated && user?.favorites) {
             const ids = user.favorites.map(fav =>
@@ -109,17 +215,6 @@ const Search = () => {
         }
     }, [isAuthenticated, user?.favorites]);
 
-    // ── Auto-focus search input when navigated from Home mobile search bar ──
-    useEffect(() => {
-        if (location.state?.autoFocus && searchInputRef.current) {
-            // Small delay to let the page finish rendering before focusing
-            const timer = setTimeout(() => {
-                searchInputRef.current?.focus();
-            }, 150);
-            return () => clearTimeout(timer);
-        }
-    }, [location.state?.autoFocus]);
-
     const isFirstRender = useRef(true);
 
     const { data: resultData, isLoading, isError, error, refetch, isFetching } = useQuery({
@@ -129,7 +224,6 @@ const Search = () => {
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
             if (isVerifiedOnly) url += `&listingType=Verified`;
 
-            // Map active filters dynamically
             Object.entries(debouncedFilters).forEach(([key, value]) => {
                 if (value !== '' && value !== null && value !== undefined && value !== false) {
                     url += `&${key}=${encodeURIComponent(value)}`;
@@ -145,7 +239,6 @@ const Search = () => {
         }
     });
 
-    // Accumulate listings for infinite scroll
     useEffect(() => {
         if (resultData?.data) {
             if (page === 1) {
@@ -182,13 +275,10 @@ const Search = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
-
-        // Synchronize search term
         const q = params.get('query') || '';
         setSearchTerm(q);
         setSearchInput(q);
 
-        // Synchronize filters from URL parameters or defaults
         const propType = params.get('propertyType') || '';
         const plotT = params.get('plotType') || 'None';
         const landT = params.get('landType') || 'None';
@@ -205,58 +295,26 @@ const Search = () => {
         const isFeatured = params.get('isFeatured') === 'true';
         const listingType = params.get('listingType') || '';
 
-        setFilters(prev => {
-            const hasChanged =
-                prev.minPrice !== minPrice ||
-                prev.maxPrice !== maxPrice ||
-                prev.minArea !== minArea ||
-                prev.maxArea !== maxArea ||
-                prev.city !== city ||
-                prev.locality !== locality ||
-                prev.propertyType !== propType ||
-                prev.plotType !== plotT ||
-                prev.landType !== landT ||
-                prev.ownerType !== ownerType ||
-                prev.roadTouch !== roadTouch ||
-                prev.cornerPlot !== cornerPlot ||
-                prev.isAgricultural !== isAgricultural ||
-                prev.isFeatured !== isFeatured;
-
-            if (!hasChanged) return prev;
-            return {
-                minPrice,
-                maxPrice,
-                minArea,
-                maxArea,
-                city,
-                locality,
-                propertyType: propType,
-                plotType: plotT,
-                landType: landT,
-                ownerType,
-                roadTouch,
-                cornerPlot,
-                isAgricultural,
-                isFeatured
-            };
-        });
+        setFilters(prev => ({
+            minPrice,
+            maxPrice,
+            minArea,
+            maxArea,
+            city,
+            locality,
+            propertyType: propType,
+            plotType: plotT,
+            landType: landT,
+            ownerType,
+            roadTouch,
+            cornerPlot,
+            isAgricultural,
+            isFeatured
+        }));
 
         const isVerifiedVal = listingType === 'Verified';
         setIsVerifiedOnly(prev => prev === isVerifiedVal ? prev : isVerifiedVal);
     }, [location.search]);
-
-    useEffect(() => {
-        const t = setTimeout(async () => {
-            if (searchInput.trim().length > 1) {
-                try {
-                    const res = await axios.get(`/api/listings/search/suggestions?q=${encodeURIComponent(searchInput)}`);
-                    setSuggestions(res.data.data);
-                    setShowSuggestions(true);
-                } catch { setSuggestions([]); }
-            } else { setSuggestions([]); setShowSuggestions(false); }
-        }, 400);
-        return () => clearTimeout(t);
-    }, [searchInput]);
 
     useEffect(() => {
         if (isFirstRender.current) {
@@ -273,20 +331,19 @@ const Search = () => {
             setGeoLoading(true);
             navigator.geolocation.getCurrentPosition(
                 (pos) => { setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setIsGeoMode(true); setSearchInput(''); setShowSuggestions(false); setGeoLoading(false); },
-                () => { toast.warning(t('search_page.location_denied')); setGeoLoading(false); }
+                () => { toast.warning('Location permission required.'); setGeoLoading(false); }
             );
-        } else { toast.error(t('search_page.geo_not_supported')); }
+        } else { toast.error('Geolocation not supported.'); }
     };
 
     const toggleWishlist = async (e, id) => {
         e.stopPropagation();
         if (!isAuthenticated) {
-            toast.info(t('search_page.login_to_save'));
+            toast.info('Please login to save favorites');
             navigate('/login');
             return;
         }
         const wasAdded = !wishlist.has(id);
-        // Optimistic update
         setWishlist(prev => {
             const s = new Set(prev);
             s.has(id) ? s.delete(id) : s.add(id);
@@ -294,24 +351,19 @@ const Search = () => {
         });
         try {
             const res = await axios.post(`/api/auth/favorites/${id}`);
-            // Sync user.favorites in context so page reloads stay consistent
             if (user && res.data?.data) {
                 user.favorites = res.data.data;
-                // Re-hydrate the wishlist set from authoritative server state
-                const ids = res.data.data.map(fav =>
-                    typeof fav === 'string' ? fav : (fav?._id || fav?.id)
-                ).filter(Boolean);
+                const ids = res.data.data.map(fav => typeof fav === 'string' ? fav : (fav?._id || fav?.id)).filter(Boolean);
                 setWishlist(new Set(ids));
             }
-            toast.success(wasAdded ? t('search_page.added_to_favorites') : t('search_page.removed_from_favorites'));
-        } catch (err) {
-            // Revert optimistic update on error
+            toast.success(wasAdded ? 'Added to favorites!' : 'Removed from favorites');
+        } catch {
             setWishlist(prev => {
                 const s = new Set(prev);
                 wasAdded ? s.delete(id) : s.add(id);
                 return s;
             });
-            toast.error(t('search_page.failed_favorites'));
+            toast.error('Failed to update favorites');
         }
     };
 
@@ -330,87 +382,112 @@ const Search = () => {
             roadTouch: false,
             cornerPlot: false,
             isAgricultural: '',
-            isFeatured: false
+            isFeatured: false,
+            gatedCommunity: false,
+            boundaryWall: false,
+            napiPermission: false,
+            minPricePerSqYd: '',
+            maxPricePerSqYd: '',
+            daysOnMarket: ''
         });
         setIsVerifiedOnly(false);
+        setSearchInput('');
+        setSearchTerm('');
+        navigate('/search');
     };
 
-    const inputClass = "w-full px-3 py-2.5 bg-[#fdfaf5] border border-[#e2d9c5] rounded-lg text-sm font-bold text-[#1a2340] placeholder-[#b0a898] focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all";
+    const inputClass = "w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-extrabold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all";
 
     /* ── Render Filter Sections ── */
     const renderFilterSections = () => (
         <>
-            <FilterSection title={t('search_page.property_category')} defaultOpen={false}>
-                <div className="flex gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Plot' ? '' : 'Plot', plotType: 'None', landType: 'None' }))}
-                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Plot'
-                            ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-                            : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
-                            }`}
-                    >
-                        {t('search_page.plots')}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setFilters(prev => ({ ...prev, propertyType: prev.propertyType === 'Land' ? '' : 'Land', plotType: 'None', landType: 'None' }))}
-                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${filters.propertyType === 'Land'
-                            ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-                            : 'bg-white text-[#1a2340]/75 border-[#e2d9c5] hover:border-[#1a2340]'
-                            }`}
-                    >
-                        {t('search_page.lands')}
-                    </button>
+            <FilterSection title="Applied Filters" defaultOpen={true}>
+                <div className="flex flex-wrap gap-1.5">
+                    {filters.landType !== 'None' && (
+                        <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg flex items-center gap-1 border border-blue-200">
+                            {filters.landType} <X size={12} className="cursor-pointer" onClick={() => setFilters(p => ({ ...p, landType: 'None' }))} />
+                        </span>
+                    )}
+                    {isVerifiedOnly && (
+                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-lg flex items-center gap-1 border border-emerald-200">
+                            Verified <X size={12} className="cursor-pointer" onClick={() => setIsVerifiedOnly(false)} />
+                        </span>
+                    )}
+                    {filters.ownerType && (
+                        <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg flex items-center gap-1 border border-slate-200">
+                            {filters.ownerType} <X size={12} className="cursor-pointer" onClick={() => setFilters(p => ({ ...p, ownerType: '' }))} />
+                        </span>
+                    )}
                 </div>
             </FilterSection>
 
-            {filters.propertyType === 'Plot' && (
-                <FilterSection title={t('search_page.plot_subtype')} defaultOpen={false}>
-                    <select
-                        value={filters.plotType}
-                        onChange={e => setFilters(prev => ({ ...prev, plotType: e.target.value }))}
-                        className={inputClass}
-                    >
-                        <option value="None">{t('search_page.all_plot_types')}</option>
-                        <option value="Residential">{t('search_page.residential')}</option>
-                        <option value="Commercial">{t('search_page.commercial')}</option>
-                        <option value="Industrial">{t('search_page.industrial')}</option>
-                        <option value="Agricultural">{t('search_page.agricultural')}</option>
-                        <option value="Other">{t('search_page.other')}</option>
-                    </select>
-                </FilterSection>
-            )}
+            <FilterSection title="Type of Property" defaultOpen={true}>
+                <div className="grid grid-cols-2 gap-2">
+                    {['Residential', 'Commercial', 'Industrial', 'Agricultural', 'Other'].map(type => (
+                        <button
+                            key={type}
+                            type="button"
+                            onClick={() => setFilters(prev => ({ ...prev, landType: prev.landType === type ? 'None' : type }))}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                                filters.landType === type
+                                    ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                            }`}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                </div>
+            </FilterSection>
 
-            {filters.propertyType === 'Land' && (
-                <FilterSection title={t('search_page.land_subtype')} defaultOpen={false}>
-                    <select
-                        value={filters.landType}
-                        onChange={e => setFilters(prev => ({ ...prev, landType: e.target.value }))}
-                        className={inputClass}
-                    >
-                        <option value="None">{t('search_page.all_land_types')}</option>
-                        <option value="Agricultural">{t('search_page.agricultural')}</option>
-                        <option value="Non-Agricultural">{t('search_page.non_agricultural')}</option>
-                        <option value="Industrial">{t('search_page.industrial')}</option>
-                        <option value="Commercial">{t('search_page.commercial')}</option>
-                        <option value="Other">{t('search_page.other')}</option>
-                    </select>
-                </FilterSection>
-            )}
+            <FilterSection title="Budget (₹)" defaultOpen={true}>
+                <DualRangeSlider
+                    min={0}
+                    max={50000000}
+                    step={100000}
+                    minVal={filters.minPrice}
+                    maxVal={filters.maxPrice}
+                    onChangeMin={val => setFilters(p => ({ ...p, minPrice: val }))}
+                    onChangeMax={val => setFilters(p => ({ ...p, maxPrice: val }))}
+                    formatLabel={(minV, maxV) => {
+                        if (minV === 0 && maxV === 50000000) return 'Any Budget';
+                        return `₹${formatBudgetVal(minV, false)} – ₹${formatBudgetVal(maxV, true)}`;
+                    }}
+                    minBoundLabel="₹0"
+                    maxBoundLabel="₹5 Cr+"
+                />
+            </FilterSection>
 
-            <FilterSection title={t('search_page.location_tiers')} defaultOpen={false}>
+            <FilterSection title="Plot Area (Sq Ft)" defaultOpen={false}>
+                <DualRangeSlider
+                    min={0}
+                    max={50000}
+                    step={500}
+                    minVal={filters.minArea}
+                    maxVal={filters.maxArea}
+                    onChangeMin={val => setFilters(p => ({ ...p, minArea: val }))}
+                    onChangeMax={val => setFilters(p => ({ ...p, maxArea: val }))}
+                    formatLabel={(minV, maxV) => {
+                        if (minV === 0 && maxV === 50000) return 'Any Size';
+                        return `${minV.toLocaleString()} – ${maxV >= 50000 ? '50,000+' : maxV.toLocaleString()} Sq Ft`;
+                    }}
+                    minBoundLabel="0 Sq Ft"
+                    maxBoundLabel="50,000+ Sq Ft"
+                />
+            </FilterSection>
+
+            <FilterSection title="Location" defaultOpen={false}>
                 <div className="space-y-2">
                     <input
                         type="text"
-                        placeholder={t('search_page.city_placeholder')}
+                        placeholder="City (e.g. Ahmedabad)"
                         value={filters.city}
                         onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))}
                         className={inputClass}
                     />
                     <input
                         type="text"
-                        placeholder={t('search_page.locality_placeholder')}
+                        placeholder="Locality (e.g. Sanand)"
                         value={filters.locality}
                         onChange={e => setFilters(prev => ({ ...prev, locality: e.target.value }))}
                         className={inputClass}
@@ -418,462 +495,308 @@ const Search = () => {
                 </div>
             </FilterSection>
 
-            <FilterSection title={t('search_page.budget')} defaultOpen={false}>
-                <div className="space-y-2">
-                    <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
-                        <input type="number" placeholder={t('search_page.min_price')} value={filters.minPrice} onChange={e => setFilters(p => ({ ...p, minPrice: e.target.value }))} className={`${inputClass} pl-7`} />
-                    </div>
-                    <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-[#9ca3af] font-bold text-xs">₹</span>
-                        <input type="number" placeholder={t('search_page.max_price')} value={filters.maxPrice} onChange={e => setFilters(p => ({ ...p, maxPrice: e.target.value }))} className={`${inputClass} pl-7`} />
-                    </div>
-                </div>
-            </FilterSection>
-
-            <FilterSection title={t('search_page.area_sqft_acres')} defaultOpen={false}>
-                <div className="space-y-2">
-                    <input type="number" placeholder={t('search_page.min_area')} value={filters.minArea} onChange={e => setFilters(p => ({ ...p, minArea: e.target.value }))} className={inputClass} />
-                    <input type="number" placeholder={t('search_page.max_area')} value={filters.maxArea} onChange={e => setFilters(p => ({ ...p, maxArea: e.target.value }))} className={inputClass} />
-                </div>
-            </FilterSection>
-
-            <FilterSection title={t('search_page.attributes')} defaultOpen={true}>
-                <div className="space-y-3">
-                    {filters.propertyType === 'Plot' && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[#1a2340]/75">{t('search_page.corner_plot')}</span>
-                            <Toggle checked={filters.cornerPlot} onChange={val => setFilters(prev => ({ ...prev, cornerPlot: val }))} />
-                        </div>
-                    )}
+            <FilterSection title="Verified Properties" defaultOpen={true}>
+                <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#1a2340]/75">{t('search_page.road_touch')}</span>
+                        <span className="text-xs font-extrabold text-slate-700">Verified Listing</span>
+                        <Toggle checked={isVerifiedOnly} onChange={val => setIsVerifiedOnly(val)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-slate-700">Road Touch Frontage</span>
                         <Toggle checked={filters.roadTouch} onChange={val => setFilters(prev => ({ ...prev, roadTouch: val }))} />
                     </div>
-                    {filters.propertyType === 'Plot' && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[#1a2340]/75">{t('search_page.agricultural_plot')}</span>
-                            <Toggle
-                                checked={filters.isAgricultural === 'true' || filters.isAgricultural === true}
-                                onChange={val => setFilters(prev => ({ ...prev, isAgricultural: val ? 'true' : '' }))}
-                            />
-                        </div>
-                    )}
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#1a2340]/75">{t('search_page.verified_only')}</span>
-                        <Toggle checked={isVerifiedOnly} onChange={setIsVerifiedOnly} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#1a2340]/75">{t('search_page.featured_only')}</span>
-                        <Toggle checked={filters.isFeatured} onChange={val => setFilters(prev => ({ ...prev, isFeatured: val }))} />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-[#1a2340]/50 uppercase tracking-widest">{t('search_page.creator_type')}</label>
-                        <select
-                            value={filters.ownerType}
-                            onChange={e => setFilters(prev => ({ ...prev, ownerType: e.target.value }))}
-                            className={inputClass}
-                        >
-                            <option value="">{t('search_page.any_creator')}</option>
-                            <option value="Owner">{t('search_page.owner')}</option>
-                            <option value="Broker">{t('search_page.builder_broker')}</option>
-                        </select>
+                        <span className="text-xs font-extrabold text-slate-700">Corner Plot</span>
+                        <Toggle checked={filters.cornerPlot} onChange={val => setFilters(prev => ({ ...prev, cornerPlot: val }))} />
                     </div>
                 </div>
             </FilterSection>
         </>
     );
 
-    /* ── Sidebar Filters ── */
     const filtersContent = (
-        <div className="bg-white border border-[#e2d9c5] rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 150px)' }}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0ebe0] flex-shrink-0">
-                <h3 className="text-sm font-bold text-[#1a2340] uppercase tracking-widest flex items-center gap-2">
-                    <SlidersHorizontal size={15} className="text-[#c9a84c]" /> {t('search_page.filters')}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-2">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <SlidersHorizontal size={14} className="text-[#0078d4]" />
+                  <span>Applied Filters</span>
                 </h3>
-                <button onClick={resetFilters} className="text-xs font-bold text-[#c9a84c] hover:underline">{t('search_page.reset_all')}</button>
+                <button onClick={resetFilters} className="text-xs font-bold text-[#0078d4] hover:underline cursor-pointer">
+                  Clear All
+                </button>
             </div>
-
-            <div className="px-5 divide-y divide-[#f0ebe0] overflow-y-auto scrollbar-thin scrollbar-thumb-[#c9a84c]/20 scrollbar-track-transparent" style={{ flex: 1 }}>
-                {renderFilterSections()}
-            </div>
+            {renderFilterSections()}
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#f8f5ee]" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
+        <div className="min-h-screen bg-slate-50 font-['Nunito_Sans',sans-serif]">
             <SEO
-                title={t('search_page.title')}
-                description={t('search_page.description')}
+                title="Search Land & Plots in Gujarat | Kharsan Properties"
+                description="Browse verified residential plots, agricultural farmlands, and commercial land across Gujarat."
             />
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
-            {/* ── Gold top bar ── */}
-            <div className="h-1 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
+            {/* Main Layout Container */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+                
+                {/* 99acres Header Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                            {isLoading ? 'Searching...' : `${totalResults.toLocaleString('en-IN')} results | Land & Plots in Gujarat`}
+                        </h1>
+                    </div>
 
-            {/* ── Sticky Search Bar ── */}
-            <div className="sticky z-30 bg-white/80 backdrop-blur-md border-b border-[#e2d9c5]/50 shadow-sm transition-all duration-300" style={{ top: 'var(--navbar-height)' }}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
-                        {/* Search Input Group */}
-                        <div className="flex flex-1 items-center bg-[#fdfaf5] border-2 border-[#e2d9c5] focus-within:border-[#c9a84c] focus-within:ring-2 focus-within:ring-[#c9a84c]/20 rounded-lg px-3 py-2 transition-all gap-2 relative">
-                            {isFetching ? (
-                                <div className="w-4 h-4 border-2 border-[#c9a84c] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                            ) : (
-                                <SearchIcon size={18} className="text-[#c9a84c] flex-shrink-0" />
-                            )}
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder={isGeoMode ? t('search_page.searching_near_you') : t('search_page.search_placeholder')}
-                                className="flex-1 bg-transparent border-none outline-none text-[#1a2340] font-bold text-sm placeholder-[#b0a898] w-full"
-                                value={searchInput}
-                                onChange={e => setSearchInput(e.target.value)}
-                                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                disabled={isGeoMode}
-                            />
-                            {searchInput && (
-                                <button onClick={() => { setSearchInput(''); setSearchTerm(''); }} className="text-[#9ca3af] hover:text-[#1a2340]">
-                                    <X size={15} />
-                                </button>
-                            )}
-
-                            {/* Suggestions Dropdown */}
-                            {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e2d9c5] rounded-xl shadow-xl z-50 overflow-hidden">
-                                    {suggestions.map(s => (
-                                        <div
-                                            key={s._id}
-                                            onClick={() => { setSearchInput(s.title); setShowSuggestions(false); }}
-                                            className="flex items-center justify-between px-4 py-3 hover:bg-[#fdfaf5] cursor-pointer border-b border-[#f8f5ee] last:border-0"
-                                        >
-                                            <div>
-                                                <div className="text-sm font-bold text-[#1a2340]">{s.title}</div>
-                                                <div className="text-xs text-[#9ca3af] flex items-center gap-1 mt-0.5">
-                                                    <MapPin size={10} /> {s.plotNumber ? `Plot: ${s.plotNumber}, ` : ''}{s.areaName ? `Area: ${s.areaName}, ` : ''}{s.location}
-                                                </div>
-                                            </div>
-                                            <div className="text-sm font-black text-[#c9a84c]">₹{s.price?.toLocaleString('en-IN')}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Actions Group */}
-                        <div className="flex items-center gap-2">
-                            {/* Near Me */}
-                            <button
-                                onClick={triggerGeoSearch}
-                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm border transition-all whitespace-nowrap ${isGeoMode ? 'bg-[#c9a84c] text-[#1a1200] border-[#c9a84c]' : 'bg-white text-[#1a2340] border-[#e2d9c5] hover:border-[#1a2340]'}`}
-                            >
-                                <Navigation size={15} className={geoLoading ? 'animate-spin' : ''} />
-                                <span>{isGeoMode ? t('search_page.near_me_active') : t('search_page.near_me')}</span>
-                            </button>
-
-                            {/* Search Button */}
-                            <button
-                                onClick={() => setSearchTerm(searchInput)}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1a2340] hover:bg-[#c9a84c] hover:text-[#1a1200] text-white rounded-lg font-bold text-sm transition-all whitespace-nowrap"
-                            >
-                                <SearchIcon size={15} /> {t('search_page.search_btn')}
-                            </button>
-
-                            {/* Mobile Filter Toggle */}
-                            <button
-                                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                                className="lg:hidden flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white border border-[#e2d9c5] rounded-lg font-bold text-sm text-[#1a2340] hover:border-[#1a2340]"
-                            >
-                                <Filter size={15} />
-                            </button>
-                        </div>
+                    {/* Sort Dropdown */}
+                    <div className="flex items-center gap-2 self-start md:self-auto">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Sort By:</span>
+                        <select
+                            value={sortBy}
+                            onChange={e => setSortBy(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 outline-none cursor-pointer focus:border-[#0078d4] shadow-xs"
+                        >
+                            <option value="recommended">Recommended</option>
+                            <option value="newest">Newest First</option>
+                            <option value="price_asc">Price: Low to High</option>
+                            <option value="price_desc">Price: High to Low</option>
+                            <option value="views">Most Viewed</option>
+                        </select>
                     </div>
                 </div>
-            </div>
 
-            {/* ── Mobile Filter Drawer ── */}
-            {showMobileFilters && (
-                <div className="fixed inset-0 z-50 bg-[#1a2340]/60 backdrop-blur-xs flex items-end justify-center transition-opacity" onClick={() => setShowMobileFilters(false)}>
-                    <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        className="bg-white rounded-t-[2rem] w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
-                        onClick={e => e.stopPropagation()}
+                {/* 99acres Quick Filter Pills Row */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
+                    <button
+                        onClick={() => setIsVerifiedOnly(!isVerifiedOnly)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
+                            isVerifiedOnly
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                        }`}
                     >
-                        {/* Drag Handle Indicator */}
-                        <div className="w-12 h-1 bg-[#e2d9c5] rounded-full mx-auto my-3 flex-shrink-0" />
+                        ✓ Verified
+                    </button>
 
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-3 border-b border-[#f0ebe0] flex-shrink-0">
-                            <h3 className="text-sm font-black text-[#1a2340] uppercase tracking-widest flex items-center gap-2">
-                                <SlidersHorizontal size={15} className="text-[#c9a84c]" /> {t('search_page.filters')}
-                            </h3>
-                            <div className="flex items-center gap-4">
-                                <button onClick={resetFilters} className="text-xs font-bold text-[#c9a84c] hover:underline">{t('search_page.reset_all')}</button>
-                                <button onClick={() => setShowMobileFilters(false)} className="text-[#9ca3af] hover:text-[#1a2340] p-1">
-                                    <X size={18} />
-                                </button>
-                            </div>
-                        </div>
+                    <button
+                        onClick={() => setFilters(prev => ({ ...prev, ownerType: prev.ownerType === 'Owner' ? '' : 'Owner' }))}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
+                            filters.ownerType === 'Owner'
+                                ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                        }`}
+                    >
+                        Owner
+                    </button>
 
-                        {/* Scrollable Content */}
-                        <div className="px-6 pb-8 divide-y divide-[#f0ebe0] overflow-y-auto flex-1 scrollbar-thin">
-                            {renderFilterSections()}
-                        </div>
-                    </motion.div>
+                    <button
+                        onClick={() => setFilters(prev => ({ ...prev, roadTouch: !prev.roadTouch }))}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
+                            filters.roadTouch
+                                ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                        }`}
+                    >
+                        Road Touch
+                    </button>
+
+                    <button
+                        onClick={() => setFilters(prev => ({ ...prev, cornerPlot: !prev.cornerPlot }))}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
+                            filters.cornerPlot
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                        }`}
+                    >
+                        Corner Plot
+                    </button>
+
+                    {filters.landType !== 'None' && (
+                        <button
+                            onClick={() => setFilters(prev => ({ ...prev, landType: 'None' }))}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-50 text-[#0078d4] border border-blue-200 flex items-center gap-1 shrink-0"
+                        >
+                            <span>Category: {filters.landType}</span>
+                            <X size={12} />
+                        </button>
+                    )}
                 </div>
-            )}
 
-            {/* ── Main Layout ── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <div className="flex gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                    {/* ── Left Sidebar ── */}
-                    <div className="hidden lg:block w-64 flex-shrink-0">
-                        <div className="sticky top-32">
+                    {/* Left Sidebar Filter Column */}
+                    <div className="hidden lg:block lg:col-span-1">
+                        <div className="sticky top-24">
                             {filtersContent}
                         </div>
                     </div>
 
-                    {/* ── Results ── */}
-                    <div className="flex-1 min-w-0">
+                    {/* Right Property Cards Column */}
+                    <div className="lg:col-span-3 min-w-0 space-y-4">
 
-                        {/* Results Header */}
-                        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-                            <div>
-                                <h2 className="text-lg font-bold text-[#1a2340]">
-                                    {isLoading ? t('search_page.searching') : `${totalResults.toLocaleString('en-IN')} ${t('search_page.properties_found')}`}
-                                </h2>
-                                {isGeoMode && (
-                                    <p className="text-xs text-[#c9a84c] font-bold mt-0.5">{t('search_page.showing_near_location')}</p>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">{t('search_page.sort_by')}</span>
-                                <select
-                                    value={sortBy}
-                                    onChange={e => setSortBy(e.target.value)}
-                                    className="text-sm font-bold text-[#1a2340] bg-white border border-[#e2d9c5] rounded-lg px-3 py-2 focus:outline-none focus:border-[#c9a84c] cursor-pointer"
-                                >
-                                    <option value="trending">{t('search_page.sort_trending')}</option>
-                                    <option value="-createdAt">{t('search_page.sort_newest')}</option>
-                                    <option value="price">{t('search_page.sort_price_low')}</option>
-                                    <option value="-price">{t('search_page.sort_price_high')}</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Cards */}
                         {isError ? (
                             <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
                         ) : ((isLoading || isFetching) && page === 1 && listings.length === 0) ? (
                             <div className="space-y-4">{[1, 2, 3].map(i => <ListingSkeleton key={i} variant="list" />)}</div>
-                        ) : (listings.length === 0 && (!resultData || (resultData.data && resultData.data.length === 0))) ? (
-                            <EmptyState onAction={resetFilters} actionText={t('search_page.clear_all_filters')} title={t('search_page.no_properties_found')} message={t('search_page.try_adjusting')} />
+                        ) : listings.length === 0 ? (
+                            <EmptyState onAction={resetFilters} actionText="Clear All Filters" title="No Exact Land Match Found" message="Try broadening your location or budget filters to explore verified parcels." />
                         ) : (
                             <div className="space-y-4">
                                 {listings.map((listing, idx) => (
                                     <motion.div
                                         key={listing._id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        whileInView={{ opacity: 1, x: 0 }}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
                                         viewport={{ once: true }}
-                                        transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                        transition={{ duration: 0.25, delay: idx * 0.04 }}
                                         ref={idx === listings.length - 1 ? lastElementRef : null}
                                         onClick={() => navigate(`/listings/${listing._id}`)}
-                                        className="bg-white border border-[#e2d9c5] hover:border-[#c9a84c] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-lg group flex flex-row h-[145px] sm:h-auto sm:min-h-[180px]"
+                                        className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer group flex flex-col md:flex-row gap-5"
                                     >
-                                        {/* Image */}
-                                        <div className="relative flex-shrink-0 overflow-hidden bg-[#e5e7eb] w-[125px] sm:w-[260px] h-full sm:h-auto">
+                                        {/* Image Box (310px width & 210px height exact 99acres aspect ratio) */}
+                                        <div className="relative w-full md:w-[310px] h-52 md:h-[210px] rounded-xl overflow-hidden shrink-0 bg-slate-100">
                                             {listing.images?.length > 0 ? (
                                                 <img
                                                     src={getImageUrl(listing.images[0])}
                                                     alt={listing.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                     loading="lazy"
-                                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
-                                            ) : (listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
-                                                <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                                                    <MapContainer
-                                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
-                                                        zoom={14}
-                                                        zoomControl={false}
-                                                        dragging={false}
-                                                        doubleClickZoom={false}
-                                                        scrollWheelZoom={false}
-                                                        attributionControl={false}
-                                                        style={{ height: '100%', width: '100%' }}
-                                                    >
-                                                        <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                                        <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
-                                                    </MapContainer>
-                                                </div>
                                             ) : (
-                                                <div className="absolute inset-0 w-full h-full flex items-center justify-center text-[#9ca3af] text-[10px] sm:text-xs font-bold uppercase tracking-widest">{t('search_page.no_image')}</div>
+                                                <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-extrabold text-xs uppercase tracking-wider">
+                                                    NO IMAGE AVAILABLE
+                                                </div>
                                             )}
 
-                                            {/* Badges */}
-                                            <div className="absolute top-2 left-2 flex flex-col gap-1.5">
-                                                {listing.status === 'Reserved' && (
-                                                    <span className="bg-[#dc2626] text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded uppercase tracking-wider">{t('search_page.reserved')}</span>
-                                                )}
-                                            </div>
+                                            {/* Featured Dark Badge */}
+                                            {listing.isFeatured && (
+                                                <div className="absolute top-3 left-3 bg-[#1a2340] text-[#c9a84c] text-[9px] font-black uppercase px-2.5 py-1 rounded-md shadow-md tracking-wider">
+                                                    FEATURED
+                                                </div>
+                                            )}
 
-                                            {/* Wishlist, Share & Mobile Contacts */}
-                                            <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-                                                <button
-                                                    onClick={e => toggleWishlist(e, listing._id)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-all"
-                                                >
-                                                    <Heart size={12} className={wishlist.has(listing._id) ? 'fill-red-500 text-red-500' : 'text-[#6b7280]'} />
-                                                </button>
-                                                <button
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-[#6b7280] shadow-md hover:scale-110 active:scale-95 transition-all"
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        const listingUrl = `${getWebsiteBaseUrl()}/listings/${listing._id}`;
-                                                        const shareData = {
-                                                            title: listing.title,
-                                                            text: `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}`,
-                                                            url: listingUrl
-                                                        };
-                                                        if (navigator.share) {
-                                                            navigator.share(shareData).catch(err => console.log(err));
-                                                        } else {
-                                                            navigator.clipboard.writeText(listingUrl);
-                                                            toast.success(t('search_page.link_copied') || 'Listing link copied to clipboard');
-                                                        }
-                                                    }}
-                                                    title="Share Property"
-                                                >
-                                                    <Share2 size={12} />
-                                                </button>
-                                                <button
-                                                    className="sm:hidden w-7 h-7 bg-[#25d366] rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        const phone = listing.createdBy?.phone || '';
-                                                        window.open(`https://wa.me/${phone}`, '_blank');
-                                                    }}
-                                                    title={t('search_page.whatsapp_seller')}
-                                                >
-                                                    <MessageCircle size={12} className="fill-current" />
-                                                </button>
-                                                <button
-                                                    className="sm:hidden w-7 h-7 bg-[#1a2340] rounded-full flex items-center justify-center text-[#c9a84c] shadow-lg active:scale-95 transition-all"
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        const phone = listing.createdBy?.phone || '';
-                                                        window.open(`tel:${phone}`);
-                                                    }}
-                                                    title={t('search_page.contact')}
-                                                >
-                                                    <Phone size={11} />
-                                                </button>
-                                            </div>
+                                            {/* Wishlist Heart Icon */}
+                                            <button
+                                                onClick={e => toggleWishlist(e, listing._id)}
+                                                className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-md text-slate-600 hover:text-rose-500 hover:scale-110 active:scale-95 transition-all z-10 cursor-pointer"
+                                            >
+                                                <Heart size={16} className={wishlist.has(listing._id) ? 'fill-rose-500 text-rose-500' : ''} />
+                                            </button>
 
-                                            {/* Bottom overlay */}
-                                            <div className="hidden sm:block absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
-                                                <p className="text-white text-[10px] font-600">
-                                                    {t('search_page.listed_on')} <strong>{new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                                                </p>
-                                            </div>
+                                            {/* Bottom Image Overlay Strip */}
+                                            {listing.contacts > 0 && (
+                                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent px-3 py-2">
+                                                    <span className="text-white text-[10px] font-bold flex items-center gap-1">
+                                                        <span>🔥 {listing.contacts}+ buyers inquired</span>
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Content */}
-                                        <div className="flex-1 flex flex-col justify-between p-3 sm:p-5 min-w-0 relative">
-                                            {/* NEW LISTING ribbon (only for first 24 hours) */}
-                                            {listing.status !== 'Reserved' && (new Date() - new Date(listing.createdAt)) < 24 * 60 * 60 * 1000 && (
-                                                <div className="hidden sm:block absolute top-0 right-0 bg-[#2563eb] text-white text-[8px] sm:text-[9px] font-bold px-2 py-0.5 sm:px-3 sm:py-1 uppercase tracking-widest"
-                                                    style={{ clipPath: 'polygon(10px 0%, 100% 0%, 100% 100%, 0% 100%)' }}>
-                                                    {t('search_page.new_listing')}
-                                                </div>
-                                            )}
-
+                                        {/* Right Info Column */}
+                                        <div className="flex-1 flex flex-col justify-between min-w-0 space-y-3">
                                             <div>
-                                                {/* Title */}
-                                                <h3 className="text-sm sm:text-lg font-bold text-[#1a2340] group-hover:text-[#c9a84c] transition-colors leading-tight mb-0.5 sm:mb-1 pr-14 sm:pr-20 line-clamp-1">
-                                                    {listing.title}
-                                                </h3>
-
-                                                {/* Subtitle */}
-                                                <p className="text-[11px] sm:text-sm text-[#6b7280] font-600 mb-1 sm:mb-2 line-clamp-1">
-                                                    <strong className="text-[#1a2340]">{listing.propertyType ? (listing.propertyType === 'Plot' ? t('search_page.plots') : t('search_page.lands')) : t('search_page.plot_or_land')}</strong> in {listing.plotNumber ? `${listing.plotNumber}, ` : ''}{listing.areaName ? `${listing.areaName}, ` : ''}{listing.location}
-                                                </p>
-
-                                                {/* Price + Area boxes */}
-                                                <div className="flex items-baseline gap-2 sm:gap-4 mb-1 sm:mb-3">
-                                                    <div className="text-sm sm:text-lg font-black text-[#1a2340]">
-                                                        ₹{listing.price?.toLocaleString('en-IN')}
-                                                    </div>
-                                                    <div className="text-[10px] sm:text-xs font-bold text-[#c9a84c] bg-[#c9a84c]/10 px-1.5 py-0.5 rounded">
-                                                        {listing.area || '—'}
+                                                {/* Title & Subtitle */}
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <h3 className="text-lg font-black text-slate-900 group-hover:text-[#0078d4] transition-colors line-clamp-1">
+                                                            {listing.title}
+                                                        </h3>
+                                                        <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                                                            <span>{listing.landType || listing.propertyType || 'Plot'}{listing.location ? ` in ${listing.location}` : ''}</span>
+                                                            {listing.listingType === 'Verified' && (
+                                                                <>
+                                                                    <span className="text-slate-300">·</span>
+                                                                    <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                                                                        <CheckCircle2 size={12} /> Verified
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </p>
                                                     </div>
                                                 </div>
 
-                                                {/* Location */}
-                                                <p className="flex items-center gap-1 text-[10px] sm:text-xs text-[#6b7280] font-600 mb-1 sm:mb-3 line-clamp-1">
-                                                    <MapPin size={10} className="text-[#c9a84c] sm:w-3 sm:h-3" /> {listing.plotNumber ? `${listing.plotNumber}, ` : ''}{listing.areaName ? `${listing.areaName}, ` : ''}{listing.location}
-                                                </p>
+                                                {/* Main Specs & Price Row */}
+                                                <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2 mt-3.5 pb-3 border-b border-slate-100">
+                                                    <div>
+                                                        <div className="text-xl sm:text-2xl font-black text-slate-900">
+                                                            ₹{listing.price >= 10000000 
+                                                                ? `${(listing.price / 10000000).toFixed(2)} Cr`
+                                                                : (listing.price >= 100000 ? `${(listing.price / 100000).toFixed(1)} Lakh` : listing.price?.toLocaleString('en-IN'))}
+                                                        </div>
+                                                        <div className="text-[11px] font-semibold text-slate-400 mt-0.5">
+                                                            {listing.pricePerSqYd ? `₹${listing.pricePerSqYd.toLocaleString()} /sqyd` : (listing.numericArea ? `₹${Math.round(listing.price / listing.numericArea).toLocaleString()} /sqyd` : 'Total Price')}
+                                                        </div>
+                                                    </div>
 
-                                                {/* Stats */}
-                                                <div className="hidden sm:flex gap-2 flex-wrap mb-3">
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#dc2626] bg-[#fff0f0] border border-[#fecaca] px-2 py-1 rounded">
-                                                        <Users size={9} /> {listing.contacts || 0}+ {t('search_page.showings')}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#1d4ed8] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">
-                                                        <Eye size={9} /> {listing.views || 0} {t('search_page.views')}
-                                                    </span>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-800">{listing.area || 'N/A'}</div>
+                                                        <div className="text-[11px] font-semibold text-slate-400 mt-0.5">Total Area</div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-800">{listing.landType || listing.propertyType || 'Plot'}</div>
+                                                        <div className="text-[11px] font-semibold text-slate-400 mt-0.5">Property Type</div>
+                                                    </div>
                                                 </div>
 
-                                                {/* Description */}
-                                                <p className="hidden sm:block text-xs text-[#9ca3af] font-500 leading-relaxed line-clamp-2">
-                                                    {listing.description || t('search_page.no_desc')}
+                                                {/* Highlight Badges */}
+                                                {(listing.roadTouch || listing.cornerPlot || listing.isAgricultural) && (
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        {listing.roadTouch && (
+                                                            <span className="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-md">
+                                                                ✓ Road Touch
+                                                            </span>
+                                                        )}
+                                                        {listing.cornerPlot && (
+                                                            <span className="bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-md">
+                                                                ★ Corner Plot
+                                                            </span>
+                                                        )}
+                                                        {listing.isAgricultural && (
+                                                            <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-md">
+                                                                🌾 Agricultural
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Description Snippet */}
+                                                <p className="text-xs text-slate-500 font-medium mt-2 line-clamp-1">
+                                                    {listing.description || `${listing.landType || listing.propertyType || 'Land'} parcel located in ${listing.location || 'prime area'}.`}
                                                 </p>
                                             </div>
 
-                                            {/* Footer */}
-                                            <div className="hidden sm:flex items-center justify-between pt-3 border-t border-[#f0ebe0] mt-3">
-                                                <div
-                                                    onClick={e => { e.stopPropagation(); navigate(`/seller/${listing.createdBy?._id || listing.createdBy}`); }}
-                                                    className="flex items-center gap-2 cursor-pointer min-w-0"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-[#1a2340] flex items-center justify-center text-[#c9a84c] font-black text-xs flex-shrink-0">
-                                                        {listing.createdBy?.name?.charAt(0) || 'U'}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider leading-none">
-                                                            {listing.createdBy?.role === 'Broker' ? 'Builder' : listing.createdBy?.role || 'Seller'}
-                                                        </div>
-                                                        <div className="text-sm font-black text-[#1a2340] truncate">
-                                                            {listing.createdBy?.name || 'Authorized Seller'}
-                                                        </div>
-                                                    </div>
+                                            {/* Seller Info & Action Buttons */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-slate-100 gap-3">
+                                                <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                                                    <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px] flex items-center justify-center uppercase">
+                                                        {listing.createdBy?.name?.[0] || 'O'}
+                                                    </span>
+                                                    <span>{listing.ownerType || listing.createdBy?.role || 'Seller'} · {listing.createdBy?.name || 'Owner'}</span>
                                                 </div>
 
-                                                <div className="flex gap-2 flex-shrink-0">
+                                                <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={e => {
                                                             e.stopPropagation();
                                                             const phone = listing.createdBy?.phone || '';
-                                                            window.open(`https://wa.me/${phone}`, '_blank');
+                                                            if (phone) window.open(`tel:${phone}`);
+                                                            else toast.info('Seller number available on property detail page');
                                                         }}
-                                                        className="flex items-center gap-1 px-3 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                                                        className="px-4 py-2 border border-[#0078d4] text-[#0078d4] hover:bg-blue-50 font-extrabold text-xs rounded-lg transition-colors cursor-pointer"
                                                     >
-                                                        <MessageCircle size={12} className="fill-current" /> <span>WhatsApp</span>
+                                                        View Number
                                                     </button>
+
                                                     <button
                                                         onClick={e => {
                                                             e.stopPropagation();
-                                                            const phone = listing.createdBy?.phone || '';
-                                                            window.open(`tel:${phone}`);
+                                                            navigate(`/listings/${listing._id}`);
                                                         }}
-                                                        className="flex items-center gap-1 px-3 py-2 bg-white border border-[#e2d9c5] hover:border-[#1a2340] text-[#1a2340] rounded-lg text-xs font-bold transition-all"
+                                                        className="px-5 py-2 bg-[#0078d4] hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
                                                     >
-                                                        <Phone size={12} strokeWidth={2.5} /> <span>{t('search_page.contact')}</span>
+                                                        <Phone size={13} />
+                                                        <span>Contact</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -881,12 +804,11 @@ const Search = () => {
                                     </motion.div>
                                 ))}
 
-                                {/* Infinite scroll loader */}
                                 {hasMore && (
-                                    <div className="py-8 flex justify-center">
-                                        <div className="flex items-center gap-3 px-6 py-3 bg-white border border-[#e2d9c5] rounded-xl text-sm font-bold text-[#9ca3af]">
-                                            <div className="w-4 h-4 border-2 border-[#c9a84c] border-t-transparent rounded-full animate-spin" />
-                                            {t('search_page.loading_more')}
+                                    <div className="py-6 flex justify-center">
+                                        <div className="flex items-center gap-2.5 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-extrabold text-slate-600 shadow-xs">
+                                            <div className="w-4 h-4 border-2 border-[#0078d4] border-t-transparent rounded-full animate-spin" />
+                                            <span>Loading more verified parcels...</span>
                                         </div>
                                     </div>
                                 )}

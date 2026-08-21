@@ -44,8 +44,19 @@ exports.createInquiry = asyncHandler(async (req, res, next) => {
 
     const inquiry = await Inquiry.create(req.body);
 
-    // Increment Contact Count for Reach Tracking
-    await Listing.findByIdAndUpdate(req.body.listingId, { $inc: { contacts: 1 } });
+    // Increment Contact Count + Inquiries counter for ranking engagement
+    await Listing.findByIdAndUpdate(req.body.listingId, {
+        $inc: { contacts: 1, inquiries: 1 },
+        $set: { lastInteractionAt: Date.now() }
+    });
+
+    // Log engagement activity for ranking + recommendation
+    const UserActivity = require('../models/UserActivity');
+    await UserActivity.create({
+        userId: req.user.id,
+        actionType: 'ENQUIRY',
+        actionDetails: { listingId: req.body.listingId }
+    });
 
     const io = req.app.get('io');
     if (io) {
@@ -133,3 +144,47 @@ exports.updateInquiryStatus = asyncHandler(async (req, res, next) => {
     
     res.status(200).json({ success: true, data: inquiry });
 });
+
+// @desc    Track buyer interaction lead (WhatsApp or Call click)
+// @route   POST /api/inquiries/track-lead
+// @access  Public / Optional Auth
+exports.trackLead = asyncHandler(async (req, res, next) => {
+    const { listingId, leadType, buyerName, buyerPhone } = req.body;
+
+    const listing = await Listing.findById(listingId);
+    if (!listing) {
+        return res.status(404).json({ success: false, error: 'Listing not found' });
+    }
+
+    const Lead = require('../models/Lead');
+    const lead = await Lead.create({
+        listingId,
+        sellerId: listing.createdBy,
+        buyerId: req.user ? req.user.id : null,
+        buyerName: buyerName || (req.user ? req.user.name : 'Interested Visitor'),
+        buyerPhone: buyerPhone || (req.user ? req.user.phone : 'Direct Click'),
+        leadType: leadType || 'WhatsApp'
+    });
+
+    // Increment contacts counter on listing
+    await Listing.findByIdAndUpdate(listingId, {
+        $inc: { contacts: 1 },
+        $set: { lastInteractionAt: Date.now() }
+    });
+
+    res.status(201).json({ success: true, data: lead });
+});
+
+// @desc    Get buyer leads for Seller / Broker
+// @route   GET /api/inquiries/seller-leads
+// @access  Private (Seller/Broker/Admin)
+exports.getSellerLeads = asyncHandler(async (req, res, next) => {
+    const Lead = require('../models/Lead');
+    const leads = await Lead.find({ sellerId: req.user.id })
+        .populate('listingId', 'title price location images landType plotType')
+        .sort('-createdAt')
+        .limit(100);
+
+    res.status(200).json({ success: true, count: leads.length, data: leads });
+});
+

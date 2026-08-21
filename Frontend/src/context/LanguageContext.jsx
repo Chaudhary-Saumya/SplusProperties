@@ -22,6 +22,10 @@ export const LanguageProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   // Helper to resolve dot notation path in the translation object
   // e.g. t('navbar.home')
   const t = (path) => {

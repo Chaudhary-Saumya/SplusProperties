@@ -1,742 +1,730 @@
-import React, { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useContext, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard, List, Settings, Plus, MapPin, Layers, Calculator, ShieldCheck, Globe, User, Heart, Building2, Calendar, FileText, Search, Users, Phone, Mail, ExternalLink, ArrowRight, Sparkles, Camera, Loader2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { getImageUrl } from '../utils/imageUrl';
+import k4Logo from '../assets/K4.png';
+
+/* ─── Ultra-Modern Right Slide Drawer Component with React Portal & Framer Motion ─── */
+const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout }) => {
+  const { updateProfileDetails } = useContext(AuthContext);
+  const { language, setLanguage, t } = useLanguage();
+  const drawerFileInputRef = useRef(null);
+  const [uploadingDrawerAvatar, setUploadingDrawerAvatar] = useState(false);
+
+  if (typeof document === 'undefined') return null;
+
+  const handleDrawerAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (PNG, JPG, WEBP)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingDrawerAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post('/api/uploads', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.data) {
+        await updateProfileDetails({ profileImage: res.data.data });
+        toast.success('Profile picture updated!');
+      }
+    } catch {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingDrawerAvatar(false);
+      if (drawerFileInputRef.current) drawerFileInputRef.current.value = '';
+    }
+  };
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[99999] flex justify-end">
+          {/* Backdrop Blur & Fade */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm cursor-pointer"
+            onClick={onClose}
+          />
+
+          {/* Drawer Body with Rounded Left Edge & Spring Motion */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+            className="relative w-full max-w-sm bg-white h-screen shadow-[0_0_60px_rgba(0,0,0,0.2)] flex flex-col justify-between z-[100000] overflow-hidden rounded-l-[2rem] border-l border-slate-200/80 font-['Nunito_Sans',sans-serif]"
+          >
+            {/* Scrollable Content Container */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Drawer Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-20 backdrop-blur-md">
+                <img src={k4Logo} alt="Kharsan Properties" className="h-9 sm:h-10 w-auto object-contain" />
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* User Account Banner */}
+              {isAuthenticated ? (
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-[#1a2340] via-slate-900 to-[#1a2340] text-white flex items-center justify-between shadow-inner">
+                  <input
+                    type="file"
+                    ref={drawerFileInputRef}
+                    onChange={handleDrawerAvatarUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div
+                      onClick={() => !uploadingDrawerAvatar && drawerFileInputRef.current?.click()}
+                      className="relative w-12 h-12 rounded-full bg-[#c9a84c] text-slate-900 font-black text-lg flex items-center justify-center uppercase shadow-md ring-2 ring-amber-400/30 overflow-hidden shrink-0 group cursor-pointer"
+                      title="Click to change profile picture"
+                    >
+                      {user?.profileImage ? (
+                        <img src={getImageUrl(user.profileImage)} alt={user?.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : (
+                        user?.name?.[0] || 'U'
+                      )}
+                      <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        {uploadingDrawerAvatar ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-extrabold truncate">{user?.name}</div>
+                      <div className="text-[10px] font-black text-[#c9a84c] uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                        <ShieldCheck size={12} />
+                        <span>{user?.role || 'Verified User'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/settings"
+                    onClick={onClose}
+                    className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-amber-300 transition-colors shrink-0"
+                    title="Account Settings"
+                  >
+                    <Settings size={16} />
+                  </Link>
+                </div>
+              ) : (
+                <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-950 text-white space-y-3">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-amber-400" />
+                    <span>Welcome to Kharsan</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/login"
+                      onClick={onClose}
+                      className="block text-center py-2.5 text-xs font-extrabold text-slate-900 bg-white rounded-xl hover:bg-slate-100 transition-colors shadow-sm"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={onClose}
+                      className="block text-center py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Language Selector Bar */}
+              <div className="p-3 bg-slate-100/90 border-b border-slate-200/80 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 uppercase tracking-wider">
+                  <Globe size={15} className="text-blue-600" />
+                  <span>{language === 'gu' ? 'ભાષા (Language)' : 'Select Language'}</span>
+                </div>
+                <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-inner">
+                  <button
+                    onClick={() => setLanguage('en')}
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                      language === 'en'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setLanguage('gu')}
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                      language === 'gu'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    ગુજરાતી
+                  </button>
+                </div>
+              </div>
+
+              {/* Navigation Options List */}
+              <div className="p-4 space-y-1.5">
+                <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {language === 'gu' ? 'મુખ્ય મેનૂ' : 'Main Menu'}
+                </div>
+
+                <Link
+                  to="/"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Home size={16} />
+                  </div>
+                  <span>{t('navbar.home')}</span>
+                </Link>
+
+                <Link
+                  to="/search"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Search size={16} />
+                  </div>
+                  <span>{t('navbar.buy')}</span>
+                </Link>
+
+                <Link
+                  to="/favorites"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-rose-50/80 text-slate-800 hover:text-rose-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-rose-100/70 text-rose-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform relative">
+                    <Heart size={16} className="fill-rose-500 text-rose-500" />
+                  </div>
+                  <div className="flex items-center justify-between w-full">
+                    <span>{t('navbar.my_favourites')}</span>
+                    {user?.favorites?.length > 0 && (
+                      <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        {user.favorites.length}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+
+                <Link
+                  to="/brokers"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Users size={16} />
+                  </div>
+                  <span>{t('navbar.brokers')}</span>
+                </Link>
+
+                {isAuthenticated && (
+                  <>
+                    <div className="pt-3 px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('navbar.my_account')}
+                    </div>
+
+                    <Link
+                      to="/my-listings"
+                      onClick={onClose}
+                      className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                        <List size={16} />
+                      </div>
+                      <span>{t('navbar.my_listings')}</span>
+                    </Link>
+
+                    <Link
+                      to="/buyer-leads"
+                      onClick={onClose}
+                      className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-emerald-50/80 text-slate-800 hover:text-emerald-600 transition-all font-black text-xs group"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                        <Users size={16} />
+                      </div>
+                      <span>{t('navbar.buyer_leads')}</span>
+                    </Link>
+                  </>
+                )}
+
+                <div className="pt-3 px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {t('navbar.tools')}
+                </div>
+
+                <Link
+                  to="/saved-maps"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <MapPin size={16} />
+                  </div>
+                  <span>{t('navbar.saved_boundaries')}</span>
+                </Link>
+
+                <Link
+                  to="/boundary-map"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-blue-50/80 text-slate-800 hover:text-blue-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Layers size={16} />
+                  </div>
+                  <span>{t('navbar.boundary_map')}</span>
+                </Link>
+
+                <Link
+                  to="/area-converter"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-amber-50/80 text-slate-800 hover:text-amber-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-100/70 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Calculator size={16} />
+                  </div>
+                  <span>{t('navbar.area_converter')}</span>
+                </Link>
+
+                <Link
+                  to="/calculator"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-emerald-50/80 text-slate-800 hover:text-emerald-600 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100/70 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <FileText size={16} />
+                  </div>
+                  <span>{t('navbar.calculator')}</span>
+                </Link>
+
+                <Link
+                  to="/about"
+                  onClick={onClose}
+                  className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl hover:bg-slate-100 text-slate-800 transition-all font-black text-xs group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Building2 size={16} />
+                  </div>
+                  <span>{t('navbar.about')}</span>
+                </Link>
+              </div>
+            </div>
+
+
+            {/* Production Sticky Bottom Footer */}
+            <div className="p-4 border-t border-slate-200/80 space-y-2 bg-slate-50/90 shrink-0">
+              <Link
+                to={isAuthenticated ? '/create-listing' : '/login'}
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs py-3 rounded-2xl shadow-md hover:shadow-lg transition-all"
+              >
+                <Plus size={16} />
+                <span>{t('navbar.post_property_free')}</span>
+              </Link>
+
+              {isAuthenticated && (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    to="/settings"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-extrabold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all shadow-xs"
+                  >
+                    <Settings size={15} className="text-slate-500" />
+                    <span>{t('navbar.settings')}</span>
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-extrabold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-xl transition-all cursor-pointer"
+                  >
+                    <LogOut size={15} />
+                    <span>{t('navbar.logout')}</span>
+                  </button>
+                </div>
+              )}
+
+
+              <div className="pt-2 text-center text-[10px] font-bold text-slate-400">
+                © {new Date().getFullYear()} Kharsan Properties Platform
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+};
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
   const { language, toggleLanguage, t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [mobileSections, setMobileSections] = useState({
-    properties: false,
-    tools: false,
-    account: false,
-    dashboard: false
-  });
+  const [showRightDrawer, setShowRightDrawer] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showToolsDropdown, setShowToolsDropdown] = useState(false);
+  const [navSearch, setNavSearch] = useState('');
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const isSearchPage = location.pathname === '/search';
 
-  const toggleMobileSection = (section) => {
-    setMobileSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  // Sync navSearch with URL parameter on mount/URL change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('query') || '';
+    setNavSearch(q);
+  }, [location.search]);
+
+  // Live real-time search: Update URL directly as user types without popup dropdowns
+  const handleNavInputChange = (e) => {
+    const val = e.target.value;
+    setNavSearch(val);
+
+    if (isSearchPage) {
+      const params = new URLSearchParams(location.search);
+      if (val.trim()) {
+        params.set('query', val.trim());
+      } else {
+        params.delete('query');
+      }
+      navigate(`/search?${params.toString()}`, { replace: true });
+    }
   };
 
   const handleLogout = () => {
     logout();
     navigate('/');
-    setIsOpen(false);
+    setShowRightDrawer(false);
+    setShowUserDropdown(false);
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const toggleDropdown = (name) => {
-    setActiveDropdown(activeDropdown === name ? null : name);
+  const handleNavSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!isSearchPage) {
+      if (navSearch.trim()) {
+        navigate(`/search?query=${encodeURIComponent(navSearch.trim())}`);
+      } else {
+        navigate('/search');
+      }
+    }
   };
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap');
-
-        :root {
-          --navbar-height: 80px;
-        }
-        .navbar-root {
-          position: sticky; top: 0; z-index: 50;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(26, 35, 64, 0.1);
-          font-family: 'Nunito Sans', sans-serif;
-          transition: all 0.3s ease;
-        }
-        .navbar-inner {
-          max-width: 1400px; margin: 0 auto;
-          padding: 0 24px;
-          display: flex; align-items: center; justify-content: space-between;
-          height: 80px;
-        }
-
-        /* Logo */
-        .logo { display: flex; flex-direction: column; align-items: center; text-decoration: none; line-height: 1; padding: 4px 0; transition: transform 0.2s; }
-        .logo:hover { transform: scale(1.03); }
-        .logo-main { display: flex; align-items: center; justify-content: center; }
-        .logo-svg { height: 78px; width: auto; }
-        .logo-text-svg { font-family: 'Nunito Sans', sans-serif; font-weight: 800; text-transform: uppercase; }
-
-        /* Desktop nav */
-        .nav-desktop { display: flex; align-items: center; gap: 4px; }
-        .nav-link { font-size: 15px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 10px 16px; border-radius: 8px; letter-spacing: 0.5px; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
-        .nav-link:hover { background: #f0f4ff; color: #c9a84c; }
-        .nav-dropdown { position: relative; }
-        .nav-dropdown-btn { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: #1a2340; background: none; border: none; cursor: pointer; padding: 10px 16px; border-radius: 8px; letter-spacing: 0.5px; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
-        .nav-dropdown-btn:hover, .nav-dropdown-btn.active { background: #f0f4ff; color: #c9a84c; }
-        .chevron { transition: transform 0.2s; }
-        .chevron.open { transform: rotate(180deg); }
-        .dropdown-menu { position: absolute; top: calc(100% + 1px); left: 0; background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #c9a84c; border-radius: 8px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); padding: 6px 0; z-index: 100; }
-        .dropdown-item { display: block; padding: 10px 18px; font-size: 13px; font-weight: 600; color: #1a2340; text-decoration: none; transition: background 0.12s; }
-        .dropdown-item:hover { background: #f8f5ee; color: #c9a84c; }
-        .nav-divider { width: 1px; height: 24px; background: #d1d5db; margin: 0 6px; }
-        .btn-login { font-size: 14px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 8px 16px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s; }
-        .btn-login:hover { background: #f0f4ff; }
-        .btn-signup { font-size: 13px; font-weight: 700; color: #fff; background: #1a2340; text-decoration: none; padding: 9px 20px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s; border: 2px solid #1a2340; }
-        .btn-signup:hover { background: #c9a84c; border-color: #c9a84c; }
-        .btn-dashboard { font-size: 13px; font-weight: 700; color: #1a2340; text-decoration: none; padding: 9px 18px; border-radius: 6px; border: 2px solid #1a2340; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
-        .btn-dashboard:hover { background: #1a2340; color: #fff; }
-        .btn-logout { font-size: 13px; font-weight: 700; color: #fff; background: #c9a84c; border: 2px solid #c9a84c; padding: 9px 18px; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
-        .btn-logout:hover { background: #b8933a; border-color: #b8933a; }
-
-        /* User Menu Styles */
-        .user-dropdown-btn {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 8px 14px;
-          border-radius: 12px;
-          background: #f8f9ff;
-          border: 1px solid rgba(201, 168, 76, 0.2);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .user-dropdown-btn:hover {
-          background: #f0f4ff;
-          border-color: #c9a84c;
-          box-shadow: 0 4px 12px rgba(26, 35, 64, 0.08);
-        }
-        .user-name {
-          font-size: 16px;
-          font-weight: 800;
-          color: #c19b33ff;
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          text-transform: capitalize;
-        }
-        .dropdown-menu.user-menu {
-          right: 0;
-          left: auto;
-          min-width: 200px;
-          padding: 8px;
-        }
-        .user-menu-header {
-          padding: 10px 14px;
-          border-bottom: 1px solid #f0f4ff;
-          margin-bottom: 6px;
-        }
-        .user-menu-role {
-          font-size: 10px;
-          font-weight: 800;
-          color: #c9a84c;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .logout-item {
-          color: #dc2626 !important;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 100%;
-          text-align: left;
-          background: none;
-          border: none;
-          cursor: pointer;
-        }
-        .logout-item:hover {
-          background: #fff1f1 !important;
-          color: #b91c1c !important;
-        }
-
-        /* Small Desktop / Laptop scaling */
-        @media (min-width: 1151px) and (max-width: 1350px) {
-          .nav-link, .nav-dropdown-btn {
-            font-size: 13px;
-            padding: 8px 10px;
-          }
-          .user-dropdown-btn {
-            padding: 6px 10px;
-            gap: 6px;
-          }
-          .user-name {
-            font-size: 14px;
-            max-width: 80px;
-          }
-          .navbar-inner {
-            padding: 0 16px;
-          }
-          .nav-divider {
-            margin: 0 3px;
-          }
-        }
-
-        /* Mobile toggle */
-        .hamburger { display: none; background: none; border: none; cursor: pointer; color: #1a2340; padding: 4px; }
-        @media (max-width: 1150px) { .nav-desktop { display: none; } .hamburger { display: flex; } }
-        .mobile-actions { display: none; align-items: center; gap: 12px; }
-        @media (max-width: 1150px) { .mobile-actions { display: flex; } }
-        .mob-quick-link { color: #1a2340; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
-        .mob-quick-link:hover { color: #c9a84c; }
-
-        /* Mobile Action Buttons */
-        .mob-header-login-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1a2340;
-          background: #f0f4ff;
-          border: 1px solid rgba(26, 35, 64, 0.15);
-          padding: 6px 14px;
-          border-radius: 20px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          text-decoration: none;
-          transition: all 0.2s ease;
-        }
-        .mob-header-login-btn:hover {
-          background: #1a2340;
-          color: #fff;
-          border-color: #1a2340;
-        }
-        .mob-header-dashboard-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #1a2340;
-          background: #f0f4ff;
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          transition: all 0.2s ease;
-          border: 1px solid rgba(26, 35, 64, 0.1);
-        }
-        .mob-header-dashboard-btn:hover {
-          color: #c9a84c;
-          background: #1a2340;
-        }
-
-        /* Profile Card inside Mobile Menu */
-        .mob-profile-card {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 16px 18px;
-          background: linear-gradient(135deg, #1a2340 0%, #2b395d 100%);
-          border-bottom: 3px solid #c9a84c;
-        }
-        .mob-profile-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .mob-profile-label {
-          font-size: 9px;
-          font-weight: 800;
-          color: #c9a84c;
-          text-transform: uppercase;
-          letter-spacing: 1.5px;
-        }
-        .mob-profile-name {
-          font-size: 15px;
-          font-weight: 800;
-          color: #fff;
-          text-transform: capitalize;
-        }
-        .mob-profile-role {
-          font-size: 10px;
-          font-weight: 700;
-          color: #d1d5db;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .mob-profile-logout-btn {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 11px;
-          font-weight: 800;
-          color: #fff;
-          background: #ef4444;
-          border: none;
-          padding: 8px 14px;
-          border-radius: 20px;
-          cursor: pointer;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: all 0.2s ease;
-        }
-        .mob-profile-logout-btn:hover {
-          background: #dc2626;
-        }
-
-        /* Collapsible Accordions in Mobile Menu */
-        .mob-accordion-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          width: 100%;
-          padding: 14px 18px;
-          font-size: 13px;
-          font-weight: 800;
-          color: #1a2340;
-          background: #fff;
-          border: none;
-          border-bottom: 1px solid #f0ebe0;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.2s ease;
-        }
-        .mob-accordion-header:hover, .mob-accordion-header.active {
-          background: #fdfaf5;
-          color: #c9a84c;
-        }
-        .mob-chevron {
-          transition: transform 0.2s ease;
-          color: #8c90aa;
-        }
-        .mob-chevron.open {
-          transform: rotate(180deg);
-          color: #c9a84c;
-        }
-        .mob-accordion-content {
-          background: #fafaf9;
-          border-bottom: 1px solid #e2d9c5;
-        }
-
-        /* Language Toggle Button Styles */
-        .lang-toggle-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          font-weight: 800;
-          color: #1a2340;
-          background: #f0f4ff;
-          border: 1px solid rgba(26, 35, 64, 0.15);
-          padding: 8px 14px;
-          border-radius: 20px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          letter-spacing: 0.5px;
-        }
-        .lang-toggle-btn:hover {
-          background: #1a2340;
-          color: #fff;
-          border-color: #1a2340;
-        }
-        .lang-toggle-btn span.active-lang {
-          color: #c9a84c;
-        }
-
-        @media (max-width: 640px) {
-          :root {
-            --navbar-height: 70px;
-          }
-          .logo-svg { height: 50px; }
-          .navbar-inner { height: 70px; padding: 0 16px; }
-          .mobile-menu { max-height: calc(100vh - 70px); }
-        }
-
-        /* ── Mobile Menu ── */
-        .mobile-menu { 
-          display: none; 
-          background: #fff; 
-          border-top: 2px solid #1a2340; 
-          max-height: calc(100vh - 80px);
-          overflow-y: auto;
-          overscroll-behavior: contain;
-        }
-        .mobile-menu.open { display: block; }
-
-        /* Section category label */
-        .mob-category {
-          font-size: 9px;
-          font-weight: 800;
-          color: #c9a84c;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          padding: 10px 18px 3px;
-          background: #f8f5ee;
-          border-top: 1px solid #e2d9c5;
-          display: block;
-        }
-
-        /* Every single menu item — identical style */
-        .mob-item {
-          display: flex;
-          align-items: center;
-          padding: 11px 18px;
-          font-size: 12px;
-          font-weight: 700;
-          color: #1a2340;
-          text-decoration: none;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          border-bottom: 1px solid #f0ebe0;
-          background: #fff;
-          transition: color 0.15s, background 0.15s;
-          gap: 8px;
-        }
-        .mob-item:hover { color: #c9a84c; background: #fdfaf5; }
-
-        /* Sub-items — same size, just indented with a left accent */
-        .mob-sub-item {
-          display: flex;
-          align-items: center;
-          padding: 11px 18px 11px 28px;
-          font-size: 12px;
-          font-weight: 700;
-          color: #1a2340;
-          text-decoration: none;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          border-bottom: 1px solid #f0ebe0;
-          background: #fff;
-          transition: color 0.15s, background 0.15s;
-          gap: 8px;
-          border-left: 3px solid transparent;
-        }
-        .mob-sub-item:hover { color: #c9a84c; background: #fdfaf5; border-left-color: #c9a84c; }
-
-        /* Auth bottom strip */
-        .mob-auth-strip {
-          padding: 12px 18px;
-          display: flex;
-          gap: 10px;
-          border-top: 2px solid #1a2340;
-          background: #f8f5ee;
-        }
-        .mob-btn-login {
-          flex: 1; text-align: center;
-          padding: 11px 8px;
-          font-size: 11px; font-weight: 800;
-          color: #1a2340;
-          border: 2px solid #1a2340;
-          border-radius: 8px;
-          text-decoration: none;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          transition: all 0.15s;
-        }
-        .mob-btn-login:hover { background: #1a2340; color: #fff; }
-
-        .mob-btn-signup {
-          flex: 1; text-align: center;
-          padding: 11px 8px;
-          font-size: 11px; font-weight: 800;
-          color: #fff;
-          background: #1a2340;
-          border: 2px solid #1a2340;
-          border-radius: 8px;
-          text-decoration: none;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          transition: all 0.15s;
-        }
-        .mob-btn-signup:hover { background: #c9a84c; border-color: #c9a84c; }
-
-        .mob-btn-logout {
-          flex: 1; text-align: center;
-          padding: 11px 8px;
-          font-size: 11px; font-weight: 800;
-          color: #1a1200;
-          background: #c9a84c;
-          border: 2px solid #c9a84c;
-          border-radius: 8px;
-          cursor: pointer;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          transition: all 0.15s;
-        }
-        .mob-btn-logout:hover { background: #b8933a; border-color: #b8933a; }
-      `}</style>
-
-      <nav className="navbar-root">
-        <div className="navbar-inner">
-
-          {/* Logo */}
-          <Link to="/" className="logo" onClick={() => setIsOpen(false)}>
-            <div className="logo-main">
-              <svg viewBox="0 0 500 500" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
-                {/* Background Accent - Soft Blue/Grey Rect */}
-                <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
-
-                {/* Architectural Lines - Dark Navy */}
-                <g stroke="#1a2340" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
-                  {/* Left building part */}
-                  <path d="M25 320 H90 V225 L190 150" />
-                  {/* Center building part */}
-                  <path d="M190 320 V75 H295 V320" />
-                  {/* Right building part */}
-                  <path d="M295 185 L395 245 V320 H495" />
-                  {/* Base line for center */}
-                  <path d="M190 320 H295" strokeWidth="12" />
-                </g>
-
-                {/* Branding Text */}
-                <text
-                  x="250"
-                  y="415"
-                  textAnchor="middle"
-                  className="logo-text-svg"
-                  fill="#c9a84c"
-                  style={{ fontSize: '82px', fontWeight: '900', fontFamily: 'Nunito Sans, sans-serif' }}
-                >
-                  KHARSAN
-                </text>
-                <text
-                  x="250"
-                  y="470"
-                  textAnchor="middle"
-                  className="logo-text-svg"
-                  fill="#1a2340"
-                  style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px', fontFamily: 'Nunito Sans, sans-serif' }}
-                >
-                  PROPERTIES
-                </text>
-              </svg>
-            </div>
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm font-['Nunito_Sans',sans-serif]">
+        {/* Main Navbar Container */}
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+          
+          {/* Brand Logo Image (K4.png) */}
+          <Link to="/" className="flex items-center text-decoration-none group shrink-0 mr-1 sm:mr-4">
+            <img
+              src={k4Logo}
+              alt="Kharsan Properties"
+              className="h-10 sm:h-12 lg:h-14 w-auto object-contain hover:scale-105 transition-transform"
+            />
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="nav-desktop">
-            <Link to="/" className="nav-link">{t('navbar.home')}</Link>
-            <Link to="/about" className="nav-link">{t('navbar.about')}</Link>
-
-            {/* Properties dropdown */}
-            <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
-              <button
-                className={`nav-dropdown-btn ${activeDropdown === 'search' ? 'active' : ''}`}
-                onMouseEnter={() => setActiveDropdown('search')}
-                aria-haspopup="true"
-                aria-expanded={activeDropdown === 'search'}
-              >
-                {t('navbar.properties')} <ChevronDown size={14} className={`chevron ${activeDropdown === 'search' ? 'open' : ''}`} />
-              </button>
-              {activeDropdown === 'search' && (
-                <div className="dropdown-menu">
-                  <Link to="/search?type=buy" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.buy')}</Link>
-                  {isAuthenticated ? (
-                    <Link to="/create-listing" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.sell')}</Link>
-                  ) : (
-                    <Link to="/login" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.sell')}</Link>
-                  )}
-                  <Link to="/brokers" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.contact_brokers')}</Link>
-                </div>
-              )}
-            </div>
-
-            {/* Tools dropdown */}
-            <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
-              <button
-                className={`nav-dropdown-btn ${activeDropdown === 'tools' ? 'active' : ''}`}
-                onMouseEnter={() => setActiveDropdown('tools')}
-                aria-haspopup="true"
-                aria-expanded={activeDropdown === 'tools'}
-              >
-                {t('navbar.tools')} <ChevronDown size={14} className={`chevron ${activeDropdown === 'tools' ? 'open' : ''}`} />
-              </button>
-              {activeDropdown === 'tools' && (
-                <div className="dropdown-menu">
-                  <Link to="/area-converter" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.area_converter')}</Link>
-                  <Link to="/calculator" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.calculator')} (FN + F9)</Link>
-                  <Link to="/boundary-map" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.boundary_map')}</Link>
-                  {isAuthenticated && <Link to="/saved-maps" className="dropdown-item" onClick={() => setActiveDropdown(null)}>{t('navbar.saved_boundaries')}</Link>}
-                </div>
-              )}
-            </div>
-
-            {isAuthenticated && (
-              <>
-                <Link to="/favorites" className="nav-link">{t('navbar.my_favourites')}</Link>
-                <Link to="/my-visits" className="nav-link">{t('navbar.site_visit')}</Link>
-              </>
-            )}
-
-            {/* Language Toggle Switch (Desktop) */}
-            <button className="lang-toggle-btn" onClick={toggleLanguage} style={{ marginLeft: '8px' }} title="Switch Language / ભાષા બદલો">
-              <span className={language === 'en' ? 'active-lang' : ''}>EN</span>
-              <span style={{ color: '#9ca3af', fontSize: '9px' }}>|</span>
-              <span className={language === 'gu' ? 'active-lang' : ''}>ગુજ</span>
-            </button>
-
-            <div className="nav-divider" />
-
-            {isAuthenticated ? (
-              <>
-                <Link to={user?.role === 'Admin' ? '/admin' : '/dashboard'} className="nav-link">{t('navbar.dashboard')}</Link>
-                <div className="nav-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
+          {/* Direct Live Search Input in Navbar (SHOWN ON SEARCH PAGE) */}
+          {isSearchPage ? (
+            <div className="flex-1 max-w-xl">
+              <form onSubmit={handleNavSearchSubmit} className="w-full flex items-center bg-slate-100/90 hover:bg-slate-100 border border-slate-200/90 rounded-full px-4 py-2 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all flex shadow-inner">
+                <Search size={16} className="text-slate-400 shrink-0 mr-2" />
+                <input
+                  type="text"
+                  placeholder={language === 'gu' ? "ગુજરાતમાં પ્લોટ, સરનામું અથવા શહેર શોધો..." : "Search city, locality, plot number in Gujarat..."}
+                  value={navSearch}
+                  onChange={handleNavInputChange}
+                  className="w-full bg-transparent text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none"
+                />
+                
+                {/* Clear 'X' Icon Button when typing */}
+                {navSearch ? (
                   <button
-                    className="user-dropdown-btn"
-                    onMouseEnter={() => setActiveDropdown('user')}
-                    onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
-                    aria-haspopup="true"
-                    aria-expanded={activeDropdown === 'user'}
+                    type="button"
+                    onClick={() => {
+                      setNavSearch('');
+                      const params = new URLSearchParams(location.search);
+                      params.delete('query');
+                      navigate(`/search?${params.toString()}`, { replace: true });
+                    }}
+                    className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 hover:bg-slate-300 transition-colors cursor-pointer"
+                    title="Clear search"
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      <span className="user-name">{user.name.split(' ')[0]}</span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280' }}>{user.role}</span>
-                    </div>
-                    <ChevronDown size={14} className={`chevron ${activeDropdown === 'user' ? 'open' : ''}`} color="#c9a84c" />
+                    <X size={13} />
                   </button>
-                  {activeDropdown === 'user' && (
-                    <div className="dropdown-menu user-menu" style={{ minWidth: '150px' }}>
-                      <button onClick={handleLogout} className="dropdown-item logout-item">
-                        {t('navbar.logout')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="btn-login">{t('navbar.login')}</Link>
-                <Link to="/register" className="btn-signup">{t('navbar.signup')}</Link>
-              </>
-            )}
-          </div>
-
-          {/* Mobile Actions: Clean Quick Buttons next to Hamburger */}
-          <div className="mobile-actions">
-            <button className="lang-toggle-btn" onClick={toggleLanguage} style={{ padding: '6px 10px' }} title="Switch Language / ભાષા બદલો">
-              <span className={language === 'en' ? 'active-lang' : ''}>EN</span>
-              <span style={{ color: '#9ca3af', fontSize: '9px' }}>|</span>
-              <span className={language === 'gu' ? 'active-lang' : ''}>ગુજ</span>
-            </button>
-
-            {!isAuthenticated ? (
-              <Link to="/login" className="mob-header-login-btn" onClick={() => setIsOpen(false)}>
-                <LogIn size={14} /> {t('navbar.login')}
-              </Link>
-            ) : (
+                ) : (
+                  <button
+                    type="submit"
+                    className="w-6 h-6 rounded-full bg-[#2563eb] text-white flex items-center justify-center shrink-0 hover:bg-blue-700 transition-colors cursor-pointer"
+                    title="Search"
+                  >
+                    <Search size={12} />
+                  </button>
+                )}
+              </form>
+            </div>
+          ) : (
+            /* Desktop Navigation Links (SHOWN ON ALL OTHER PAGES) */
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
               <Link
-                to={user?.role === 'Admin' ? '/admin' : '/dashboard'}
-                className="mob-header-dashboard-btn"
-                onClick={() => setIsOpen(false)}
-                title="Dashboard"
+                to="/search"
+                className="text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all"
               >
-                <LayoutDashboard size={18} />
+                {t('navbar.buy')}
               </Link>
+
+              <Link
+                to="/brokers"
+                className="text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all"
+              >
+                {t('navbar.brokers')}
+              </Link>
+
+              {/* Tools Hover Dropdown Menu */}
+              <div
+                className="relative"
+                onMouseEnter={() => setShowToolsDropdown(true)}
+                onMouseLeave={() => setShowToolsDropdown(false)}
+              >
+                <button
+                  onClick={() => setShowToolsDropdown(!showToolsDropdown)}
+                  className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer"
+                >
+                  <span>{t('navbar.tools')}</span>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showToolsDropdown ? 'rotate-180 text-blue-600' : ''}`} />
+                </button>
+
+                {showToolsDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-fade-in space-y-1">
+                    <Link
+                      to="/boundary-map"
+                      onClick={() => setShowToolsDropdown(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50/80 transition-colors text-slate-800 hover:text-blue-600 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-blue-100/70 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black">{t('navbar.boundary_map')}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold">{language === 'gu' ? 'જમીન સીમા દોરો અને ચકાસો' : 'Draw & verify land coordinates'}</div>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/area-converter"
+                      onClick={() => setShowToolsDropdown(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-amber-50/80 transition-colors text-slate-800 hover:text-amber-600 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-amber-100/70 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Calculator size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black">{t('navbar.area_converter')}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold">{language === 'gu' ? 'વીઘા, એકર અને ચોરસ ફૂટ બદલો' : 'Convert Bigha, Acre & Sq Ft'}</div>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/calculator"
+                      onClick={() => setShowToolsDropdown(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50/80 transition-colors text-slate-800 hover:text-emerald-600 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100/70 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <FileText size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black">{t('navbar.calculator')}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold">{language === 'gu' ? 'જમીન કિંમત અને ચુકવણી કેલ્ક્યુલેટર' : 'Estimate costs & payments'}</div>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/about"
+                      onClick={() => setShowToolsDropdown(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 transition-colors text-slate-800 hover:text-slate-900 group border-t border-slate-100 mt-1"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Building2 size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black">{t('navbar.about')}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold">{language === 'gu' ? 'ખરસાણ પ્રોપર્ટીઝ વિશે જાણો' : 'Learn about Kharsan Properties'}</div>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </nav>
+          )}
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            
+            {/* Post Property FREE Button */}
+            <Link
+              to={isAuthenticated ? '/create-listing' : '/login'}
+              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+            >
+              <span>{t('navbar.post_property_free')}</span>
+            </Link>
+
+            {/* Language Switcher Button */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition-all border border-slate-200/90 cursor-pointer shadow-xs"
+              title="Toggle Language (English / ગુજરાતી)"
+            >
+              <Globe size={15} className="text-blue-600" />
+              <span className="font-black">{language === 'en' ? 'ગુજરાતી' : 'English'}</span>
+            </button>
+
+            {/* Direct Shortlist / Favorites Button */}
+            {(() => {
+              const favCount = Array.isArray(user?.favorites) ? user.favorites.filter(f => f !== null && f !== undefined).length : 0;
+              return (
+                <Link
+                  to="/favorites"
+                  className="relative p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-rose-50 border border-slate-200 rounded-xl text-slate-700 hover:text-rose-600 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Shortlisted Properties"
+                >
+                  <Heart size={16} className={favCount > 0 ? "fill-rose-600 text-rose-600" : "text-slate-600"} />
+                  <span className="hidden md:inline">{t('navbar.my_favourites')}</span>
+                  {favCount > 0 && (
+                    <span className="bg-rose-600 text-white text-[10px] font-black min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                      {favCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })()}
+
+            {/* User Profile / Auth Action */}
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="flex items-center gap-2 bg-[#1a2340] text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#c9a84c] text-slate-900 font-black text-xs flex items-center justify-center uppercase overflow-hidden shrink-0">
+                    {user?.profileImage ? (
+                      <img src={getImageUrl(user.profileImage)} alt={user?.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user?.name?.[0] || 'U'
+                    )}
+                  </div>
+                  <span className="text-xs font-bold max-w-[90px] truncate hidden md:inline-block">
+                    {user?.name?.split(' ')[0]}
+                  </span>
+                  <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
+                </button>
+
+                {showUserDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-fade-in">
+                    <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                      <div className="text-xs font-extrabold text-slate-900 truncate">{user?.name}</div>
+                      <div className="text-[10px] font-bold text-[#c9a84c] uppercase tracking-wider">{user?.role || 'User'}</div>
+                    </div>
+                    <Link
+                      to="/my-listings"
+                      onClick={() => setShowUserDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                    >
+                      <List size={16} className="text-blue-500" />
+                      <span>{t('navbar.my_listings')}</span>
+                    </Link>
+                    <Link
+                      to="/buyer-leads"
+                      onClick={() => setShowUserDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                    >
+                      <Users size={16} className="text-emerald-500" />
+                      <span>{t('navbar.buyer_leads')}</span>
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setShowUserDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                    >
+                      <Settings size={16} className="text-amber-500" />
+                      <span>{t('navbar.settings')}</span>
+                    </Link>
+                    <Link
+                      to="/favorites"
+                      onClick={() => setShowUserDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors border-t border-slate-100 pt-2"
+                    >
+                      <Heart size={16} className="text-rose-500" />
+                      <span>{t('navbar.my_favourites')}</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors mt-1 cursor-pointer"
+                    >
+                      <LogOut size={16} />
+                      <span>{t('navbar.logout')}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="text-xs font-extrabold text-slate-800 hover:text-[#2563eb] px-3 py-2 rounded-xl transition-colors"
+                >
+                  {t('navbar.login')}
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-[#1a2340] hover:bg-slate-800 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
+                >
+                  {t('navbar.signup')}
+                </Link>
+              </div>
             )}
-            <button className="hamburger" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
-              {isOpen ? <X size={26} /> : <Menu size={26} />}
+
+
+            {/* Right-Side Hamburger Drawer Trigger (☰) */}
+            <button
+              onClick={() => setShowRightDrawer(true)}
+              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              aria-label="Open Menu Drawer"
+              title="Open Options Menu"
+            >
+              <Menu size={24} />
             </button>
           </div>
         </div>
+      </header>
 
-        {/* ── Mobile Menu ── */}
-        <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
-          {isAuthenticated && (
-            <div className="mob-profile-card">
-              <div className="mob-profile-info">
-                <span className="mob-profile-label">{t('navbar.logged_in_as')}</span>
-                <span className="mob-profile-name">{user.name}</span>
-                <span className="mob-profile-role">{user.role}</span>
-              </div>
-              <button onClick={handleLogout} className="mob-profile-logout-btn" title="Logout">
-                <LogOut size={13} /> {t('navbar.logout')}
-              </button>
-            </div>
-          )}
-
-          {/* Main Links */}
-          <Link to="/" className="mob-item" onClick={() => setIsOpen(false)}>{t('navbar.home')}</Link>
-          <Link to="/about" className="mob-item" onClick={() => setIsOpen(false)}>{t('navbar.about')}</Link>
-
-          {/* Properties Dropdown */}
-          <button
-            className={`mob-accordion-header ${mobileSections.properties ? 'active' : ''}`}
-            onClick={() => toggleMobileSection('properties')}
-          >
-            <span>{t('navbar.properties')}</span>
-            <ChevronDown size={15} className={`mob-chevron ${mobileSections.properties ? 'open' : ''}`} />
-          </button>
-          {mobileSections.properties && (
-            <div className="mob-accordion-content">
-              <Link to="/search?type=buy" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.buy')}</Link>
-              {isAuthenticated ? (
-                <Link to="/create-listing" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.sell')}</Link>
-              ) : (
-                <Link to="/login" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.sell')}</Link>
-              )}
-              <Link to="/brokers" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.contact_brokers')}</Link>
-            </div>
-          )}
-
-          {/* Tools Dropdown */}
-          <button
-            className={`mob-accordion-header ${mobileSections.tools ? 'active' : ''}`}
-            onClick={() => toggleMobileSection('tools')}
-          >
-            <span>{t('navbar.tools')}</span>
-            <ChevronDown size={15} className={`mob-chevron ${mobileSections.tools ? 'open' : ''}`} />
-          </button>
-          {mobileSections.tools && (
-            <div className="mob-accordion-content">
-              <Link to="/area-converter" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.area_converter')}</Link>
-              <Link to="/calculator" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.calculator')}</Link>
-              <Link to="/boundary-map" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.boundary_map')}</Link>
-              {isAuthenticated && <Link to="/saved-maps" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.saved_boundaries')}</Link>}
-            </div>
-          )}
-
-          {/* Logged in sections */}
-          {isAuthenticated && (
-            <>
-              {/* My Account Dropdown */}
-              <button
-                className={`mob-accordion-header ${mobileSections.account ? 'active' : ''}`}
-                onClick={() => toggleMobileSection('account')}
-              >
-                <span>{t('navbar.my_account')}</span>
-                <ChevronDown size={15} className={`mob-chevron ${mobileSections.account ? 'open' : ''}`} />
-              </button>
-              {mobileSections.account && (
-                <div className="mob-accordion-content">
-                  <Link to="/favorites" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_favourites')}</Link>
-                  <Link to="/my-visits" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_contact_requests')}</Link>
-                </div>
-              )}
-
-              {/* Dashboard Dropdown */}
-              <button
-                className={`mob-accordion-header ${mobileSections.dashboard ? 'active' : ''}`}
-                onClick={() => toggleMobileSection('dashboard')}
-              >
-                <span>{t('navbar.dashboard_options')}</span>
-                <ChevronDown size={15} className={`mob-chevron ${mobileSections.dashboard ? 'open' : ''}`} />
-              </button>
-              {mobileSections.dashboard && (
-                <div className="mob-accordion-content">
-                  <Link to="/dashboard?tab=overview" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.overview')}</Link>
-                  <Link to="/dashboard?tab=listings" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.my_listings')}</Link>
-                  <Link to="/dashboard?tab=transactions" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.token_history')}</Link>
-                  {(user?.role === 'Seller' || user?.role === 'Broker') && (
-                    <Link to="/dashboard?tab=payouts" className="mob-sub-item" onClick={() => setIsOpen(false)}>{t('navbar.payout_accounts')}</Link>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Auth Strip at Bottom */}
-          <div className="mob-auth-strip">
-            {isAuthenticated ? (
-              <button onClick={handleLogout} className="mob-btn-logout">{t('navbar.logout')}</button>
-            ) : (
-              <>
-                <Link to="/login" className="mob-btn-login" onClick={() => setIsOpen(false)}>{t('navbar.login')}</Link>
-                <Link to="/register" className="mob-btn-signup" onClick={() => setIsOpen(false)}>{t('navbar.signup')}</Link>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      {/* Render Drawer Portal Outside Header */}
+      <RightSlideDrawer
+        isOpen={showRightDrawer}
+        onClose={() => setShowRightDrawer(false)}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        handleLogout={handleLogout}
+      />
     </>
   );
 };

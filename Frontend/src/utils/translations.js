@@ -4,10 +4,10 @@ export const translations = {
       home: "Home",
       about: "About",
       properties: "Properties",
-      buy: "Buy",
+      buy: "Buy Properties",
       sell: "Sell / List",
       contact_brokers: "Contact Brokers",
-      tools: "Tools",
+      tools: "Other Tools",
       area_converter: "Area Converter",
       calculator: "Calculator",
       boundary_map: "Boundary Map",
@@ -25,7 +25,13 @@ export const translations = {
       token_history: "Token History",
       payout_accounts: "Payout Accounts",
       my_contact_requests: "My Contact Requests",
-      my_account: "My Account"
+      my_account: "My Account",
+      brokers: "Brokers List",
+
+      more_tools: "More Tools",
+      post_property_free: "Post Property FREE",
+      settings: "Settings",
+      buyer_leads: "Buyer Leads"
     },
     home: {
       slide0_tag: "Premium Agricultural Land",
@@ -374,7 +380,13 @@ export const translations = {
       clear_search: "Clear Search",
       partner_role: "Partner",
       verified: "Verified",
-      id: "ID:"
+      id: "ID:",
+      call: "Call",
+      whatsapp: "WhatsApp",
+      view_listings: "View All Listings",
+      directory: "Broker Network Directory",
+      title: "Real Estate Brokers & Agents in Gujarat",
+      desc: "Connect with registered property brokers and land consultants across Gujarat for direct property inquiries."
     },
     calculator: {
       smart_tool: "Smart Tool",
@@ -731,6 +743,86 @@ export const translations = {
       segment_lengths: "Side Dimensions",
       side_label: "Side {index}",
       center_on_plot: "Center on Plot"
+    },
+    shared_map: {
+      loading: "Loading Land Boundary Map...",
+      map_not_found: "Map Not Found",
+      map_not_found_desc: "Map not found or has been removed.",
+      go_home: "Go Home",
+      home: "Home",
+      title: "Land Plot Boundary Map",
+      total_property_area: "Total Property Area",
+      share: "Share",
+      copied: "Copied",
+      plot: "Plot"
+    },
+    account_settings: {
+      title: "Account Settings",
+      subtitle: "Manage your personal profile, security, bank accounts, and preferences.",
+      personal_info: "Personal Information",
+      full_name: "Full Name",
+      phone: "Phone Number",
+      email: "Email Address",
+      save_changes: "Save Changes",
+      saving: "Saving...",
+      change_password: "Change Password",
+      current_password: "Current Password",
+      new_password: "New Password",
+      confirm_new_password: "Confirm New Password",
+      update_password: "Update Password",
+      updating: "Updating...",
+      linked_payouts: "Linked Payout Accounts",
+      add_account: "Add Payout Account",
+      no_payouts: "No payout accounts linked yet.",
+      security_note: "Email and phone number are locked for security verification.",
+      active_sessions: "Active Login Sessions",
+      logout_other_devices: "Log Out All Other Devices"
+    },
+    my_listings: {
+      title: "My Property Listings",
+      subtitle: "View and manage all properties you have listed for sale or rent.",
+      add_new: "Add New Property",
+      no_listings: "No Property Listings Found",
+      no_listings_desc: "You haven't posted any property listings yet. Start selling your land today!",
+      post_first: "Post Your First Listing",
+      active: "Active",
+      reserved: "Reserved",
+      edit: "Edit",
+      delete: "Delete",
+      view: "View Details",
+      confirm_delete: "Are you sure you want to delete this listing?",
+      deleting: "Deleting..."
+    },
+    buyer_leads: {
+      title: "Buyer Leads & Inquiries",
+      subtitle: "Direct contact requests from interested buyers on your property listings.",
+      no_leads: "No Buyer Leads Received",
+      no_leads_desc: "When buyers express interest in your properties, their details will appear here.",
+      buyer_name: "Buyer Name",
+      phone: "Phone Number",
+      property: "Property",
+      date: "Date Received",
+      call_buyer: "Call Buyer",
+      whatsapp_buyer: "WhatsApp Buyer",
+      inquiry_status: "Status"
+    },
+    edit_listing: {
+      title: "Edit Property Listing",
+      subtitle: "Update specifications, pricing, location, and photos for your property.",
+      save_changes: "Save Changes",
+      saving: "Saving Changes...",
+      back: "Back to Dashboard",
+      basic_info: "Basic Property Information",
+      pricing_area: "Pricing & Area Size",
+      location_details: "Location Details",
+      photos_docs: "Photos & Documents",
+      update_success: "Property updated successfully!"
+    },
+    privacy_policy: {
+      title: "Privacy Policy",
+      subtitle: "How Kharsan Properties collects, protects, and handles your data.",
+      last_updated: "Last Updated: January 2026",
+      back_home: "Back to Home"
     }
   },
   gu: {
@@ -738,10 +830,10 @@ export const translations = {
       home: "હોમ",
       about: "અમારા વિશે",
       properties: "પ્રોપર્ટીઝ",
-      buy: "ખરીદો",
+      buy: "પ્રોપર્ટી ખરીદો",
       sell: "વેચો / લિસ્ટ કરો",
       contact_brokers: "બ્રોકર્સ સંપર્ક",
-      tools: "સાધનો",
+      tools: "અન્ય ટૂલ્સ",
       area_converter: "એરિયા કન્વર્ટર",
       calculator: "કેલ્ક્યુલેટર",
       boundary_map: "સીમા નકશો",
@@ -759,7 +851,13 @@ export const translations = {
       token_history: "ટોકન હિસ્ટ્રી",
       payout_accounts: "બેંક એકાઉન્ટ્સ",
       my_contact_requests: "મારી વિનંતીઓ",
-      my_account: "મારું એકાઉન્ટ"
+      my_account: "મારું એકાઉન્ટ",
+      brokers: "બ્રોકર્સ લિસ્ટ",
+
+      more_tools: "વધુ ટૂલ્સ",
+      post_property_free: "મફત પ્રોપર્ટી લિસ્ટ કરો",
+      settings: "સેટિંગ્સ",
+      buyer_leads: "ખરીદદાર પૂછપરછ"
     },
     home: {
       slide0_tag: "પ્રીમિયમ ખેતીની જમીન",
@@ -1105,10 +1203,15 @@ export const translations = {
       no_matches_desc: "તમારી શોધ સાથે મેળ ખાતા કોઈ બ્રોકર્સ મળ્યા નથી. બીજું નામ શોધો.",
       expanding_network: "નેટવર્ક વિસ્તરી રહ્યું છે",
       expanding_network_desc: "અમારું વેરિફાઇડ પાર્ટનર નેટવર્ક હાલમાં વિસ્તરી રહ્યું છે. કૃપા કરીને ટૂંક સમયમાં ફરી તપાસો.",
-      clear_search: "શોધ સાફ કરો",
       partner_role: "ભાગીદાર",
       verified: "ચકાસાયેલ",
-      id: "ID:"
+      id: "ID:",
+      call: "કોલ કરો",
+      whatsapp: "WhatsApp",
+      view_listings: "બધી પ્રોપર્ટીઝ જુઓ",
+      directory: "બ્રોકર નેટવર્ક ડિરેક્ટરી",
+      title: "ગુજરાતમાં રિયલ એસ્ટેટ બ્રોકર્સ અને એજન્ટો",
+      desc: "સીધી પ્રોપર્ટી પૂછપરછ માટે સમગ્ર ગુજરાતમાં નોંધાયેલા પ્રોપર્ટી બ્રોકર્સ અને લેન્ડ કન્સલ્ટન્ટ્સ સાથે જોડાઓ."
     },
     calculator: {
       smart_tool: "સ્માર્ટ ટૂલ",
@@ -1465,6 +1568,86 @@ export const translations = {
       segment_lengths: "બાજુઓની લંબાઈ",
       side_label: "બાજુ {index}",
       center_on_plot: "પ્લોટ પર કેન્દ્રિત કરો"
+    },
+    shared_map: {
+      loading: "જમીન સીમા નકશો લોડ થઈ રહ્યો છે...",
+      map_not_found: "નકશો મળ્યો નથી",
+      map_not_found_desc: "નકશો મળ્યો નથી અથવા દૂર કરવામાં આવ્યો છે.",
+      go_home: "હોમ પર પાછા જાઓ",
+      home: "હોમ",
+      title: "જમીન સીમા નકશો",
+      total_property_area: "કુલ મિલકત ક્ષેત્રફળ",
+      share: "શેર કરો",
+      copied: "કોપી થયું",
+      plot: "પ્લોટ"
+    },
+    account_settings: {
+      title: "એકાઉન્ટ સેટિંગ્સ",
+      subtitle: "તમારી વ્યક્તિગત પ્રોફાઇલ, સુરક્ષા, બેંક એકાઉન્ટ્સ અને પસંદગીઓનું સંચાલન કરો.",
+      personal_info: "વ્યક્તિગત માહિતી",
+      full_name: "આખું નામ",
+      phone: "ફોન નંબર",
+      email: "ઇમેઇલ સરનામું",
+      save_changes: "ફેરફારો સાચવો",
+      saving: "સાચવી રહ્યું છે...",
+      change_password: "પાસવર્ડ બદલો",
+      current_password: "વર્તમાન પાસવર્ડ",
+      new_password: "નવો પાસવર્ડ",
+      confirm_new_password: "નવા પાસવર્ડની પુષ્ટિ કરો",
+      update_password: "પાસવર્ડ અપડેટ કરો",
+      updating: "અપડેટ થઈ રહ્યું છે...",
+      linked_payouts: "લિંક કરેલ ચુકવણી એકાઉન્ટ્સ",
+      add_account: "ચુકવણી એકાઉન્ટ ઉમેરો",
+      no_payouts: "હજુ સુધી કોઈ ચુકવણી ખાતું લિંક નથી.",
+      security_note: "સુરક્ષા કારણોસર ઇમેઇલ અને ફોન નંબર બદલી શકાતા નથી.",
+      active_sessions: "સક્રિય લોગિન સેશન્સ",
+      logout_other_devices: "અન્ય તમામ ઉપકરણોમાંથી લોગઆઉટ કરો"
+    },
+    my_listings: {
+      title: "મારી પ્રોપર્ટી લિસ્ટિંગ્સ",
+      subtitle: "તમે વેચાણ અથવા ભાડા માટે લિસ્ટ કરેલી બધી પ્રોપર્ટીઝ જુઓ અને સંચાલન કરો.",
+      add_new: "નવી પ્રોપર્ટી ઉમેરો",
+      no_listings: "કોઈ લિસ્ટિંગ મળ્યું નથી",
+      no_listings_desc: "તમે હજુ સુધી કોઈ પ્રોપર્ટી લિસ્ટ કરી નથી. આજે જ તમારી જમીન લિસ્ટ કરવાનું શરૂ કરો!",
+      post_first: "પ્રથમ પ્રોપર્ટી લિસ્ટ કરો",
+      active: "સક્રિય",
+      reserved: "બુક થયેલ",
+      edit: "ફેરફાર કરો",
+      delete: "ડિલીટ કરો",
+      view: "વિગત જુઓ",
+      confirm_delete: "શું તમે ચોક્કસ આ લિસ્ટિંગ કાયમ માટે ડિલીટ કરવા માંગો છો?",
+      deleting: "ડિલીટ થઈ રહ્યું છે..."
+    },
+    buyer_leads: {
+      title: "ખરીદદાર પૂછપરછ (Buyer Leads)",
+      subtitle: "તમારી પ્રોપર્ટીમાં રસ ધરાવતા ખરીદદારોની સીધી સંપર્ક વિનંતીઓ.",
+      no_leads: "હજુ સુધી કોઈ પૂછપરછ મળી નથી",
+      no_leads_desc: "જ્યારે ખરીદદારો તમારી પ્રોપર્ટીમાં રસ દર્શાવશે, ત્યારે તેમની વિગતો અહીં દેખાશે.",
+      buyer_name: "ખરીદદારનું નામ",
+      phone: "ફોન નંબર",
+      property: "પ્રોપર્ટી",
+      date: "તારીખ",
+      call_buyer: "કોલ કરો",
+      whatsapp_buyer: "WhatsApp કરો",
+      inquiry_status: "સ્થિતિ"
+    },
+    edit_listing: {
+      title: "પ્રોપર્ટી ફેરફાર કરો (Edit Listing)",
+      subtitle: "તમારી પ્રોપર્ટીના સ્પષ્ટીકરણો, કિંમત, સ્થળ અને ફોટા અપડેટ કરો.",
+      save_changes: "ફેરફારો સાચવો",
+      saving: "સાચવી રહ્યું છે...",
+      back: "ડેશબોર્ડ પર પાછા જાઓ",
+      basic_info: "મૂળભૂત માહિતી",
+      pricing_area: "કિંમત અને ક્ષેત્રફળ",
+      location_details: "સ્થળની વિગત",
+      photos_docs: "ફોટા અને દસ્તાવેજો",
+      update_success: "પ્રોપર્ટી સફળતાપૂર્વક અપડેટ થઈ ગઈ!"
+    },
+    privacy_policy: {
+      title: "ગોપનીયતા નીતિ (Privacy Policy)",
+      subtitle: "ખરસાણ પ્રોપર્ટીઝ તમારો ડેટા કેવી રીતે સુરક્ષિત રાખે છે અને પ્રક્રિયા કરે છે.",
+      last_updated: "છેલ્લું અપડેટ: જાન્યુઆરી ૨૦૨૬",
+      back_home: "હોમ પર પાછા જાઓ"
     }
   }
 };

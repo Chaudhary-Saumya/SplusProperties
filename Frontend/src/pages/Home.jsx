@@ -1,11 +1,15 @@
-import React, { useEffect, useState, useCallback, useContext } from 'react';
-// eslint-disable-next-line no-unused-vars
+import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Search, Phone, Eye, Users, ChevronLeft, ChevronRight, ChevronDown, Heart, MessageCircle, Mail, Globe, Shield, Award, Target, Calculator, Layers, Building2 } from 'lucide-react';
+import {
+  MapPin, Search, Phone, Eye, Users, User, ChevronLeft, ChevronRight, ChevronDown,
+  Heart, MessageCircle, Mail, Globe, Shield, ShieldCheck, Award, Target, Calculator, Layers,
+  Building2, Navigation, Mic, SlidersHorizontal, CheckCircle2, ArrowUpRight, Plus, FileText, Calendar,
+  TrendingUp, Compass, Sparkles, CheckCircle, ExternalLink
+} from 'lucide-react';
 
 import SEO from '../components/SEO';
 import ListingSkeleton from '../components/ListingSkeleton';
@@ -13,65 +17,26 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import { getImageUrl } from '../utils/imageUrl';
 import { useLanguage } from '../context/LanguageContext';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIcon2x,
-    shadowUrl: markerShadow,
-});
+import AppDownloadBanner from '../components/AppDownloadBanner';
+import k4Logo from '../assets/K4.png';
 
 
-const slides = [
-  {
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80',
-    tag: 'Premium Agricultural Land',
-    heading: 'Find Your Perfect\nPlot of Land',
-    sub: 'Verified plots, farmland & commercial sites across India — invest with confidence.',
-    cta: 'Search Properties',
-    ctaLink: '/search',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1659572863867-70ae4445ad4e?q=80&w=3056&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
-    tag: 'Digital Mapping Tech',
-    heading: 'Interactive Smart\nLand Visualization',
-    sub: 'Visualize property boundaries and verify land parcels with our advanced mapping tools.',
-    cta: 'See Land Map',
-    ctaLink: '/boundary-map',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
-    tag: 'Convert Area',
-    heading: 'Convert Area of Your Land',
-    sub: 'Convert your land area to different units and calculate the area of your land in different units.',
-    cta: 'Convert Area',
-    ctaLink: '/area-converter',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
-    tag: 'Commercial & Industrial',
-    heading: 'Secure Your\nInvestment Today',
-    sub: 'Residential plots, NA land & commercial zones — directly from verified sellers.',
-    cta: 'Post Your Inquiry',
-    ctaLink: '/register',
-  }
-];
+/* ─── Kharsan Properties Brand Logo ───────────────────────────────────────── */
+const KharsanLogo = () => (
+  <Link to="/" className="flex items-center text-decoration-none group">
+    <img
+      src={k4Logo}
+      alt="Kharsan Properties"
+      className="h-12 sm:h-16 w-auto object-contain hover:scale-105 transition-transform"
+    />
+  </Link>
+);
 
-/* ─── Hero Carousel ───────────────────────────────────────────────────────── */
+/* ─── Hero Carousel Component ─────────────────────────────────────────────── */
 const HeroCarousel = () => {
-  const { user, isAuthenticated } = useContext(AuthContext);
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
 
   const localSlides = [
     {
@@ -81,30 +46,25 @@ const HeroCarousel = () => {
       sub: t('home.slide0_sub'),
       cta: t('home.slide0_cta'),
       ctaLink: '/search',
+      badge: 'VERIFIED LANDS'
     },
     {
-      image: 'https://images.unsplash.com/photo-1659572863867-70ae4445ad4e?q=80&w=3056&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+      image: 'https://images.unsplash.com/photo-1659572863867-70ae4445ad4e?q=80&w=1600&auto=format&fit=crop',
       tag: t('home.slide1_badge'),
       heading: t('home.slide1_title'),
       sub: t('home.slide1_desc'),
       cta: t('home.slide1_btn'),
       ctaLink: '/boundary-map',
+      badge: '100% ACCURATE'
     },
     {
-      image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
-      tag: t('home.slide2_badge'),
-      heading: t('home.slide2_title'),
-      sub: t('home.slide2_desc'),
-      cta: t('home.slide2_btn'),
-      ctaLink: '/area-converter',
-    },
-    {
-      image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1906&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=1600&q=80',
+      image: 'https://images.unsplash.com/photo-1648347807172-548b97276ce7?q=80&w=1600&auto=format&fit=crop',
       tag: t('home.slide3_badge'),
       heading: t('home.slide3_title'),
       sub: t('home.slide3_desc'),
       cta: t('home.slide3_btn'),
-      ctaLink: '/register',
+      ctaLink: '/create-listing',
+      badge: 'DIRECT CONNECT'
     }
   ];
 
@@ -118,546 +78,603 @@ const HeroCarousel = () => {
   }, [animating, localSlides.length]);
 
   useEffect(() => {
-    const t = setInterval(() => go(current + 1), 5500);
-    return () => clearInterval(t);
+    const timer = setInterval(() => go(current + 1), 6000);
+    return () => clearInterval(timer);
   }, [current, go]);
 
-  const handleTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    if (isLeftSwipe) go(current + 1);
-    if (isRightSwipe) go(current - 1);
-  };
-
-  const baseSlide = localSlides[current];
-  const slide = { ...baseSlide };
-  
-  if (current === 0 && isAuthenticated && user) {
-    slide.tag = language === 'en' ? `Welcome, ${user.name}` : `સ્વાગત છે, ${user.name}`;
-    slide.heading = language === 'en' ? `Hello ${user.name.split(' ')[0]},\nFind Your Perfect Plot` : `નમસ્તે ${user.name.split(' ')[0]},\nતમારી આદર્શ જમીન શોધો`;
-  }
+  const slide = localSlides[current];
 
   return (
-    <div 
-      style={{ position: 'relative', width: '100%', height: '92vh', minHeight: 520, overflow: 'hidden', background: '#0a0f1e' }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <style>{`
-        .carousel-arrow { 
-          display: flex !important; 
-        }
-        .area-converter-btn {
-          position: absolute;
-          top: 32px;
-          right: 32px;
-          z-index: 10;
-          background: #c9a84c;
-          color: #1a1200;
-          font-family: 'Nunito Sans', sans-serif;
-          font-weight: 800;
-          font-size: 14px;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          text-decoration: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          box-shadow: 0 8px 24px rgba(201,168,76,0.4);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .area-converter-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 28px rgba(201,168,76,0.5);
-        }
-        @media (max-width: 768px) {
-          .carousel-arrow { 
-            display: none !important; 
-          }
-          .area-converter-btn {
-            top: 20px;
-            right: 20px;
-            padding: 10px 16px;
-            font-size: 12px;
-          }
-        }
-        @media (max-width: 480px) {
-          .area-converter-btn {
-            top: 16px;
-            right: 16px;
-            padding: 8px 12px;
-            font-size: 11px;
-          }
-          .btn-text {
-             display: none;
-          }
-        }
-      `}</style>
-      {/* BG Image */}
+    <div className="relative w-full h-[420px] sm:h-[480px] lg:h-[510px] overflow-hidden bg-slate-950 font-['Nunito_Sans',sans-serif]">
+      {/* Background Image */}
       <img
         key={current}
         src={slide.image}
-        alt=""
-        fetchpriority="high"
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'cover', objectPosition: 'center',
-          transition: 'opacity 0.7s ease',
-          opacity: animating ? 0 : 1,
-        }}
+        alt={slide.heading}
+        fetchPriority="high"
+        className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${animating ? 'opacity-0' : 'opacity-100'}`}
       />
+
       {/* Gradient Overlay */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(to bottom, rgba(10,15,30,0.35) 0%, rgba(10,15,30,0.62) 50%, rgba(10,15,30,0.85) 100%)',
-      }} />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/60 to-transparent" />
 
-      {/* Gold top accent line */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg,#c9a84c,#f0d080,#c9a84c)', zIndex: 5 }} />
+      {/* Content Overlay */}
+      <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center z-10">
+        <div className={`max-w-2xl text-white transition-all duration-500 ${animating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-300 text-[10px] sm:text-xs font-black uppercase tracking-wider mb-3 sm:mb-4">
+            <Award size={14} className="text-amber-400" />
+            <span>{slide.tag}</span>
+          </div>
 
-      {/* Content */}
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '0 24px',
-        textAlign: 'center', zIndex: 4,
-        opacity: animating ? 0 : 1, transform: animating ? 'translateY(16px)' : 'translateY(0)',
-        transition: 'opacity 0.5s ease, transform 0.5s ease',
-      }}>
-        {/* Tag */}
-        <span style={{
-          display: 'inline-block', background: 'rgba(201,168,76,0.2)', border: '1px solid rgba(201,168,76,0.6)',
-          color: '#f0d080', fontSize: 12, fontWeight: 700, letterSpacing: '2px',
-          textTransform: 'uppercase', padding: '6px 18px', borderRadius: 100, marginBottom: 20,
-          fontFamily: "'Nunito Sans', sans-serif",
-        }}>
-          {slide.tag}
-        </span>
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight mb-3 sm:mb-4">
+            {slide.heading}
+          </h1>
 
-        {/* Heading */}
-        <h1 style={{
-          fontSize: 'clamp(2.2rem, 6vw, 5rem)',
-          fontWeight: 700, color: '#fff', lineHeight: 1.15,
-          marginBottom: 20, maxWidth: 820,
-          whiteSpace: 'pre-line',
-          textShadow: '0 4px 24px rgba(0,0,0,0.4)',
-          fontFamily: "'Nunito Sans', sans-serif",
-        }}>
-          {slide.heading}
-        </h1>
+          <p className="text-slate-300 text-xs sm:text-base font-semibold mb-5 sm:mb-6 max-w-lg leading-relaxed line-clamp-2 sm:line-clamp-none">
+            {slide.sub}
+          </p>
 
-        {/* Sub */}
-        <p style={{
-          fontFamily: "'Nunito Sans', sans-serif",
-          fontSize: 'clamp(1rem, 2vw, 1.3rem)',
-          color: 'rgba(255,255,255,0.82)', maxWidth: 600,
-          fontWeight: 500, marginBottom: 36, lineHeight: 1.7,
-        }}>
-          {slide.sub}
-        </p>
-
-        {/* CTA Buttons */}
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link to={slide.ctaLink} style={{
-            background: '#c9a84c', color: '#1a1200',
-            fontFamily: "'Nunito Sans', sans-serif",
-            fontWeight: 800, fontSize: 14, letterSpacing: '1.5px',
-            textTransform: 'uppercase', textDecoration: 'none',
-            padding: '14px 32px', borderRadius: 8,
-            boxShadow: '0 8px 24px rgba(201,168,76,0.4)',
-            transition: 'all 0.2s',
-          }}>
-            {slide.cta}
-          </Link>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link
+              to={slide.ctaLink}
+              className="bg-[#2563eb] hover:bg-blue-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl shadow-lg transition-all hover:scale-105"
+            >
+              {slide.cta}
+            </Link>
+            <div className="hidden sm:flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20">
+              <ShieldCheck size={18} className="text-emerald-400" />
+              <span className="text-xs font-extrabold text-white">{slide.badge}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Prev / Next Arrows */}
-      {[
-        { dir: -1, icon: <ChevronLeft size={26} />, side: { left: 20 } },
-        { dir: 1, icon: <ChevronRight size={26} />, side: { right: 20 } },
-      ].map(({ dir, icon, side }) => (
-        <button key={dir} onClick={() => go(current + dir)} className="carousel-arrow" style={{
-          position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-          ...side, zIndex: 6,
-          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.3)',
-          color: '#fff', width: 48, height: 48, borderRadius: '50%',
-          alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', backdropFilter: 'blur(8px)',
-          transition: 'background 0.2s',
-        }}>
-          {icon}
-        </button>
-      ))}
+      {/* Arrow Controls */}
+      <button
+        onClick={() => go(current - 1)}
+        className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md border border-white/30 items-center justify-center text-white transition-all hover:scale-110 cursor-pointer"
+        aria-label="Previous Slide"
+      >
+        <ChevronLeft size={24} />
+      </button>
+      <button
+        onClick={() => go(current + 1)}
+        className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md border border-white/30 items-center justify-center text-white transition-all hover:scale-110 cursor-pointer"
+        aria-label="Next Slide"
+      >
+        <ChevronRight size={24} />
+      </button>
 
-      {/* Dot Indicators */}
-      <div style={{
-        position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 8, zIndex: 6,
-      }}>
+      {/* Slide Indicators */}
+      <div className="absolute bottom-10 sm:bottom-12 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {localSlides.map((_, i) => (
-          <button key={i} onClick={() => go(i)} style={{
-            width: i === current ? 28 : 8, height: 8, borderRadius: 4,
-            background: i === current ? '#c9a84c' : 'rgba(255,255,255,0.4)',
-            border: 'none', cursor: 'pointer', padding: 0,
-            transition: 'all 0.3s ease',
-          }} />
+          <button
+            key={i}
+            onClick={() => go(i)}
+            className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${i === current ? 'w-7 bg-[#2563eb]' : 'w-2 bg-white/40'}`}
+            aria-label={`Slide ${i + 1}`}
+          />
         ))}
       </div>
-
-      {/* Area Converter Button */}
-      <Link to="/area-converter" className="area-converter-btn">
-        <Calculator size={18} />
-      </Link>
-
     </div>
   );
 };
 
-
-
-/* ─── Footer ─────────────────────────────────────────────────────────────── */
-const Footer = () => {
+/* ─── Floating Search Bar (Plots & Land focused) ─────────────────────────── */
+const FloatingSearchBox = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const [activeTab, setActiveTab] = useState('All Land & Plots');
+  const [searchCategory, setSearchCategory] = useState('All Land & Plots');
+  const [searchInput, setSearchInput] = useState('');
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const landTabs = [
+    { key: 'All Land & Plots', label: t('home.search_all') },
+    { key: 'Plots', label: t('search_page.plots') },
+    { key: 'Agricultural Land', label: t('search_page.agricultural') },
+    { key: 'Commercial Land', label: t('search_page.commercial') }
+  ];
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    let queryStr = '/search?';
+    if (activeTab === 'Plots') queryStr += 'propertyType=Plot';
+    else if (activeTab === 'Agricultural Land') queryStr += 'propertyType=Land&landType=Agricultural';
+    else if (activeTab === 'Commercial Land') queryStr += 'propertyType=Land&landType=Commercial';
+
+    if (searchInput.trim()) {
+      queryStr += `&query=${encodeURIComponent(searchInput.trim())}`;
+    }
+    navigate(queryStr);
+  };
+
+  const handleGeoDetect = () => {
+    if (navigator.geolocation) {
+      setGeoLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGeoLoading(false);
+          navigate(`/search?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius=50`);
+        },
+        () => {
+          setGeoLoading(false);
+          toast.info(language === 'gu' ? 'નજીકની જમીન શોધવા માટે લોકેશન પરવાનગી આપો.' : 'Location permission required for nearby plots.');
+        }
+      );
+    }
+  };
+
   return (
-    <footer className="bg-[#1a2340] text-white pt-10 pb-6 md:pt-16 md:pb-10 px-6 border-t-[5px] border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 mb-10 md:mb-16">
-          
-          {/* Left Side: Logo */}
-          <div className="lg:w-1/3 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <div 
-              onClick={() => { window.scrollTo(0,0); navigate('/'); }}
-              className="cursor-pointer mb-4 md:mb-6 transform scale-90 md:scale-100 lg:origin-left"
+    <div className="relative max-w-5xl mx-auto px-4 -mt-16 sm:-mt-16 z-30 font-['Nunito_Sans',sans-serif]">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200/80">
+
+        {/* Land Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 border-b border-slate-100 scrollbar-none">
+          {landTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setSearchCategory(tab.key);
+              }}
+              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-extrabold rounded-full transition-all whitespace-nowrap cursor-pointer shrink-0 ${activeTab === tab.key
+                  ? 'bg-[#1a2340] text-white shadow-md'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
             >
-              <svg viewBox="0 0 500 500" className="h-[60px] md:h-[90px] w-auto mx-auto lg:mx-0" xmlns="http://www.w3.org/2000/svg">
-                <rect x="165" y="105" width="85" height="215" fill="#d1d9e6" />
-                <g stroke="#fff" strokeWidth="10" fill="none" strokeLinecap="square" strokeLinejoin="miter">
-                  <path d="M25 320 H90 V225 L190 150" />
-                  <path d="M190 320 V75 H295 V320" />
-                  <path d="M295 185 L395 245 V320 H495" />
-                  <path d="M190 320 H295" strokeWidth="12" />
-                </g>
-                <text x="250" y="415" textAnchor="middle" fill="#c9a84c" style={{ fontSize: '82px', fontWeight: '900' }}>KHARSAN</text>
-                <text x="250" y="470" textAnchor="middle" fill="#fff" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '24px' }}>PROPERTIES</text>
-              </svg>
-            </div>
-            <p className="text-white/50 text-xs md:text-sm leading-relaxed mb-6 md:mb-8 max-w-xs md:max-w-sm mx-auto lg:mx-0">
-              {t('footer.desc')}
-            </p>
-            <div className="flex gap-4 justify-center lg:justify-start">
-              <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" title="Website" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <Globe size={16} />
-              </a>
-              <a href="mailto:support@kharsan.com" title="Email" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <Mail size={16} />
-              </a>
-              <a href="https://wa.me/9409553232" target="_blank" rel="noopener noreferrer" title="Contact" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-white transition-all hover:bg-[#c9a84c] border border-white/10 hover:border-[#c9a84c]">
-                <MessageCircle size={16} />
-              </a>
-            </div>
-          </div>
-
-          {/* Right Side: Links */}
-          <div className="lg:w-2/3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 text-left mt-4 lg:mt-0">
-            {/* Quick Links */}
-            <div>
-              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.explore')}</h4>
-              <div className="flex flex-col gap-2 md:gap-3">
-                <Link to="/" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.home')}</Link>
-                <Link to="/about" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.about_us')}</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.trending_plots')}</Link>
-                <Link to="/search" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.verified_sellers')}</Link>
-              </div>
-            </div>
-
-            {/* Services */}
-            <div>
-              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.services')}</h4>
-              <div className="flex flex-col gap-2 md:gap-3">
-                <Link to="/search?type=buy" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.buy_property')}</Link>
-                <Link to="/create-listing" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.sell_property')}</Link>
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.land_mapping')}</Link>
-                <Link to="/brokers" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.broker_connect')}</Link>
-              </div>
-            </div>
-
-            {/* Tools */}
-            <div>
-              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.smart_tools')}</h4>
-              <div className="flex flex-col gap-2 md:gap-3">
-                <Link to="/boundary-map" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.boundary_map')}</Link>
-                <Link to="/area-converter" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.area_converter')}</Link>
-                <Link to="/saved-maps" className="text-white/70 hover:text-[#c9a84c] transition-colors text-xs md:text-sm font-semibold">{t('footer.saved_boundaries')}</Link>
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div className="col-span-1">
-              <h4 className="text-[#c9a84c] text-xs md:text-sm font-extrabold uppercase tracking-[1.5px] mb-3 md:mb-5">{t('footer.contact')}</h4>
-              <div className="flex flex-col gap-3 md:gap-4 items-start">
-                <a href="mailto:support@kharsan.com" className="flex gap-2.5 items-center group">
-                  <Mail size={14} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-[10.5px] sm:text-xs md:text-sm font-semibold break-all">support@kharsan.com</span>
-                </a>
-                <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="flex gap-2.5 items-center group">
-                  <Globe size={14} className="text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                  <span className="text-white/70 group-hover:text-[#c9a84c] transition-colors text-[10.5px] sm:text-xs md:text-sm font-semibold break-all">properties.kharsan.com</span>
-                </a>
-              </div>
-            </div>
-          </div>
+              {tab.label}
+            </button>
+          ))}
+          <Link
+            to="/create-listing"
+            className="ml-auto px-3.5 py-1.5 text-xs font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full transition-colors whitespace-nowrap hidden sm:inline-block"
+          >
+            {t('navbar.post_property_free')}
+          </Link>
         </div>
 
-        {/* Bottom Strip */}
-        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 text-center md:text-left">
-          <p className="text-white/40 text-xs md:text-sm font-semibold">
-            © {new Date().getFullYear()} {t('footer.rights_reserved')}
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-            <Link to="/privacy-policy" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.privacy_policy')}</Link>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.terms_of_service')}</a>
-            <a href="#" className="text-white/40 hover:text-[#c9a84c] transition-colors text-[10px] md:text-xs font-bold">{t('footer.cookie_policy')}</a>
+        {/* Main Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="mt-3 sm:mt-4 flex flex-col md:flex-row items-center gap-2.5 sm:gap-3">
+
+          {/* Land Subtype Dropdown */}
+          <div className="w-full md:w-56 relative bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:py-3 flex items-center justify-between">
+            <select
+              value={searchCategory}
+              onChange={(e) => setSearchCategory(e.target.value)}
+              className="w-full bg-transparent text-xs font-extrabold text-slate-800 outline-none cursor-pointer appearance-none pr-4"
+            >
+              <option value="All Land & Plots">All Land & Plots</option>
+              <option value="Plots">Residential Plots</option>
+              <option value="Agricultural Land">Agricultural Land</option>
+              <option value="Commercial Land">Commercial Land</option>
+            </select>
+            <ChevronDown size={14} className="text-slate-400 pointer-events-none absolute right-3" />
           </div>
-        </div>
+
+          {/* Search Input */}
+          <div className="flex-1 w-full relative bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+            <Search size={18} className="text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder={language === 'en' ? 'Search city, locality, village or plot number...' : 'ગામ, પ્લોટ અથવા શહેરનું નામ શોધો...'}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
+            />
+
+            {/* GPS Location Button */}
+            <button
+              type="button"
+              onClick={handleGeoDetect}
+              className="p-1.5 hover:bg-slate-200 rounded-xl text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+              title="Detect my location"
+            >
+              <Navigation size={16} className={geoLoading ? 'animate-spin text-blue-600' : ''} />
+            </button>
+          </div>
+
+          {/* Search Button */}
+          <button
+            type="submit"
+            className="w-full md:w-auto px-8 py-3 sm:py-3.5 bg-[#2563eb] hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+          >
+            <Search size={16} />
+            <span>Search</span>
+          </button>
+        </form>
       </div>
-    </footer>
+    </div>
   );
 };
 
-
-// Mobile Entrance Dashboard component for mobile devices only
-const MobileEntrance = () => {
-  const { user, isAuthenticated } = useContext(AuthContext);
-  const { language } = useLanguage();
+/* ─── Dynamic Land Categories Component (Matching Backend landType options) ──── */
+const LandCategoriesSection = () => {
   const navigate = useNavigate();
-  const [mobileSearch, setMobileSearch] = useState('');
 
-  const handleMobileSearchSubmit = (e) => {
-    e.preventDefault();
-    // Always navigate to search — even if empty, to let user focus & type there
-    navigate(`/search${mobileSearch.trim() ? `?query=${encodeURIComponent(mobileSearch.trim())}` : ''}`, { state: { autoFocus: true } });
-  };
-
-  // Tapping the search bar immediately navigates to /search with autofocus
-  const handleSearchFocus = () => {
-    navigate('/search', { state: { autoFocus: true } });
-  };
-
-  const getCards = () => {
-    if (!isAuthenticated) {
-      return [
-        {
-          title: language === 'en' ? 'Buy Land' : 'જમીન ખરીદો',
-          desc: language === 'en' ? 'Explore verified plots' : 'વેરિફાઇડ પ્લોટ અને જમીન જુઓ',
-          icon: <Search className="text-[#c9a84c]" size={22} />,
-          link: '/search'
-        },
-        {
-          title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
-          desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
-          icon: <Layers className="text-[#c9a84c]" size={22} />,
-          link: '/boundary-map'
-        },
-        {
-          title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
-          desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
-          icon: <Calculator className="text-[#c9a84c]" size={22} />,
-          link: '/area-converter'
-        },
-        {
-          title: language === 'en' ? 'Sell Land' : 'જમીન વેચો',
-          desc: language === 'en' ? 'List your property' : 'વેચાણ માટે પ્રોપર્ટી લિસ્ટ કરો',
-          icon: <Building2 className="text-[#c9a84c]" size={22} />,
-          link: '/login'
-        }
-      ];
-    }
-
-    if (user?.role === 'Buyer') {
-      return [
-        {
-          title: language === 'en' ? 'Dashboard' : 'ડેશબોર્ડ',
-          desc: language === 'en' ? 'My account overview' : 'મારી પ્રોફાઇલ અને ઇતિહાસ',
-          icon: <Eye className="text-[#c9a84c]" size={22} />,
-          link: '/dashboard'
-        },
-        {
-          title: language === 'en' ? 'Buy Land' : 'જમીન ખરીદો',
-          desc: language === 'en' ? 'Explore verified plots' : 'વેરિફાઇડ પ્લોટ અને જમીન જુઓ',
-          icon: <Search className="text-[#c9a84c]" size={22} />,
-          link: '/search'
-        },
-        {
-          title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
-          desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
-          icon: <Layers className="text-[#c9a84c]" size={22} />,
-          link: '/boundary-map'
-        },
-        {
-          title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
-          desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
-          icon: <Calculator className="text-[#c9a84c]" size={22} />,
-          link: '/area-converter'
-        }
-      ];
-    }
-
-    // Seller or Broker
-    return [
-      {
-        title: language === 'en' ? 'Dashboard' : 'ડેશબોર્ડ',
-        desc: language === 'en' ? 'Manage listings & payments' : 'પ્રોપર્ટી અને પેમેન્ટ સંચાલન',
-        icon: <Eye className="text-[#c9a84c]" size={22} />,
-        link: '/dashboard'
-      },
-      {
-        title: user?.role === 'Broker'
-          ? (language === 'en' ? 'Create Listing' : 'લિસ્ટિંગ બનાવો')
-          : (language === 'en' ? 'Create Listing' : 'લિસ્ટિંગ બનાવો'),
-        desc: language === 'en' ? 'Add a new property to sell' : 'નવી પ્રોપર્ટી ઉમેરો અને વેચો',
-        icon: <Building2 className="text-[#c9a84c]" size={22} />,
-        link: '/create-listing'
-      },
-      {
-        title: language === 'en' ? 'Boundary Map' : 'સીમા નકશો',
-        desc: language === 'en' ? 'Draw & measure land' : 'નકશા પર જમીન દોરો અને માપો',
-        icon: <Layers className="text-[#c9a84c]" size={22} />,
-        link: '/boundary-map'
-      },
-      {
-        title: language === 'en' ? 'Area Converter' : 'એરિયા કન્વર્ટર',
-        desc: language === 'en' ? 'Bigha to Acre / Sqft' : 'જમીન ક્ષેત્રફળનું રૂપાંતર',
-        icon: <Calculator className="text-[#c9a84c]" size={22} />,
-        link: '/area-converter'
+  const { data: allListingsData } = useQuery({
+    queryKey: ['allListings'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get('/api/listings');
+        return res.data.data || [];
+      } catch {
+        return [];
       }
-    ];
-  };
+    }
+  });
 
-  const cards = getCards();
+  const listings = allListingsData || [];
+
+  const getCount = (type) => listings.filter(l => {
+    if (type === 'Residential') {
+      return l.landType === 'Residential' || l.plotType === 'Residential' || (l.propertyType === 'Plot' && l.landType !== 'Commercial' && l.landType !== 'Industrial' && l.landType !== 'Agricultural');
+    }
+    if (type === 'Commercial') {
+      return l.landType === 'Commercial' || l.plotType === 'Commercial' || /commercial|shop|office|retail|highway/i.test(l.title || '');
+    }
+    if (type === 'Industrial') {
+      return l.landType === 'Industrial' || l.plotType === 'Industrial' || /industrial|gidc|factory|warehouse/i.test(l.title || '');
+    }
+    if (type === 'Agricultural') {
+      return l.landType === 'Agricultural' || l.plotType === 'Agricultural' || l.isAgricultural;
+    }
+    if (type === 'Other') {
+      return l.landType === 'Other' || l.plotType === 'Other' || l.plotType === 'None' || l.landType === 'None' || (!['Residential', 'Commercial', 'Industrial', 'Agricultural'].includes(l.landType) && !['Residential', 'Commercial', 'Industrial', 'Agricultural'].includes(l.plotType));
+    }
+    return l.landType === type;
+  }).length;
+
+  const categories = [
+    {
+      type: 'Residential',
+      title: 'Residential Land & Plots',
+      count: getCount('Residential'),
+      desc: 'Housing plots, NA residential land & gated villa sites across Gujarat',
+      icon: MapPin,
+      color: 'from-blue-600 to-indigo-600',
+      link: '/search?landType=Residential'
+    },
+    {
+      type: 'Commercial',
+      title: 'Commercial Land',
+      count: getCount('Commercial'),
+      desc: 'Commercial zones, retail plot corridors & business land parcels',
+      icon: Building2,
+      color: 'from-purple-600 to-[#1a2340]',
+      link: '/search?landType=Commercial'
+    },
+    {
+      type: 'Industrial',
+      title: 'Industrial Land',
+      count: getCount('Industrial'),
+      desc: 'GIDC industrial plots, factory sites & logistics warehouse land',
+      icon: Layers,
+      color: 'from-[#1a2340] to-slate-900',
+      link: '/search?landType=Industrial'
+    },
+    {
+      type: 'Agricultural',
+      title: 'Agricultural Farmland',
+      count: getCount('Agricultural'),
+      desc: 'Fertile agricultural land, canal water access & clear ownership documents',
+      icon: Sparkles,
+      color: 'from-emerald-600 to-teal-600',
+      link: '/search?landType=Agricultural'
+    },
+    {
+      type: 'Other',
+      title: 'Other & Mixed Use Land',
+      count: getCount('Other'),
+      desc: 'Farmhouse plots, open land parcels & special investment plots',
+      icon: Compass,
+      color: 'from-amber-600 to-orange-600',
+      link: '/search?landType=Other'
+    }
+  ];
 
   return (
-    <div className="bg-transparent text-[#1a2340] pt-6 pb-12 px-5 relative overflow-hidden flex flex-col gap-6 font-['Nunito_Sans',sans-serif]">
-      {/* soft ambient light-themed background accent */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-[#c9a84c]/5 blur-[60px] pointer-events-none" />
+    <section className="py-10 sm:py-14 bg-slate-100/60 font-['Nunito_Sans',sans-serif]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      {/* Title & Welcome */}
-      <div className="flex flex-col gap-1.5 z-10">
-        <span className="text-[#c9a84c] text-[10px] font-black uppercase tracking-[0.25em]">
-          {isAuthenticated
-            ? `${language === 'en' ? 'WELCOME BACK' : 'નમસ્તે'}, ${user?.name?.split(' ')[0]}`
-            : (language === 'en' ? 'PREMIUM PORTAL' : 'પ્રીમિયમ પોર્ટલ')}
-        </span>
-        <h1 className="text-[#1a2340] text-3xl font-black tracking-tight leading-tight">
-          {isAuthenticated
-            ? (language === 'en' ? `Hello, ${user?.name?.split(' ')[0]}` : `નમસ્કાર, ${user?.name?.split(' ')[0]}`)
-            : (language === 'en' ? 'Find Your Perfect Plot of Land' : 'તમારી આદર્શ જમીન શોધો')}
-        </h1>
-        <p className="text-[#64748b] text-[13px] font-semibold leading-relaxed max-w-sm">
-          {isAuthenticated
-            ? (user?.role === 'Buyer'
-                ? (language === 'en' ? 'Browse properties, manage favorites & track your reservations.' : 'જમીન જુઓ, પસંદગી સાચવો અને બુકિંગ ટ્રૅક કરો.')
-                : (language === 'en' ? 'Manage your listings, payments and boundary maps.' : 'તમારી યાદી, ચૂકવણી અને નકશા સંચાલિત કરો.'))
-            : (language === 'en'
-                ? 'Verified agricultural lands, commercial zones & plots directly from owners.'
-                : 'વેરિફાઇડ ખેતીની જમીન અને પ્લોટ્સ સીધા જ વેચનાર પાસેથી મેળવો.')}
-        </p>
-      </div>
-
-      {/* Search Input Box — tapping redirects to /search with autofocus */}
-      <form onSubmit={handleMobileSearchSubmit} className="z-10 w-full">
-        <div className="relative flex items-center bg-white border border-[#e2d9c5] rounded-2xl px-4 py-3.5 shadow-[0_8px_30px_rgba(26,35,64,0.03)] transition-all focus-within:border-[#c9a84c]/70">
-          <Search size={18} className="text-[#c9a84c] shrink-0" />
-          <input
-            type="text"
-            readOnly
-            placeholder={language === 'en' ? 'Search by location or village...' : 'ગામ અથવા જગ્યાનું નામ શોધો...'}
-            onFocus={handleSearchFocus}
-            onClick={handleSearchFocus}
-            className="flex-1 bg-transparent border-none text-[#1a2340] text-sm font-semibold placeholder:text-[#9ca3af] outline-none ml-2.5 cursor-pointer"
-          />
-          <span className="text-xs font-black text-[#c9a84c] uppercase tracking-wider shrink-0 ml-1">→</span>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
+          <div>
+            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
+              Database Categories (landType)
+            </span>
+            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+              Land & Plot Categories in Gujarat
+            </h2>
+            <p className="text-xs font-semibold text-slate-500 mt-1">
+              Select a category to view verified active backend listings
+            </p>
+          </div>
+          <Link
+            to="/search"
+            className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline self-start sm:self-auto"
+          >
+            <span>View All ({listings.length} Active Listings)</span>
+            <ArrowUpRight size={14} />
+          </Link>
         </div>
-      </form>
 
-      {/* Role-based 2×2 Quick Access Grid */}
-      <div className="z-10">
-        <p className="text-[10px] font-black text-[#1a2340]/40 uppercase tracking-[0.2em] mb-3">
-          {language === 'en' ? 'Quick Access' : 'ઝડપી ઍક્સેસ'}
-        </p>
-        <div className="grid grid-cols-2 gap-3.5">
-          {cards.map((card, index) => {
-            const isAreaConverter = card.link === '/area-converter';
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {categories.map((cat, idx) => {
+            const IconComp = cat.icon;
             return (
               <motion.div
-                key={index}
+                key={cat.type}
                 initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.06 }}
-                onClick={() => navigate(card.link)}
-                className={`relative active:scale-[0.97] transition-all rounded-[22px] p-4 flex flex-col justify-between aspect-square cursor-pointer shadow-sm hover:shadow-md ${
-                  isAreaConverter
-                    ? 'bg-[#fdfaf2] border-2 border-[#c9a84c] shadow-[0_6px_20px_rgba(201,168,76,0.12)]'
-                    : 'bg-white border border-[#e2d9c5] active:border-[#c9a84c]'
-                }`}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                onClick={() => navigate(cat.link)}
+                className="bg-white border border-slate-200 hover:border-blue-500 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col justify-between"
               >
-                {/* Popular Badge for Area Converter */}
-                {isAreaConverter && (
-                  <span className="absolute top-3.5 right-3.5 bg-[#c9a84c] text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">
-                    {language === 'en' ? 'Popular' : 'પ્રખ્યાત'}
-                  </span>
-                )}
-
-                {/* Top icon */}
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border ${
-                  isAreaConverter
-                    ? 'bg-[#c9a84c]/15 border-[#c9a84c]/30'
-                    : 'bg-[#f8f5ee] border-[#e2d9c5]/60'
-                }`}>
-                  {card.icon}
+                <div>
+                  <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${cat.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform mb-3.5`}>
+                    <IconComp size={20} />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                    {cat.title}
+                  </h3>
+                  <p className="text-xs font-black text-blue-600 mt-1">
+                    {cat.count > 0 ? `${cat.count} Active Listings` : 'Verified Parcels'}
+                  </p>
+                  <p className="text-[11px] font-semibold text-slate-500 mt-2 leading-relaxed line-clamp-2 sm:line-clamp-none">
+                    {cat.desc}
+                  </p>
                 </div>
 
-                {/* Title and subtitle */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[#1a2340] font-black text-[14px] leading-tight flex items-center gap-0.5">
-                    {card.title}
-                    <ChevronRight size={12} className="text-[#c9a84c] opacity-80 ml-0.5" />
-                  </span>
-                  <span className="text-[#6b7280] text-[10.5px] font-semibold leading-tight">
-                    {card.desc}
-                  </span>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-blue-600 group-hover:translate-x-1 transition-transform">
+                  <span>View {cat.type}</span>
+                  <span>→</span>
                 </div>
               </motion.div>
             );
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
+/* ─── Dynamic Top Land Corridors (Connected to Backend) ───────────────── */
+const TopCorridorsSection = () => {
+  const navigate = useNavigate();
+
+  const { data: allListingsData } = useQuery({
+    queryKey: ['allListings'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get('/api/listings');
+        return res.data.data || [];
+      } catch {
+        return [];
+      }
+    }
+  });
+
+  const listings = allListingsData || [];
+
+  // Group listings by city / location keyword
+  const locationMap = {};
+  listings.forEach(l => {
+    if (!l.location) return;
+    const locName = l.location.split(',')[0].trim();
+    if (!locationMap[locName]) locationMap[locName] = 0;
+    locationMap[locName] += 1;
+  });
+
+  // Top locations from backend
+  const topBackendLocations = Object.entries(locationMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  // Default regional hubs if DB has few locations
+  const defaultHubs = [
+    { name: 'Sanand, Ahmedabad', tag: 'Industrial Corridor' },
+    { name: 'Dholera SIR Smart City', tag: 'Special Investment Region' },
+    { name: 'SP Ring Road West', tag: 'Prime Residential' },
+    { name: 'South Bopal & Shela', tag: 'Weekend Villas' }
+  ];
+
+  const displayCorridors = defaultHubs.map((hub, idx) => {
+    const backendLoc = topBackendLocations[idx];
+    const locName = backendLoc ? backendLoc[0] : hub.name;
+    const count = backendLoc ? backendLoc[1] : (listings.length > 0 ? Math.ceil(listings.length / 4) : 0);
+
+    return {
+      name: locName,
+      plots: count > 0 ? `${count} Active Listings` : 'Verified Parcels Available',
+      tag: hub.tag,
+      query: locName.split(',')[0]
+    };
+  });
+
+  return (
+    <section className="py-12 bg-white font-['Nunito_Sans',sans-serif]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
+          <div>
+            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
+              Live Market Demand
+            </span>
+            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+              Top Land Investment Corridors in Gujarat
+            </h2>
+          </div>
+          <Link to="/search" className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline">
+            <span>Explore Map & Search</span>
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {displayCorridors.map((c) => (
+            <div
+              key={c.name}
+              onClick={() => navigate(`/search?query=${encodeURIComponent(c.query)}`)}
+              className="bg-slate-50 border border-slate-200 hover:border-blue-500 rounded-2xl p-5 cursor-pointer shadow-sm hover:shadow-md transition-all group"
+            >
+              <div className="inline-block px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase mb-2">
+                {c.tag}
+              </div>
+              <h3 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                {c.name}
+              </h3>
+              <p className="text-xs font-bold text-blue-600 mt-1">{c.plots}</p>
+              <div className="mt-3 text-[11px] font-extrabold text-emerald-600 flex items-center gap-1">
+                <TrendingUp size={13} />
+                <span>Live Listings & Market Demand</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── Popular Brokers Section ─────────────────────────────────────────────── */
+const PopularBrokersSection = () => {
+  const navigate = useNavigate();
+  const brokerScrollRef = useRef(null);
+
+  const scrollBrokerLeft = () => {
+    if (brokerScrollRef.current) brokerScrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
+  };
+  const scrollBrokerRight = () => {
+    if (brokerScrollRef.current) brokerScrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+  };
+
+  const { data: brokersData, isLoading, isError } = useQuery({
+    queryKey: ['brokers'],
+    queryFn: async () => {
+      const res = await axios.get('/api/users/brokers');
+      return res.data.data;
+    }
+  });
+
+  const brokers = brokersData || [];
+
+  return (
+    <section className="py-10 sm:py-14 bg-white font-['Nunito_Sans',sans-serif]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div className="flex items-end justify-between mb-6 sm:mb-8">
+          <div>
+            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
+              Verified Regional Agents
+            </span>
+            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+              Popular Brokers & Agents
+            </h2>
+            <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5 sm:mt-1">
+              Connect with top verified authorized land brokers in Gujarat
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={scrollBrokerLeft}
+              className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+              aria-label="Scroll Left"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={scrollBrokerRight}
+              className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+              aria-label="Scroll Right"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <Link
+              to="/brokers"
+              className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline ml-1 sm:ml-2 hidden sm:flex"
+            >
+              <span>View All</span>
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="flex gap-4 overflow-hidden">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="w-40 sm:w-52 h-44 bg-slate-100 rounded-2xl animate-pulse shrink-0" />
+            ))}
+          </div>
+        ) : isError || brokers.length === 0 ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+            <p className="text-xs font-bold text-slate-500">Authorized land brokers are available in our Brokers Directory.</p>
+            <Link to="/brokers" className="text-xs font-black text-blue-600 hover:underline mt-2 inline-block">
+              Explore Brokers Directory →
+            </Link>
+          </div>
+        ) : (
+          <div
+            ref={brokerScrollRef}
+            className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 pt-1 px-1 scrollbar-none"
+          >
+            {brokers.map((b, idx) => (
+              <motion.div
+                key={b._id || idx}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                onClick={() => navigate('/brokers')}
+                className="shrink-0 w-40 sm:w-52 snap-start bg-white border border-slate-200/90 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 flex flex-col items-center text-center group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                {/* Avatar Ring */}
+                <div className="relative w-14 h-14 sm:w-18 sm:h-18 rounded-full bg-[#1a2340] text-[#c9a84c] flex items-center justify-center font-black text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform mb-2.5 ring-4 ring-slate-100 overflow-hidden shrink-0">
+                  {b.profileImage ? (
+                    <img src={getImageUrl(b.profileImage)} alt={b.name} className="w-full h-full object-cover" />
+                  ) : (
+                    b.name?.charAt(0)?.toUpperCase() || 'B'
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 text-white p-0.5 sm:p-1 rounded-full border-2 border-white shadow-sm z-10">
+                    <ShieldCheck size={11} />
+                  </div>
+                </div>
+
+                {/* Broker Info */}
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                  {b.name}
+                </h3>
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-0.5">
+                  {b.listingsCount ?? 0} Active Listings
+                </p>
+
+                <span className="mt-2 text-[10px] font-extrabold text-blue-600 bg-blue-50 group-hover:bg-blue-600 group-hover:text-white px-2.5 py-1 rounded-full transition-colors flex items-center gap-1">
+                  <Phone size={10} /> Contact Agent
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+/* ─── Main Home Component ─────────────────────────────────────────────────── */
 const Home = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const scrollRef = useRef(null);
 
-  // Fetch trending properties
+  const scrollPropLeft = () => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+  };
+  const scrollPropRight = () => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+  };
+
   const { data: trendingData, isLoading: isTrendingLoading, isError: isTrendingError, error: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: ['trending'],
     queryFn: async () => {
@@ -666,520 +683,489 @@ const Home = () => {
     }
   });
 
-  // Fetch my listings for Seller/Broker
-  const { data: myListingsData, isLoading: isMyListingsLoading } = useQuery({
-    queryKey: ['myListings', user?._id],
-    enabled: !!user && (user.role === 'Seller' || user.role === 'Broker'),
-    queryFn: async () => {
-      const res = await axios.get('/api/listings/mine');
-      return res.data.data;
-    }
-  });
-
-  // Fetch profile data for Buyer (includes favorites)
-  const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = useQuery({
+  const { data: profileData } = useQuery({
     queryKey: ['profile', user?._id],
-    enabled: !!user && user.role === 'Buyer',
+    enabled: !!user,
     queryFn: async () => {
       const res = await axios.get('/api/auth/me');
       return res.data.data;
-    },
-    staleTime: 0, // Always fetch fresh data for profile/favorites
-    refetchOnWindowFocus: true,
+    }
+  });
+
+  const { data: inquiriesData } = useQuery({
+    queryKey: ['userInquiries', user?._id],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const res = await axios.get('/api/inquiries/mine');
+        return res.data.data;
+      } catch {
+        return [];
+      }
+    }
   });
 
   const trending = (trendingData || []).slice(0, 8);
-  const myListings = myListingsData || [];
   const myFavorites = profileData?.favorites || [];
-
-  // Force refetch on mount or auth change
-  useEffect(() => {
-    if (isAuthenticated && user?.role === 'Buyer') {
-      refetchProfile();
-    }
-  }, [isAuthenticated, user?.role, refetchProfile]);
-
-  // Create a Set of favorite IDs for quick lookup
   const wishlistIds = new Set(myFavorites.map(f => f._id));
+  const userInquiries = inquiriesData || [];
 
-  // Toggle wishlist with optimistic updates and proper cache management
   const toggleWishlist = async (e, listingId) => {
     e.stopPropagation();
-    
     if (!isAuthenticated) {
       toast.info('Please login to save favorites');
       navigate('/login');
       return;
     }
 
-    if (!user || user.role !== 'Buyer') {
-      toast.warning('Only buyers can save favorites');
-      return;
-    }
-
     const wasInWishlist = wishlistIds.has(listingId);
-    
-    // Find the full listing object for optimistic update
-    let listingToToggle = null;
-    
-    // Search in trending data
-    if (trendingData) {
-      listingToToggle = trendingData.find(item => item._id === listingId);
-    }
-    
-    // If not found in trending, search in current favorites
-    if (!listingToToggle && myFavorites) {
-      listingToToggle = myFavorites.find(item => item._id === listingId);
-    }
-
-    if (!listingToToggle) {
-      console.error('Listing not found for toggle');
-      toast.error('Unable to update favorites');
-      return;
-    }
-
-    // Optimistically update the cache BEFORE making the API call
-    queryClient.setQueryData(['profile', user._id], (oldData) => {
-      if (!oldData) return oldData;
-
-      let newFavorites;
-      if (wasInWishlist) {
-        // Remove from favorites
-        newFavorites = oldData.favorites.filter(fav => fav._id !== listingId);
-      } else {
-        // Add to favorites
-        newFavorites = [...oldData.favorites, listingToToggle];
-      }
-
-      return {
-        ...oldData,
-        favorites: newFavorites
-      };
-    });
-
-    // Show immediate feedback
-    toast.success(wasInWishlist ? 'Removed from favorites' : 'Added to favorites!', {
-      autoClose: 2000,
-    });
+    toast.success(wasInWishlist ? 'Removed from favorites' : 'Added to favorites!');
 
     try {
-      // Make the API call
       await axios.post(`/api/auth/favorites/${listingId}`);
-      
-      // Refetch to ensure data consistency with backend
       await queryClient.invalidateQueries(['profile', user._id]);
-      
     } catch (err) {
-      console.error('Error toggling favorite:', err);
-      
-      // Revert the optimistic update on error
-      queryClient.setQueryData(['profile', user._id], (oldData) => {
-        if (!oldData) return oldData;
-
-        let revertedFavorites;
-        if (wasInWishlist) {
-          // Add it back
-          revertedFavorites = [...oldData.favorites, listingToToggle];
-        } else {
-          // Remove it
-          revertedFavorites = oldData.favorites.filter(fav => fav._id !== listingId);
-        }
-
-        return {
-          ...oldData,
-          favorites: revertedFavorites
-        };
-      });
-
-      toast.error('Failed to update favorites. Please try again.', {
-        autoClose: 3000,
-      });
+      toast.error('Failed to update favorites');
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (search.trim()) navigate(`/search?query=${search}`);
-  };
-
-  const getSectionData = () => {
-    if (!isAuthenticated) return { 
-      title: language === 'en' ? 'Trending Properties' : 'ટ્રેન્ડિંગ પ્રોપર્ટીઝ', 
-      sub: language === 'en' ? 'The most demanded plots with highest interaction volumes.' : 'સૌથી વધુ પસંદ કરાયેલ અને લોકપ્રિય પ્લોટ્સ.', 
-      data: trending,
-      isLoading: isTrendingLoading,
-      isError: isTrendingError,
-      error: trendingError,
-      refetch: refetchTrending
-    };
-
-    if (user.role === 'Buyer') return {
-      title: language === 'en' ? 'My Favourite Properties' : 'મારી પસંદગીની પ્રોપર્ટીઝ',
-      sub: language === 'en' ? 'Quick access to the lands you saved for later.' : 'તમે સાચવેલી પ્રોપર્ટીઝની ઝડપી ઍક્સેસ.',
-      data: myFavorites,
-      isLoading: isProfileLoading,
-      isError: false,
-      refetch: refetchProfile,
-      emptyTitle: language === 'en' ? 'No Favourites Yet' : 'કોઈ પસંદગી નથી',
-      emptySub: language === 'en' ? 'Start exploring and heart the properties you love to see them here.' : 'તમારી મનપસંદ પ્રોપર્ટી લિસ્ટિંગને હાર્ટ કરો જેથી તે અહીં દેખાય.',
-      cta: language === 'en' ? 'Explore Listings' : 'પ્રોપર્ટી શોધો',
-      ctaLink: '/search'
-    };
-
-    return {
-      title: language === 'en' ? 'My Listed Properties' : 'મારી લિસ્ટ કરેલી પ્રોપર્ટીઝ',
-      sub: language === 'en' ? 'Track and manage the properties you have listed.' : 'તમે લિસ્ટ કરેલી જમીનનું સંચાલન કરો.',
-      data: myListings,
-      isLoading: isMyListingsLoading,
-      isError: false,
-      refetch: () => {}, // Handled by myListings query
-      emptyTitle: language === 'en' ? 'No Listings Yet' : 'કોઈ લિસ્ટિંગ નથી',
-      emptySub: language === 'en' ? 'Start your journey as a seller by listing your first property today.' : 'આજે જ તમારી પ્રથમ પ્રોપર્ટી લિસ્ટ કરીને વેચાણની શરૂઆત કરો.',
-      // cta: language === 'en' ? 'List My First Property' : 'પ્રથમ પ્રોપર્ટી લિસ્ટ કરો',
-      ctaLink: '/create-listing'
-    };
-  };
-
-  const { title, sub, data, isLoading, isError, error, refetch, emptyTitle, emptySub, cta, ctaLink } = getSectionData();
-
   return (
-    <div style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
-      <SEO 
-        title="Verified Land Plots & Farmhouse Land in India"
-        description="Find verified land parcels, agricultural plots, and commercial land directly from sellers. Intelligent mapping and secure booking for your next land investment."
+    <div className="bg-slate-50 min-h-screen font-['Nunito_Sans',sans-serif]">
+      <SEO
+        title="Kharsan Properties - Verified Land Plots & Farmhouse Land"
+        description="Find verified land parcels, agricultural plots, and commercial land directly from sellers and authorized brokers."
       />
 
+      {/* Hero Banner Slider */}
+      <HeroCarousel />
 
-      {/* Laptop / Desktop View Hero */}
-      <div className="hidden md:block">
-        <HeroCarousel />
-      </div>
+      {/* Floating Land Search Box */}
+      <FloatingSearchBox />
 
-      {/* Mobile View Entrance Hero */}
-      <div className="block md:hidden">
-        <MobileEntrance />
-      </div>
+      {/* Main Content Area */}
+      <section className="py-10 sm:py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      {/* ── Floating Search Bar ── */}
-      {/* <div style={{ background: '#f8f5ee', padding: '0 24px' }}>
-        <form onSubmit={handleSearch} className="home-search-bar" style={{
-          maxWidth: 780, margin: '0 auto', display: 'flex',
-          background: '#fff', borderRadius: 12, padding: 8,
-          border: '2px solid #1a2340',
-          boxShadow: '0 12px 40px rgba(26,35,64,0.12)',
-          transform: 'translateY(-32px)',
-          gap: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: 12 }}>
-            <Search size={20} color="#c9a84c" style={{ flexShrink: 0 }} />
-            <input
-              type="text"
-              placeholder="Search by Region, City, or Property Name..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                flex: 1, border: 'none', outline: 'none', padding: '12px 14px',
-                fontSize: 15, fontWeight: 600, color: '#1a2340',
-                fontFamily: "'Nunito Sans', sans-serif",
-                background: 'transparent',
-              }}
-            />
-          </div>
-          <button type="submit" style={{
-            background: '#1a2340', color: '#fff', border: 'none', cursor: 'pointer',
-            padding: '10px 12px', borderRadius: 8,
-            fontSize: 14, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase',
-            fontFamily: "'Nunito Sans', sans-serif",
-            flexShrink: 0,
-          }}>
-            Search
-          </button>
-        </form>
-      </div> */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
 
-      {/* ── Stats Strip ── */}
-      <div className="hidden md:block" style={{ background: '#1a2340', padding: '28px 24px' }}>
-        <div style={{
-          maxWidth: 1100, margin: '0 auto',
-          display: 'flex', justifyContent: 'space-around',
-          flexWrap: 'wrap', gap: 24,
-        }}>
-          {[
-            { num: t('home.stat_verified_num'), label: t('home.stat_verified_label') },
-            { num: t('home.stat_mapping_num'), label: t('home.stat_mapping_label') },
-            { num: t('home.stat_connection_num'), label: t('home.stat_connection_label') },
-            { num: t('home.stat_charges_num'), label: t('home.stat_charges_label') },
-          ].map(({ num, label }) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 28, color: '#c9a84c', fontWeight: 700 }}>{num}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600, letterSpacing: '0.5px', marginTop: 4 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+          {/* Left Column: Recommended Properties Horizontal Scroll Carousel */}
+          <div className="lg:col-span-3 space-y-5 sm:space-y-6 min-w-0">
 
-      <style>{`
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-bottom: 40px;
-          border-bottom: 2px solid #e2d9c5;
-          padding-bottom: 20px;
-        }
-        @media (max-width: 768px) {
-          .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 16px;
-          }
-        }
-        .carousel-container {
-          display: flex;
-          gap: 24px;
-          overflow-x: auto;
-          padding: 10px 4px 40px;
-          scroll-snap-type: x mandatory;
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none;  /* IE and Edge */
-        }
-        .carousel-container::-webkit-scrollbar {
-          display: none; /* Chrome, Safari and Opera */
-        }
-        .square-card {
-          flex: 0 0 300px;
-          scroll-snap-align: start;
-          background: #fff;
-          border-radius: 20px;
-          border: 1px solid #e2d9c5;
-          overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          cursor: pointer;
-          position: relative;
-        }
-        .square-card:hover {
-          transform: translateY(-10px);
-          box-shadow: 0 20px 40px rgba(26,35,64,0.12);
-          border-color: #c9a84c;
-        }
-        .square-card-img-wrap {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 1/1;
-          overflow: hidden;
-          background: #f3f4f6;
-        }
-        .square-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.6s ease;
-        }
-        .square-card:hover .square-card-img {
-          transform: scale(1.1);
-        }
-        .square-card-content {
-          padding: 20px;
-        }
-        .square-card-price {
-          font-size: 20px;
-          font-weight: 900;
-          color: #1a2340;
-          margin-bottom: 4px;
-        }
-        .square-card-title {
-          font-size: 15px;
-          font-weight: 700;
-          color: #1a2340;
-          margin-bottom: 8px;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .square-card-meta {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 11px;
-          color: #6b7280;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .square-card-badge {
-          position: absolute;
-          top: 15px;
-          left: 15px;
-          background: #1a2340;
-          color: #c9a84c;
-          padding: 4px 12px;
-          border-radius: 8px;
-          font-size: 10px;
-          font-weight: 800;
-          z-index: 10;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .empty-state-card {
-          background: #fff;
-          border: 2px dashed #e2d9c5;
-          border-radius: 20px;
-          padding: 60px 40px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 20px;
-        }
-        .heart-btn {
-          transition: all 0.2s ease;
-        }
-        .heart-btn:active {
-          transform: scale(0.9);
-        }
-      `}</style>
+            <div className="flex items-end justify-between border-b border-slate-200 pb-3 sm:pb-4">
+              <div>
+                <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
+                  Curated especially for you
+                </span>
+                <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+                  Recommended Properties
+                </h2>
+              </div>
 
-    <div style={{ background: '#f8f5ee', padding: '64px 24px 80px' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {/* Section Header */}
-        <div className="section-header">
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 6 }}>
-              {isAuthenticated 
-                ? (language === 'en' ? 'Personalized for You' : 'તમારા માટે ખાસ') 
-                : (language === 'en' ? 'Most Viewed' : 'સૌથી વધુ જોવાયેલ')}
-            </div>
-            <h2 style={{ fontFamily: "'Nunito Sans', serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1a2340', fontWeight: 700, margin: 0 }}>
-              {title} 
-            </h2>
-            <p style={{ color: '#6b7280', fontWeight: 600, marginTop: 8, fontSize: 15 }}>
-              {sub}
-            </p>
-          </div>
-          {/* <Link to={ctaLink || "/search"} style={{
-            background: '#1a2340', color: '#c9a84c', textDecoration: 'none',
-            padding: '12px 28px', borderRadius: 12, fontWeight: 800,
-            fontSize: 13, letterSpacing: '1px', textTransform: 'uppercase',
-            border: '2px solid #1a2340', whiteSpace: 'nowrap',
-            transition: 'all 0.2s',
-          }}>
-            {cta || (language === 'en' ? 'Explore All' : 'બધું શોધો')}
-          </Link> */}
-        </div>
-
-        {/* Content */}
-        {isError ? (
-          <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />
-        ) : isLoading ? (
-          <div className="carousel-container">
-            {[1, 2, 3, 4].map(i => <ListingSkeleton key={i} variant="square" />)}
-          </div>
-        ) : data.length === 0 ? (
-          <div className="empty-state-card">
-            <div style={{ width: 80, height: 80, borderRadius: 20, background: '#f8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {user?.role === 'Buyer' ? <Heart size={32} color="#c9a84c" /> : <Target size={32} color="#c9a84c" />}
-            </div>
-            <h3 style={{ fontSize: 24, fontWeight: 800, color: '#1a2340', margin: 0 }}>{emptyTitle}</h3>
-            <p style={{ color: '#6b7280', fontWeight: 600, margin: 0, maxWidth: 400 }}>{emptySub}</p>
-            <Link to={ctaLink} style={{
-              background: '#c9a84c', color: '#1a1200', textDecoration: 'none',
-              padding: '14px 32px', borderRadius: 12, fontWeight: 800,
-              fontSize: 14, letterSpacing: '1px', textTransform: 'uppercase',
-              boxShadow: '0 8px 24px rgba(201,168,76,0.3)',
-            }}>
-              {cta}
-            </Link>
-          </div>
-        ) : (
-          <div className="carousel-container">
-            {data.map((listing, idx) => {
-              const isInWishlist = wishlistIds.has(listing._id);
-              
-              return (
-                <motion.div
-                  key={listing._id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: idx * 0.05 }}
-                  className="square-card"
-                  onClick={() => navigate(`/listings/${listing._id}`)}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={scrollPropLeft}
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+                  aria-label="Scroll Left"
                 >
-                  <div className="square-card-badge">
-                    {listing.propertyType === 'Land' 
-                      ? (language === 'en' ? 'Land' : 'જમીન') 
-                      : (language === 'en' ? 'Plot' : 'પ્લોટ')}
-                  </div>
-                  
-                  {isAuthenticated && user?.role === 'Buyer' && (
-                    <button 
-                      className="heart-btn"
-                      style={{
-                        position: 'absolute', top: 15, right: 15, zIndex: 11,
-                        background: 'rgba(255,255,255,0.95)', padding: 8, borderRadius: 10,
-                        border: 'none', cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      }}
-                      onClick={e => toggleWishlist(e, listing._id)}
-                      aria-label={isInWishlist ? "Remove from favorites" : "Add to favorites"}
-                    >
-                      <Heart 
-                        size={18} 
-                        fill={isInWishlist ? "#dc2626" : "none"} 
-                        color={isInWishlist ? "#dc2626" : "#6b7280"} 
-                        strokeWidth={2.5}
-                      />
-                    </button>
-                  )}
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={scrollPropRight}
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+                  aria-label="Scroll Right"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <Link
+                  to="/search"
+                  className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline ml-1 sm:ml-2 hidden sm:flex"
+                >
+                  <span>Explore All</span>
+                  <ArrowUpRight size={14} />
+                </Link>
+              </div>
+            </div>
 
-                  <div className="square-card-img-wrap relative">
-                    {listing.images?.length > 0 ? (
-                      <img src={getImageUrl(listing.images[0])} alt={listing.title} className="square-card-img" loading="lazy" />
-                    ) : (listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
-                      <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                        <MapContainer 
-                          center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} 
-                          zoom={14} 
-                          zoomControl={false}
-                          dragging={false}
-                          doubleClickZoom={false}
-                          scrollWheelZoom={false}
-                          attributionControl={false}
-                          style={{ height: '100%', width: '100%' }}
+            {/* Horizontal Touch Scroll Container */}
+            {isTrendingError ? (
+              <ErrorBox message={trendingError?.message} retry={() => refetchTrending()} />
+            ) : isTrendingLoading ? (
+              <div className="flex gap-4 overflow-hidden">
+                {[1, 2, 3].map(i => <div key={i} className="w-[240px] sm:w-[260px] shrink-0 h-64 bg-slate-200/60 rounded-2xl animate-pulse" />)}
+              </div>
+            ) : trending.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+                <p className="text-slate-500 font-bold text-sm">No properties available at the moment.</p>
+              </div>
+            ) : (
+              <div
+                ref={scrollRef}
+                className="flex gap-3.5 sm:gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 pt-1 px-1 scrollbar-none"
+              >
+                {trending.map((listing, idx) => {
+                  const isInWishlist = wishlistIds.has(listing._id);
+
+                  return (
+                    <motion.div
+                      key={listing._id}
+                      initial={{ opacity: 0, y: 15 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      onClick={() => navigate(`/listings/${listing._id}`)}
+                      className="shrink-0 w-[230px] sm:w-[260px] md:w-[280px] snap-start bg-white border border-slate-200 hover:border-blue-400 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+                    >
+                      <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                        {listing.images?.length > 0 ? (
+                          <img
+                            src={getImageUrl(listing.images[0])}
+                            alt={listing.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 font-black text-xs">
+                            NO IMAGE
+                          </div>
+                        )}
+
+                        {/* Verified Badge */}
+                        <div className="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                          <CheckCircle2 size={11} />
+                          <span>Verified</span>
+                        </div>
+
+                        {/* Wishlist Heart Button */}
+                        <button
+                          onClick={(e) => toggleWishlist(e, listing._id)}
+                          className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-md text-slate-600 hover:text-red-500 transition-colors cursor-pointer"
                         >
-                          <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                          <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]} />
-                        </MapContainer>
+                          <Heart
+                            size={15}
+                            className={isInWishlist ? 'fill-red-500 text-red-500' : ''}
+                          />
+                        </button>
+
+                        {/* Price Badge Overlay */}
+                        <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl shadow-md border border-slate-200/60">
+                          <span className="text-xs sm:text-sm font-black text-slate-900">
+                            ₹{listing.price >= 10000000
+                              ? `${(listing.price / 10000000).toFixed(1)} Cr`
+                              : (listing.price >= 100000 ? `${(listing.price / 100000).toFixed(0)} L` : listing.price?.toLocaleString('en-IN'))}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Card Content Below Image */}
+                      <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                        <div>
+                          <h3 className="text-xs font-black text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                            {listing.title}
+                          </h3>
+                          <p className="text-[11px] font-semibold text-slate-500 line-clamp-1 mt-0.5">
+                            In {listing.location || 'Gujarat'}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
+                          <span>Posted by {listing.user?.role || 'Owner'}</span>
+                          <span className="text-slate-700 font-extrabold">{listing.area || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: User Activity Card OR Smart Tools Card */}
+          <div className="lg:col-span-1">
+            {isAuthenticated ? (
+              /* Real Logged In User Activity Widget */
+              <div className="sticky top-28 bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#1a2340] text-[#c9a84c] flex items-center justify-center font-black text-base sm:text-lg shadow-sm overflow-hidden shrink-0">
+                    {user?.profileImage ? (
+                      <img src={getImageUrl(user.profileImage)} alt={user.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontWeight: 800, fontSize: 12 }}>NO IMAGE</div>
+                      user?.name?.[0] || 'U'
                     )}
                   </div>
-
-                  <div className="square-card-content">
-                    <div className="square-card-price">
-                      ₹{listing.price?.toLocaleString('en-IN')}
-                    </div>
-                    <h3 className="square-card-title">{listing.title}</h3>
-                    <div className="square-card-meta">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={12} color="#c9a84c" />
-                        {listing.location?.split(',')[0]}
-                      </div>
-                      <div style={{ color: '#c9a84c' }}>•</div>
-                      <div>{listing.area || 'N/A'}</div>
-                    </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-black text-slate-900">{user?.name}</h3>
+                    <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400">Your Recent Activity</p>
                   </div>
-                </motion.div>
-              );
-            })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                  <div className="bg-blue-50/80 border border-blue-100 rounded-xl p-2.5 sm:p-3 text-center">
+                    <div className="text-lg sm:text-xl font-black text-blue-700 flex items-center justify-center gap-1">
+                      <span>{myFavorites.length || 0}</span>
+                      <ArrowUpRight size={14} className="text-blue-500" />
+                    </div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-wider mt-0.5">Shortlisted</div>
+                  </div>
+
+                  <div className="bg-amber-50/80 border border-amber-100 rounded-xl p-2.5 sm:p-3 text-center">
+                    <div className="text-lg sm:text-xl font-black text-amber-700 flex items-center justify-center gap-1">
+                      <span>{userInquiries.length || 0}</span>
+                      <ArrowUpRight size={14} className="text-amber-500" />
+                    </div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-amber-600 uppercase tracking-wider mt-0.5">Inquiries</div>
+                  </div>
+                </div>
+
+                <Link
+                  to="/dashboard"
+                  className="w-full block text-center bg-[#1a2340] hover:bg-slate-800 text-white font-extrabold text-xs py-2.5 sm:py-3 rounded-xl shadow-md transition-all"
+                >
+                  Manage My Account
+                </Link>
+
+                <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                  <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Smart Tools</div>
+                  <Link
+                    to="/boundary-map"
+                    className="flex items-center justify-between text-xs font-bold text-slate-700 hover:text-blue-600 p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Layers size={14} className="text-blue-600" />
+                      Boundary Mapping
+                    </span>
+                    <span>→</span>
+                  </Link>
+                  <Link
+                    to="/area-converter"
+                    className="flex items-center justify-between text-xs font-bold text-slate-700 hover:text-amber-600 p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Calculator size={14} className="text-amber-600" />
+                      Area Converter
+                    </span>
+                    <span>→</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              /* Visitor Smart Tools Card */
+              <div className="sticky top-28 bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black">
+                    <Layers size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-black text-slate-900">Land Utilities</h3>
+                    <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400">Interactive Mapping & Calculators</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Link
+                    to="/boundary-map"
+                    className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Layers size={15} className="text-blue-600" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600">Boundary Map</div>
+                        <div className="text-[10px] text-slate-400 font-medium">Draw & verify coordinates</div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 group-hover:text-blue-600">→</span>
+                  </Link>
+
+                  <Link
+                    to="/area-converter"
+                    className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-200/80 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Calculator size={15} className="text-amber-600" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 group-hover:text-amber-600">Area Converter</div>
+                        <div className="text-[10px] text-slate-400 font-medium">Convert Bigha, Acre & Sq Ft</div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 group-hover:text-amber-600">→</span>
+                  </Link>
+                </div>
+
+                <Link
+                  to="/create-listing"
+                  className="w-full block text-center bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2.5 sm:py-3 rounded-xl shadow-md transition-all"
+                >
+                  Post Your Property FREE
+                </Link>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
-    {/* ── Footer ── */}
-      <Footer />
+        </div>
+      </section>
+
+      {/* Dynamic Land Categories Section (Matching Backend landType schema) */}
+      <LandCategoriesSection />
+
+      {/* Dynamic Top Land Corridors Section (Connected to Backend) */}
+      <TopCorridorsSection />
+
+      {/* Real Popular Brokers Section */}
+      <PopularBrokersSection />
+
+      {/* Sell Your Land Free Banner */}
+      <section className="py-12 px-4 max-w-7xl mx-auto">
+        <div className="bg-gradient-to-r from-[#1a2340] to-slate-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl text-center md:text-left">
+            <span className="bg-[#c9a84c] text-slate-900 text-[10px] font-black uppercase px-3 py-1 rounded-full">
+              Zero Platform Commission
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+              Want to Sell or Lease Your Land Faster?
+            </h2>
+            <p className="text-slate-300 text-xs sm:text-sm font-semibold">
+              List your agricultural parcel, residential plot, or commercial site FREE. Direct buyer inquiries sent to your phone!
+            </p>
+          </div>
+          <Link
+            to="/create-listing"
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider px-8 py-4 rounded-2xl shadow-lg transition-all hover:scale-105 shrink-0"
+          >
+            Post Property FREE
+          </Link>
+        </div>
+      </section>
+
+      {/* Soft Sky-Blue Modern Stats Strip */}
+      {/* <section className="bg-gradient-to-r from-sky-50/80 via-blue-50/60 to-indigo-50/80 border-y border-sky-100/70 py-10 sm:py-12 px-4 font-['Nunito_Sans',sans-serif]">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all text-center flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center mb-2.5 sm:mb-3">
+              <ShieldCheck size={22} className="sm:w-6 sm:h-6" />
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">100%</div>
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Verified Land Listings</div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all text-center flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-2.5 sm:mb-3">
+              <Navigation size={22} className="sm:w-6 sm:h-6" />
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">5,000+</div>
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">GPS Mapped Parcels</div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all text-center flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2.5 sm:mb-3">
+              <Users size={22} className="sm:w-6 sm:h-6" />
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Direct</div>
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Owner & Broker Connect</div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all text-center flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2.5 sm:mb-3">
+              <Award size={22} className="sm:w-6 sm:h-6" />
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">₹0</div>
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Zero Platform Fees</div>
+          </div>
+        </div>
+      </section> */}
+
+      {/* Download App Banner Section */}
+      <AppDownloadBanner />
+
+      {/* Production-Ready Responsive Footer */}
+      <footer className="bg-white text-slate-800 pt-10 sm:pt-14 pb-8 px-4 sm:px-6 border-t-4 border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 mb-10">
+
+          {/* Col 1: Brand Info */}
+          <div className="space-y-3">
+            <KharsanLogo />
+            <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-xs">
+              India's premier smart land & plot marketplace. Verified agricultural parcels, NA plots, and commercial land zones.
+            </p>
+          </div>
+
+          {/* Col 2: Quick Links */}
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-[#1a2340] border-b border-slate-100 pb-2 mb-3">
+              Quick Links
+            </h4>
+            <ul className="space-y-2 text-xs font-bold text-slate-600">
+              <li>
+                <Link to="/search" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  Buy Land & Plots
+                </Link>
+              </li>
+              <li>
+                <Link to="/create-listing" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  Post Property FREE
+                </Link>
+              </li>
+              <li>
+                <Link to="/brokers" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  Brokers Directory
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  About Us
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Smart Tools */}
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-[#1a2340] border-b border-slate-100 pb-2 mb-3">
+              Smart Tools
+            </h4>
+            <ul className="space-y-2 text-xs font-bold text-slate-600">
+              <li>
+                <Link to="/boundary-map" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  Boundary Map Tool
+                </Link>
+              </li>
+              <li>
+                <Link to="/area-converter" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  Land Area Converter
+                </Link>
+              </li>
+              <li>
+                <Link to="/calculator" className="hover:text-[#2563eb] transition-colors inline-block py-0.5">
+                  EMI & Land Calculator
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 4: Contact & Support */}
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-[#1a2340] border-b border-slate-100 pb-2 mb-3">
+              Contact Support
+            </h4>
+            <div className="space-y-2 text-xs font-bold text-slate-600">
+              <a href="mailto:support@kharsan.com" className="flex items-center gap-2 text-slate-700 hover:text-blue-600 transition-colors py-0.5">
+                <Mail size={14} className="text-blue-600 shrink-0" />
+                <span>support@kharsan.com</span>
+              </a>
+              <a href="tel:+919409553232" className="flex items-center gap-2 text-slate-700 hover:text-blue-600 transition-colors py-0.5">
+                <Phone size={14} className="text-blue-600 shrink-0" />
+                <span>+91 94095 53232</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="max-w-7xl mx-auto border-t border-slate-200 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 font-bold gap-3 text-center sm:text-left">
+          <div>© {new Date().getFullYear()} Kharsan Properties. All Rights Reserved.</div>
+          <div className="flex gap-4">
+            <Link to="/privacy-policy" className="hover:text-slate-700 transition-colors">Privacy Policy</Link>
+            <Link to="/about" className="hover:text-slate-700 transition-colors">About Us</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

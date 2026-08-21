@@ -398,8 +398,12 @@ const SellerProfile = () => {
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6 text-center md:text-left">
                             <div className="flex flex-col md:flex-row items-center gap-6">
                                 {/* Avatar (simple, flat, clean styling) */}
-                                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#1a2340] flex items-center justify-center text-[#c9a84c] font-black text-3xl sm:text-4xl shrink-0 shadow-md">
-                                    {user.name?.charAt(0)}
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#1a2340] flex items-center justify-center text-[#c9a84c] font-black text-3xl sm:text-4xl shrink-0 shadow-md overflow-hidden">
+                                    {user.profileImage ? (
+                                        <img src={getImageUrl(user.profileImage)} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        user.name?.charAt(0)
+                                    )}
                                 </div>
 
                                 {/* Name + badges (safely sits fully in the white area) */}

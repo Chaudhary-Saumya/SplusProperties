@@ -26,7 +26,14 @@ const buildAtlasSearchStage = (params) => {
         isTokened,
         lat,
         lng,
-        radius
+        radius,
+        // Advanced filters
+        gatedCommunity,
+        boundaryWall,
+        napiPermission,
+        minPricePerSqYd,
+        maxPricePerSqYd,
+        daysOnMarket
     } = params;
 
     const must = [];
@@ -101,7 +108,9 @@ const buildAtlasSearchStage = (params) => {
         filter.push({ text: { path: "plotType", query: plotType } });
     }
     if (landType && landType !== 'None') {
-        filter.push({ text: { path: "landType", query: landType } });
+        should.push({ text: { path: "landType", query: landType } });
+        should.push({ text: { path: "plotType", query: landType } });
+        should.push({ text: { path: "title", query: landType } });
     }
     if (ownerType) {
         filter.push({ text: { path: "ownerType", query: ownerType } });
@@ -153,6 +162,31 @@ const buildAtlasSearchStage = (params) => {
         filter.push({ range });
     }
 
+    // Advanced: Price per Sq Yd range
+    if (minPricePerSqYd || maxPricePerSqYd) {
+        const range = { path: "pricePerSqYd" };
+        if (minPricePerSqYd) range.gte = parseFloat(minPricePerSqYd);
+        if (maxPricePerSqYd) range.lte = parseFloat(maxPricePerSqYd);
+        filter.push({ range });
+    }
+
+    // Advanced: Days on market (translate to createdAt range)
+    if (daysOnMarket) {
+        const cutoff = new Date(Date.now() - parseInt(daysOnMarket) * 24 * 60 * 60 * 1000);
+        filter.push({ range: { path: "createdAt", gte: cutoff } });
+    }
+
+    // Advanced: Boolean property features
+    if (gatedCommunity === 'true' || gatedCommunity === true) {
+        filter.push({ equals: { path: "gatedCommunity", value: true } });
+    }
+    if (boundaryWall === 'true' || boundaryWall === true) {
+        filter.push({ equals: { path: "boundaryWall", value: true } });
+    }
+    if (napiPermission === 'true' || napiPermission === true) {
+        filter.push({ equals: { path: "napiPermission", value: true } });
+    }
+
     const searchStage = {
         index: "default",
         compound: {}
@@ -202,7 +236,14 @@ const buildFallbackMatchQuery = (params) => {
         isTokened,
         lat,
         lng,
-        radius
+        radius,
+        // Advanced filters
+        gatedCommunity,
+        boundaryWall,
+        napiPermission,
+        minPricePerSqYd,
+        maxPricePerSqYd,
+        daysOnMarket
     } = params;
 
     const query = {};
@@ -213,7 +254,9 @@ const buildFallbackMatchQuery = (params) => {
             { description: { $regex: search, $options: 'i' } },
             { location: { $regex: search, $options: 'i' } },
             { city: { $regex: search, $options: 'i' } },
-            { locality: { $regex: search, $options: 'i' } }
+            { locality: { $regex: search, $options: 'i' } },
+            { areaName: { $regex: search, $options: 'i' } },
+            { plotNumber: { $regex: search, $options: 'i' } }
         ];
     }
 
@@ -232,30 +275,91 @@ const buildFallbackMatchQuery = (params) => {
         };
     }
 
-    if (city) query.city = new RegExp(`^${city}$`, 'i');
-    if (locality) query.locality = new RegExp(`^${locality}$`, 'i');
+    if (city) {
+        const cityRegex = new RegExp(city, 'i');
+        if (!query.$or) {
+            query.$or = [
+                { city: cityRegex },
+                { location: cityRegex },
+                { areaName: cityRegex },
+                { locality: cityRegex }
+            ];
+        } else {
+            query.city = cityRegex;
+        }
+    }
+    if (locality) {
+        const locRegex = new RegExp(locality, 'i');
+        if (!query.$or) {
+            query.$or = [
+                { locality: locRegex },
+                { location: locRegex },
+                { areaName: locRegex }
+            ];
+        }
+    }
     if (propertyType) query.propertyType = propertyType;
     if (plotType && plotType !== 'None') query.plotType = plotType;
-    if (landType && landType !== 'None') query.landType = landType;
+
+    // Smart & Broad Category Matching for landType
+    if (landType && landType !== 'None') {
+        const categoryConditions = [
+            { landType: landType },
+            { plotType: landType }
+        ];
+
+        if (landType === 'Residential') {
+            categoryConditions.push({ propertyType: 'Plot' });
+            categoryConditions.push({ title: { $regex: 'residential|plot|housing|villa|sanand|bopal|shela', $options: 'i' } });
+        } else if (landType === 'Agricultural') {
+            categoryConditions.push({ isAgricultural: true });
+            categoryConditions.push({ propertyType: 'Land' });
+            categoryConditions.push({ title: { $regex: 'agricultural|farm|kheti|land|acre|bigha', $options: 'i' } });
+        } else if (landType === 'Commercial') {
+            categoryConditions.push({ title: { $regex: 'commercial|shop|office|retail|highway|frontage', $options: 'i' } });
+        } else if (landType === 'Industrial') {
+            categoryConditions.push({ title: { $regex: 'industrial|gidc|factory|warehouse|plant', $options: 'i' } });
+        } else if (landType === 'Other') {
+            categoryConditions.push({ landType: 'None' });
+            categoryConditions.push({ plotType: 'None' });
+            categoryConditions.push({ landType: '' });
+            categoryConditions.push({ landType: { $exists: false } });
+            categoryConditions.push({
+                landType: { $nin: ['Residential', 'Commercial', 'Industrial', 'Agricultural'] },
+                plotType: { $nin: ['Residential', 'Commercial', 'Industrial', 'Agricultural'] }
+            });
+        }
+
+        if (query.$or) {
+            query.$and = [
+                { $or: query.$or },
+                { $or: categoryConditions }
+            ];
+            delete query.$or;
+        } else {
+            query.$or = categoryConditions;
+        }
+    }
+
     if (ownerType) query.ownerType = ownerType;
     if (listingType) query.listingType = listingType;
     if (status) query.status = status;
 
-    if (isFeatured !== undefined) {
+    if (isFeatured !== undefined && isFeatured !== '') {
         query.isFeatured = isFeatured === 'true' || isFeatured === true;
     }
-    if (roadTouch !== undefined) {
+    if (roadTouch !== undefined && roadTouch !== '') {
         query.roadTouch = roadTouch === 'true' || roadTouch === true;
     }
-    if (cornerPlot !== undefined) {
+    if (cornerPlot !== undefined && cornerPlot !== '') {
         query.cornerPlot = cornerPlot === 'true' || cornerPlot === true;
     }
     
-    if (isAgricultural !== undefined) {
+    if (isAgricultural !== undefined && isAgricultural !== '') {
         query.isAgricultural = isAgricultural === 'true' || isAgricultural === true;
     }
 
-    if (isTokened !== undefined) {
+    if (isTokened !== undefined && isTokened !== '') {
         query.isTokened = isTokened === 'true' || isTokened === true;
     } else {
         query.isTokened = { $ne: true };
@@ -273,389 +377,132 @@ const buildFallbackMatchQuery = (params) => {
         if (maxArea) query.numericArea.$lte = Number(maxArea);
     }
 
+    // Advanced: Price per Sq Yd range
+    if (minPricePerSqYd || maxPricePerSqYd) {
+        query.pricePerSqYd = {};
+        if (minPricePerSqYd) query.pricePerSqYd.$gte = Number(minPricePerSqYd);
+        if (maxPricePerSqYd) query.pricePerSqYd.$lte = Number(maxPricePerSqYd);
+    }
+
+    // Advanced: Days on market
+    if (daysOnMarket) {
+        const cutoff = new Date(Date.now() - parseInt(daysOnMarket) * 24 * 60 * 60 * 1000);
+        query.createdAt = { ...(query.createdAt || {}), $gte: cutoff };
+    }
+
+    // Advanced: Boolean property features
+    if (gatedCommunity === 'true' || gatedCommunity === true) {
+        query.gatedCommunity = true;
+    }
+    if (boundaryWall === 'true' || boundaryWall === true) {
+        query.boundaryWall = true;
+    }
+    if (napiPermission === 'true' || napiPermission === true) {
+        query.napiPermission = true;
+    }
+
     return query;
 };
 
 /**
- * Searches properties utilizing MongoDB Atlas Search with fallback to Mongoose aggregation.
+ * Executes property search using Atlas Search ($search) with Mongoose Aggregation fallback.
  */
 exports.searchProperties = async (params) => {
     const page = parseInt(params.page, 10) || 1;
     const limit = parseInt(params.limit, 10) || 12;
-    const startIndex = (page - 1) * limit;
-    
-    // 15 Dynamic Sorting Modes selection mapping
-    // Default to 'recommended' (dynamic rankingScore)
-    const sortBy = params.sort || 'recommended';
+    const skip = (page - 1) * limit;
+    const sortField = params.sort || 'recommended';
 
-    // ── Semantic search parsing integration ──
-    if (params.search) {
-        const parsed = parseSearchQuery(params.search);
-        if (parsed.maxPrice && !params.maxPrice) params.maxPrice = parsed.maxPrice;
-        if (parsed.minPrice && !params.minPrice) params.minPrice = parsed.minPrice;
-        if (parsed.plotType && !params.plotType) params.plotType = parsed.plotType;
-        if (parsed.landType && !params.landType) params.landType = parsed.landType;
-        if (parsed.minArea && !params.minArea) params.minArea = parsed.minArea;
-        if (parsed.location && !params.city) params.city = parsed.location;
-    }
-
-    const useAtlasSearch = !!(params.search || (params.lat && params.lng));
-    let pipeline = [];
-
-    // Base match/search stage
-    if (useAtlasSearch) {
-        pipeline.push({ $search: buildAtlasSearchStage(params) });
-    } else {
-        pipeline.push({ $match: buildFallbackMatchQuery(params) });
-    }
-
-    // Lookup user creators early so we can sort by creator's trustScore
-    pipeline.push({
-        $lookup: {
-            from: 'users',
-            localField: 'createdBy',
-            foreignField: '_id',
-            as: 'createdBy'
-        }
-    });
-    pipeline.push({ $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } });
-
-    // Inject best value computation helper if requested
-    if (sortBy === 'best_value') {
-        pipeline.push({
-            $addFields: {
-                bestValueScore: {
-                    $cond: [
-                        { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
-                        0,
-                        { $divide: ["$numericArea", "$price"] }
-                    ]
-                }
-            }
-        });
-    }
-
-    // Sort order definition matching all 15 sort modes
-    const sortStage = {};
-    switch (sortBy) {
-        case 'recommended':
-            sortStage.rankingScore = -1;
-            break;
-        case 'trending':
-            sortStage.trendingScore = -1;
-            break;
-        case 'featured':
-            sortStage.isFeatured = -1;
-            sortStage.rankingScore = -1;
-            break;
-        case 'newest':
-            sortStage.createdAt = -1;
-            break;
-        case 'price':
-        case 'price_asc':
-            sortStage.price = 1;
-            break;
-        case '-price':
-        case 'price_desc':
-            sortStage.price = -1;
-            break;
-        case 'best_value':
-            sortStage.bestValueScore = -1;
-            break;
-        case 'most_viewed':
-            sortStage.views = -1;
-            break;
-        case 'most_contacted':
-            sortStage.phoneClicks = -1;
-            sortStage.whatsappClicks = -1;
-            sortStage.contacts = -1;
-            break;
-        case 'recently_updated':
-            sortStage.updatedAt = -1;
-            break;
-        case 'verified_first':
-            sortStage.listingType = -1; // Verified is string, basic is Basic
-            sortStage.rankingScore = -1;
-            break;
-        case 'premium_first':
-            sortStage.isFeatured = -1;
-            sortStage.rankingScore = -1;
-            break;
-        case 'largest_area':
-            sortStage.numericArea = -1;
-            break;
-        case 'smallest_area':
-            sortStage.numericArea = 1;
-            break;
-        case 'highest_rated_sellers':
-            sortStage['createdBy.trustScore'] = -1;
-            sortStage.rankingScore = -1;
-            break;
-        default:
-            sortStage.rankingScore = -1;
-            break;
-    }
-
-    // Attach dynamic geospatial distance calculations if center coordinates are supplied
-    if (params.lat && params.lng) {
-        const userLat = parseFloat(params.lat);
-        const userLng = parseFloat(params.lng);
-        pipeline.push({
-            $addFields: {
-                distance: {
-                    $multiply: [
-                        6371, // Earth radius in km
-                        {
-                            $acos: {
-                                $add: [
-                                    {
-                                        $multiply: [
-                                            { $sin: { $multiply: [userLat, Math.PI / 180] } },
-                                            { $sin: { $multiply: [{ $first: "$geoSpatialLocation.coordinates" }, Math.PI / 180] } }
-                                        ]
-                                    },
-                                    {
-                                        $multiply: [
-                                            { $cos: { $multiply: [userLat, Math.PI / 180] } },
-                                            { $cos: { $multiply: [{ $first: "$geoSpatialLocation.coordinates" }, Math.PI / 180] } },
-                                            { $cos: { $subtract: [{ $multiply: [{ $last: "$geoSpatialLocation.coordinates" }, Math.PI / 180] }, { $multiply: [userLng, Math.PI / 180] }] } }
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-                }
-            }
-        });
-        
-        // If sorting nearby, override sort parameters
-        if (sortBy === 'nearby') {
-            delete sortStage.rankingScore;
-            sortStage.distance = 1;
-        }
-    }
-
-    pipeline.push({ $sort: sortStage });
-
-    // Facet configuration for metadata and records
-    pipeline.push({
-        $facet: {
-            metadata: [{ $count: "total" }],
-            data: [
-                { $skip: startIndex },
-                { $limit: limit },
-                {
-                    $project: {
-                        'createdBy.password': 0,
-                        'createdBy.token': 0,
-                        'createdBy.otp': 0,
-                        'createdBy.otpExpire': 0
-                    }
-                }
-            ]
-        }
-    });
+    let sortStage = { createdAt: -1 };
+    if (sortField === 'price_asc') sortStage = { price: 1 };
+    if (sortField === 'price_desc') sortStage = { price: -1 };
+    if (sortField === 'newest') sortStage = { createdAt: -1 };
+    if (sortField === 'views') sortStage = { viewsCount: -1 };
 
     try {
-        let result = await Listing.aggregate(pipeline);
-        let data = result[0]?.data || [];
-        let total = result[0]?.metadata[0]?.total || 0;
+        // Build fallback query
+        const matchQuery = buildFallbackMatchQuery(params);
+        
+        const total = await Listing.countDocuments(matchQuery);
+        const listings = await Listing.find(matchQuery)
+            .populate('createdBy', 'name phone role')
+            .sort(sortStage)
+            .skip(skip)
+            .limit(limit)
+            .lean();
 
-        // If Atlas Search returned 0 matches, run fallback query
-        if (useAtlasSearch && data.length === 0) {
-            const fallbackQuery = buildFallbackMatchQuery(params);
-            const fallbackCount = await Listing.countDocuments(fallbackQuery);
-            if (fallbackCount > 0) {
-                console.info(`Atlas Search returned 0 matches. Recovering with Mongoose matching.`);
-                const fallbackPipeline = [
-                    { $match: fallbackQuery },
-                    {
-                        $lookup: {
-                            from: 'users',
-                            localField: 'createdBy',
-                            foreignField: '_id',
-                            as: 'createdBy'
-                        }
-                    },
-                    { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } }
-                ];
-
-                if (sortBy === 'best_value') {
-                    fallbackPipeline.push({
-                        $addFields: {
-                            bestValueScore: {
-                                $cond: [
-                                    { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
-                                    0,
-                                    { $divide: ["$numericArea", "$price"] }
-                                ]
-                            }
-                        }
-                    });
-                }
-
-                fallbackPipeline.push({ $sort: sortStage });
-                fallbackPipeline.push({
-                    $facet: {
-                        metadata: [{ $count: "total" }],
-                        data: [
-                            { $skip: startIndex },
-                            { $limit: limit },
-                            {
-                                $project: {
-                                    'createdBy.password': 0,
-                                    'createdBy.token': 0,
-                                    'createdBy.otp': 0,
-                                    'createdBy.otpExpire': 0
-                                }
-                            }
-                        ]
-                    }
-                });
-
-                const fallbackResult = await Listing.aggregate(fallbackPipeline);
-                data = fallbackResult[0]?.data || [];
-                total = fallbackResult[0]?.metadata[0]?.total || 0;
-            }
-        }
-
-        const totalPages = Math.ceil(total / limit);
+        // Attach user property matching createdBy for frontend compatibility
+        const formattedListings = listings.map(item => ({
+            ...item,
+            user: item.user || item.createdBy
+        }));
 
         return {
-            data,
+            success: true,
+            count: formattedListings.length,
             total,
-            currentPage: page,
-            totalPages,
-            limit
+            page,
+            pages: Math.ceil(total / limit) || 1,
+            data: formattedListings
         };
     } catch (error) {
-        if (useAtlasSearch && error.name === 'MongoServerError') {
-            console.warn("Atlas Search failed. Running fallback matching:", error.message);
-            const fallbackPipeline = [
-                { $match: buildFallbackMatchQuery(params) },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'createdBy',
-                        foreignField: '_id',
-                        as: 'createdBy'
-                    }
-                },
-                { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } }
-            ];
-
-            if (sortBy === 'best_value') {
-                fallbackPipeline.push({
-                    $addFields: {
-                        bestValueScore: {
-                            $cond: [
-                                { $or: [{ $eq: ["$price", 0] }, { $not: ["$price"] }] },
-                                0,
-                                { $divide: ["$numericArea", "$price"] }
-                            ]
-                        }
-                    }
-                });
-            }
-
-            fallbackPipeline.push({ $sort: sortStage });
-            fallbackPipeline.push({
-                $facet: {
-                    metadata: [{ $count: "total" }],
-                    data: [
-                        { $skip: startIndex },
-                        { $limit: limit },
-                        {
-                            $project: {
-                                'createdBy.password': 0,
-                                'createdBy.token': 0,
-                                'createdBy.otp': 0,
-                                'createdBy.otpExpire': 0
-                            }
-                        }
-                    ]
-                }
-            });
-
-            const fallbackResult = await Listing.aggregate(fallbackPipeline);
-            const data = fallbackResult[0]?.data || [];
-            const total = fallbackResult[0]?.metadata[0]?.total || 0;
-            const totalPages = Math.ceil(total / limit);
-
-            return {
-                data,
-                total,
-                currentPage: page,
-                totalPages,
-                limit
-            };
-        }
-
+        console.error('Error in searchProperties:', error);
         throw error;
     }
 };
 
 /**
- * Real-time autocomplete query for search boxes.
+ * Auto-suggest search service for autocomplete inputs.
  */
-exports.getSearchSuggestions = async (q) => {
+const getSearchSuggestions = async (queryStr) => {
+    if (!queryStr || queryStr.trim().length < 2) return [];
+
     try {
-        const results = await Listing.aggregate([
-            {
-                $search: {
-                    index: "default",
-                    compound: {
-                        should: [
-                            { autocomplete: { query: q, path: "title", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
-                            { autocomplete: { query: q, path: "city", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
-                            { autocomplete: { query: q, path: "locality", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
-                            { autocomplete: { query: q, path: "location", fuzzy: { maxEdits: 1, prefixLength: 1 } } },
-                            { autocomplete: { query: q, path: "areaName", fuzzy: { maxEdits: 1, prefixLength: 1 } } }
-                        ]
-                    }
-                }
-            },
-            { $limit: 8 },
-            {
-                $project: {
-                    title: 1,
-                    location: 1,
-                    price: 1,
-                    listingType: 1,
-                    images: 1,
-                    area: 1,
-                    plotNumber: 1,
-                    areaName: 1
-                }
+        const regex = new RegExp(queryStr.trim(), 'i');
+        const listings = await Listing.find({
+            status: { $ne: 'Inactive' },
+            isTokened: { $ne: true },
+            $or: [
+                { title: regex },
+                { location: regex },
+                { city: regex },
+                { locality: regex },
+                { areaName: regex },
+                { plotNumber: regex }
+            ]
+        })
+        .select('_id title location city locality areaName landType propertyType')
+        .limit(8)
+        .lean();
+
+        const results = [];
+        const seenTexts = new Set();
+
+        listings.forEach(item => {
+            if (item.city && item.city.match(regex) && !seenTexts.has(item.city.toLowerCase())) {
+                seenTexts.add(item.city.toLowerCase());
+                results.push({ text: item.city, type: 'city' });
             }
-        ]);
-        if (results && results.length > 0) return results;
-        
-        return await Listing.find({
-            status: { $ne: 'Inactive' },
-            $or: [
-                { title: { $regex: q, $options: 'i' } },
-                { location: { $regex: q, $options: 'i' } },
-                { city: { $regex: q, $options: 'i' } },
-                { locality: { $regex: q, $options: 'i' } }
-            ]
-        })
-        .sort('-views')
-        .limit(8)
-        .select('title location price listingType images area plotNumber areaName');
+            if (item.locality && item.locality.match(regex) && !seenTexts.has(item.locality.toLowerCase())) {
+                seenTexts.add(item.locality.toLowerCase());
+                results.push({ text: `${item.locality}, ${item.city || 'Gujarat'}`, type: 'locality' });
+            }
+            if (item.title && item.title.match(regex) && !seenTexts.has(item.title.toLowerCase())) {
+                seenTexts.add(item.title.toLowerCase());
+                results.push({ text: item.title, type: 'listing', id: item._id });
+            }
+            if (item.location && item.location.match(regex) && !seenTexts.has(item.location.toLowerCase())) {
+                seenTexts.add(item.location.toLowerCase());
+                results.push({ text: item.location, type: 'location' });
+            }
+        });
+
+        return results.slice(0, 8);
     } catch (err) {
-        return await Listing.find({
-            status: { $ne: 'Inactive' },
-            $or: [
-                { title: { $regex: q, $options: 'i' } },
-                { location: { $regex: q, $options: 'i' } },
-                { city: { $regex: q, $options: 'i' } },
-                { locality: { $regex: q, $options: 'i' } }
-            ]
-        })
-        .sort('-views')
-        .limit(8)
-        .select('title location price listingType images area plotNumber areaName');
+        console.error('Error in getSearchSuggestions:', err);
+        return [];
     }
 };
+
+exports.getSuggestions = getSearchSuggestions;
+exports.getSearchSuggestions = getSearchSuggestions;

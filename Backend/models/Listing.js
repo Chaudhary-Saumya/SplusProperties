@@ -233,6 +233,57 @@ const listingSchema = new mongoose.Schema({
     lastInteractionAt: {
         type: Date,
         default: Date.now
+    },
+    // ── Price Competitiveness ──
+    pricePerSqYd: {
+        type: Number,
+        default: 0
+    },
+    priceCompetitivenessScore: {
+        type: Number,
+        default: 0
+    },
+    // ── Location Demand ──
+    locationDemandScore: {
+        type: Number,
+        default: 0
+    },
+    // ── Verification Composite ──
+    verificationScore: {
+        type: Number,
+        default: 0
+    },
+    // ── Advanced Property Attributes ──
+    gatedCommunity: {
+        type: Boolean,
+        default: false
+    },
+    napiPermission: {
+        type: Boolean,
+        default: false
+    },
+    boundaryWall: {
+        type: Boolean,
+        default: false
+    },
+    // ── Engagement: Inquiries ──
+    inquiries: {
+        type: Number,
+        default: 0
+    },
+    // ── Featured / Boost System ──
+    boostTier: {
+        type: String,
+        enum: ['none', 'silver', 'gold', 'platinum'],
+        default: 'none'
+    },
+    featuredUntil: {
+        type: Date
+    },
+    // ── Anti-spam tracking ──
+    sellerListingVelocity: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true
@@ -262,6 +313,10 @@ listingSchema.index({ rankingScore: -1 });
 listingSchema.index({ trendingScore: -1 });
 listingSchema.index({ qualityScore: -1 });
 listingSchema.index({ isDuplicate: 1 });
+listingSchema.index({ city: 1, propertyType: 1, pricePerSqYd: 1 }); // Price competitiveness lookups
+listingSchema.index({ status: 1, rankingScore: -1 }); // Compound for filtered sorts
+listingSchema.index({ boostTier: 1, featuredUntil: 1 }); // Boost queries
+listingSchema.index({ createdBy: 1, createdAt: -1 }); // Seller velocity checks
 
 // Generate slug and extract numeric area before saving
 listingSchema.pre('save', async function() {
@@ -286,7 +341,38 @@ listingSchema.pre('save', async function() {
             this.numericArea = 0;
         }
     }
+
+    // Compute price per square yard
+    if (this.isModified('price') || this.isModified('area') || this.isNew) {
+        this.pricePerSqYd = (this.numericArea > 0) ? Math.round(this.price / this.numericArea) : 0;
+    }
+
+    // Auto-expire featured status
+    if (this.featuredUntil && new Date(this.featuredUntil) < new Date()) {
+        this.isFeatured = false;
+        this.boostTier = 'none';
+        this.featuredUntil = undefined;
+    }
 });
 
+// Virtual populate for 'user' mapping to createdBy
+listingSchema.virtual('user', {
+    ref: 'User',
+    localField: 'createdBy',
+    foreignField: '_id',
+    justOne: true
+});
+
+listingSchema.set('toJSON', { virtuals: true });
+listingSchema.set('toObject', { virtuals: true });
+
+// Database Indexes for High-Speed Real-Time Searches & Geospatial Queries
+listingSchema.index({ status: 1, isTokened: 1, createdAt: -1 });
+listingSchema.index({ landType: 1, plotType: 1 });
+listingSchema.index({ city: 1, locality: 1 });
+listingSchema.index({ price: 1, numericArea: 1 });
+listingSchema.index({ geoSpatialLocation: '2dsphere' });
+
 module.exports = mongoose.model('Listing', listingSchema);
+
 

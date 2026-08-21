@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -6,8 +6,9 @@ import {
     Heart, Share2, MapPin, Calendar, CheckCircle2, Phone, ChevronRight,
     ArrowLeft, Maximize2, Eye, LandPlot, UserCheck, FileText, Users,
     ShieldCheck, Download, MessageSquare, ExternalLink, Image, Clock,
-    Check, X, Zap, ZapOff, Award, Star, StarHalf, StarOff, UserRound, MessageCircle, Navigation, Layers,
-    SlidersHorizontal
+    Check, X, Zap, ZapOff, Award, Star, UserRound, MessageCircle, Navigation, Layers,
+    SlidersHorizontal, Sparkles, ChevronLeft, Building2, Info, PhoneCall, Send,
+    CheckCircle, Tag, Shield, Compass, Sparkle, ArrowUpRight
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
@@ -51,7 +52,11 @@ const PropertyDetails = () => {
     const [mainImageIndex, setMainImageIndex] = useState(0);
     const [isFavorite, setIsFavorite] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
-    const { user, isAuthenticated } = useContext(AuthContext);
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [showPhoneNumber, setShowPhoneNumber] = useState(false);
+    const [expandDescription, setExpandDescription] = useState(false);
+    const { user, isAuthenticated, updateFavorites } = useContext(AuthContext);
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
@@ -59,18 +64,19 @@ const PropertyDetails = () => {
     const [displayUnit, setDisplayUnit] = useState('sqft');
     const [originalAreaValue, setOriginalAreaValue] = useState(0);
     const [originalUnit, setOriginalUnit] = useState('sqft');
-    // const [ownerInquiries, setOwnerInquiries] = useState(0);
     const [requestingVisit, setRequestingVisit] = useState(false);
-    // const [requestingContact, setRequestingContact] = useState(false); /* for commented Send Message button */
+
+    // Form states for dealer inquiry
+    const [userRoleType, setUserRoleType] = useState('Individual');
+    const [inquiryName, setInquiryName] = useState(user?.name || '');
+    const [inquiryPhone, setInquiryPhone] = useState(user?.phone || '');
+    const [inquiryMsg, setInquiryMsg] = useState('I am interested in this Property. Please contact me with more details.');
 
     // Review states
-    // reviewsData from useQuery data
     const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const [hoverRating, setHoverRating] = useState(0);
     const [submittingReview, setSubmittingReview] = useState(false);
-    // reviewsLoading from useQuery
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const conversionFactors = {
         guntha: 1,
         hectare: 98.84,
@@ -98,7 +104,7 @@ const PropertyDetails = () => {
 
         if (subTypeValue && subTypeValue !== 'None') {
             const subTypeKey = subTypeValue.toLowerCase().replace('-', '_');
-            const subTypeTrans = t(`search_page.${subTypeKey}`);
+            const subTypeTrans = t(`search_page.${subTypeKey}`, subTypeValue);
             return `${subTypeTrans} ${typeLabel}`;
         }
         return typeLabel;
@@ -113,17 +119,10 @@ const PropertyDetails = () => {
             vigha_chhota: language === 'gu' ? 'વીઘું (નાનું - ૧૬.૧૯ ગુન્ટા)' : 'Bigha (16.19 Gutha)',
             acre: language === 'gu' ? 'એકર' : 'Acre',
             sqm: language === 'gu' ? 'ચોરસ મીટર' : 'Square Meter (Sq.Mt)',
-            sqft: language === 'gu' ? 'ચોરસ ફૂટ' : 'Square Feet (Sqft)',
-            gaj: language === 'gu' ? 'ગજ / વાર' : 'Gaj / Yard / Vaar',
+            sqft: language === 'gu' ? 'ચોરસ ફૂટ' : 'Sq.Ft.',
+            gaj: language === 'gu' ? 'ગજ / વાર' : 'Gaj / Sq.Yd',
         };
         return labels[u] || u;
-    };
-
-    const getRoleLabel = (role) => {
-        if (role === 'Broker') return t('auth.role_broker').split(' ')[0];
-        if (role === 'Seller') return t('auth.role_seller').split(' ')[0];
-        if (role === 'Buyer') return t('auth.role_buyer').split(' ')[0];
-        return role;
     };
 
     const { data: systemSettings } = useQuery({
@@ -141,6 +140,20 @@ const PropertyDetails = () => {
             return res.data;
         }
     });
+
+    const { data: similarData } = useQuery({
+        queryKey: ['similarListings', cleanId],
+        enabled: !!cleanId,
+        queryFn: async () => {
+            try {
+                const res = await axios.get(`/api/recommendations/similar/${cleanId}`);
+                return res.data.data;
+            } catch {
+                return [];
+            }
+        }
+    });
+
 
     useEffect(() => {
         if (listing) {
@@ -178,6 +191,13 @@ const PropertyDetails = () => {
     }, [listing, user, cleanId]);
 
     useEffect(() => {
+        if (user) {
+            setInquiryName(user.name || '');
+            setInquiryPhone(user.phone || '');
+        }
+    }, [user]);
+
+    useEffect(() => {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
@@ -193,6 +213,17 @@ const PropertyDetails = () => {
         };
     }, [cleanId]);
 
+    const formatIndianPrice = (price) => {
+        if (!price || isNaN(price)) return 'Price on Request';
+        if (price >= 10000000) {
+            return `₹ ${(price / 10000000).toFixed(2).replace(/\.00$/, '')} Cr`;
+        }
+        if (price >= 100000) {
+            return `₹ ${(price / 100000).toFixed(2).replace(/\.00$/, '')} Lac`;
+        }
+        return `₹ ${price.toLocaleString('en-IN')}`;
+    };
+
     const getConvertedArea = () => {
         if (!originalAreaValue) return listing?.area;
         const baseGuntha = originalAreaValue * conversionFactors[originalUnit];
@@ -202,33 +233,86 @@ const PropertyDetails = () => {
         return convertedValue.toLocaleString('en-IN', { maximumFractionDigits: 2 });
     };
 
+    const getListingHighlights = () => {
+        if (!listing) return [];
+        const items = [];
+
+        if (listing.roadTouch) {
+            items.push({ id: 'road', text: 'Direct Road Touch Access' });
+        }
+        if (listing.cornerPlot) {
+            items.push({ id: 'corner', text: 'Corner Plot (Multi-side Open)' });
+        }
+        if (listing.listingType === 'Verified' || listing.verifiedAt) {
+            items.push({ id: 'verified', text: 'Admin Verified Property' });
+        }
+        if (listing.isAgricultural) {
+            items.push({ id: 'agri', text: 'Agricultural Soil & Farming Land' });
+        } else if (listing.landType === 'Non-Agricultural' || listing.plotType === 'Commercial') {
+            items.push({ id: 'na', text: 'Non-Agricultural (NA) Land Zone' });
+        }
+        if (listing.plotType && listing.plotType !== 'None') {
+            items.push({ id: 'plotType', text: `${listing.plotType} Approved Zone` });
+        } else if (listing.landType && listing.landType !== 'None') {
+            items.push({ id: 'landType', text: `${listing.landType} Approved Land` });
+        }
+        if (listing.ownerType === 'Owner') {
+            items.push({ id: 'owner', text: 'Direct Owner Sale (Zero Broker Fee)' });
+        } else if (listing.ownerType === 'Broker') {
+            items.push({ id: 'broker', text: 'Listed by Authorized Real Estate Agent' });
+        }
+        if (listing.isBookingEnabled && listing.tokenAmount > 0) {
+            items.push({ id: 'token', text: `Online Token Reservation Available (₹${listing.tokenAmount?.toLocaleString('en-IN')})` });
+        }
+        if (listing.documents?.length > 0) {
+            items.push({ id: 'docs', text: `${listing.documents.length} Legal Document(s) Uploaded` });
+        }
+        if (listing.videos?.length > 0) {
+            items.push({ id: 'videos', text: 'Drone Video Walkthrough Available' });
+        }
+        if (listing.locationMode === 'map' && listing.mapCoordinates?.lat) {
+            items.push({ id: 'gps', text: 'Exact GPS Satellite Location Mapped' });
+        }
+        if (listing.amenities?.length > 0) {
+            listing.amenities.slice(0, 3).forEach((a, i) => {
+                items.push({ id: `amenity_${i}`, text: `Facility: ${a}` });
+            });
+        }
+
+        if (items.length === 0) {
+            items.push({ id: 'location', text: `Located in ${listing.location || 'Gujarat'}` });
+            items.push({ id: 'type', text: `${getFormattedType()}` });
+        }
+
+        return items;
+    };
+
     const handleFavorite = async () => {
         if (!isAuthenticated) return navigate('/login');
         try {
             const res = await axios.post(`/api/auth/favorites/${cleanId}`);
-            if (user && res.data && res.data.data) {
-                user.favorites = res.data.data;
+            if (res.data && res.data.data && updateFavorites) {
+                updateFavorites(res.data.data);
             }
             const nextState = !isFavorite;
             setIsFavorite(nextState);
             toast.success(nextState ? t('property_details.add_to_fav_success') : t('property_details.remove_from_fav_success'));
-            // eslint-disable-next-line no-unused-vars
         } catch (err) {
             toast.error(t('property_details.failed_favorites'));
         }
     };
 
-    const handleSiteVisitRequest = async () => {
+    const handleSiteVisitRequest = async (e) => {
+        if (e) e.preventDefault();
         if (!isAuthenticated) return navigate('/login');
         setRequestingVisit(true);
         try {
             await axios.post('/api/inquiries', {
                 listingId: cleanId,
                 type: 'SiteVisit',
-                message: 'I would like to schedule a site visit for this property. Please suggest available dates and contact me to arrange.'
+                message: `${inquiryMsg} (User Type: ${userRoleType}, Contact: ${inquiryPhone || user?.phone || 'N/A'})`
             });
-            toast.success(t('property_details.site_visit_success'));
-            // eslint-disable-next-line no-unused-vars
+            toast.success(t('property_details.site_visit_success') || 'Enquiry submitted! The seller will reach out soon.');
         } catch (err) {
             toast.error(t('property_details.failed_site_visit'));
         } finally {
@@ -240,27 +324,24 @@ const PropertyDetails = () => {
         if (!isAuthenticated) return navigate('/login');
         setSubmitting(true);
         try {
-            // 1. Create Razorpay order
             const { data } = await axios.post('/api/payments/create-order', {
                 listingId: cleanId
             });
 
-            // 2. Open Razorpay checkout (demo/test mode)
             const options = {
-                key: data.key, // Razorpay public key
-                amount: data.amount, // in paise
+                key: data.key,
+                amount: data.amount,
                 currency: 'INR',
                 name: 'LandSelling Token',
                 description: `Reserve ${listing.title}`,
                 order_id: data.orderId,
                 handler: async function (response) {
-                    // 3. Verify payment on backend
                     const verifyRes = await axios.post('/api/payments/verify', response);
                     if (verifyRes.data.success) {
                         toast.success(t('property_details.reserved_success') + '! Receipt: ' + verifyRes.data.receiptNumber);
                         setReceiptData(verifyRes.data.transaction || verifyRes.data);
                         setShowReceipt(true);
-                        refetch(); // Refresh listing
+                        refetch();
                     }
                 },
                 prefill: {
@@ -269,7 +350,7 @@ const PropertyDetails = () => {
                     contact: user.phone
                 },
                 theme: {
-                    color: '#1a2340'
+                    color: '#0284c7'
                 },
                 modal: {
                     ondismiss: function () {
@@ -289,16 +370,26 @@ const PropertyDetails = () => {
     };
 
     const handleWhatsApp = () => {
-        const phone = listing.createdBy?.phone || '';
-        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing.title} (${getWebsiteBaseUrl()}/listings/${cleanId}). Can we discuss further?`);
+        axios.post('/api/inquiries/track-lead', { listingId: cleanId, leadType: 'WhatsApp' }).catch(() => {});
+        const phone = listing?.createdBy?.phone || '';
+        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing?.title} (${getWebsiteBaseUrl()}/listings/${cleanId}). Can we discuss further?`);
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     };
+
+    const handleCall = () => {
+        axios.post('/api/inquiries/track-lead', { listingId: cleanId, leadType: 'Call' }).catch(() => {});
+        const phone = listing?.createdBy?.phone || '';
+        if (phone) {
+            window.location.href = `tel:${phone}`;
+        }
+    };
+
 
     const handleShareOptions = async (e) => {
         if (e) e.stopPropagation();
         const listingUrl = `${getWebsiteBaseUrl()}/listings/${cleanId}`;
         const shareData = {
-            title: listing?.title || 'Kharsan Properties',
+            title: listing?.title || 'LandSelling Property',
             text: listing ? `${listing.title} - ${listing.propertyType || 'Plot/Land'} in ${listing.location}` : '',
             url: listingUrl
         };
@@ -316,9 +407,22 @@ const PropertyDetails = () => {
         }
     };
 
-    if (isLoading) return <DetailSkeleton />;
-    if (isError) return <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />;
-    if (!listing) return <div className="py-20 text-center"><p className="text-gray-500">{t('property_details.property_not_found')}</p></div>;
+    const scrollToSection = (sectionId) => {
+        setActiveTab(sectionId);
+        const element = document.getElementById(sectionId);
+        if (element) {
+            const offset = 130;
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     const handleSubmitReview = async (e) => {
         e.preventDefault();
@@ -366,13 +470,13 @@ const PropertyDetails = () => {
                             onMouseEnter={() => setHoverRating(i)}
                             onMouseLeave={() => setHoverRating(0)}
                             onClick={() => setNewReview({ ...newReview, rating: i })}
-                            className="transition-all duration-150 transform hover:scale-115 focus:outline-none py-1"
+                            className="transition-all duration-150 transform hover:scale-110 focus:outline-none p-0.5"
                         >
                             <Star
-                                size={28}
+                                size={26}
                                 className={`transition-colors duration-150 ${i <= currentRating
-                                    ? 'text-[#c9a84c] fill-[#c9a84c] filter drop-shadow-[0_2px_4px_rgba(201,168,76,0.15)]'
-                                    : 'text-slate-300 hover:text-[#c9a84c] fill-transparent'
+                                    ? 'text-amber-500 fill-amber-400'
+                                    : 'text-slate-200 hover:text-amber-400 fill-transparent'
                                     }`}
                                 strokeWidth={i <= currentRating ? 1.5 : 2}
                             />
@@ -380,7 +484,7 @@ const PropertyDetails = () => {
                     ))}
                 </div>
                 {currentRating > 0 && (
-                    <span className="text-xs font-black uppercase tracking-wider text-[#c9a84c] bg-[#c9a84c]/10 px-2.5 py-1 rounded-lg transition-all duration-200">
+                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
                         {ratingLabels[currentRating]}
                     </span>
                 )}
@@ -388,8 +492,14 @@ const PropertyDetails = () => {
         );
     };
 
+    if (isLoading) return <DetailSkeleton />;
+    if (isError) return <ErrorBox message={error?.response?.data?.message || error?.message} retry={() => refetch()} />;
+    if (!listing) return <div className="py-20 text-center"><p className="text-slate-500 font-bold">{t('property_details.property_not_found')}</p></div>;
+
+    const ratePerSqft = listing.price && originalAreaValue ? Math.round(listing.price / originalAreaValue) : null;
+
     return (
-        <div style={{ fontFamily: "'Nunito Sans', sans-serif" }} className="bg-[#FAF9F6] min-h-screen pb-24 lg:pb-12 text-slate-800">
+        <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen pb-24 lg:pb-16 text-slate-800 antialiased">
             <SEO
                 title={`${listing.title} in ${listing.plotNumber ? `Plot: ${listing.plotNumber}, ` : ''}${listing.areaName ? `Area: ${listing.areaName}, ` : ''}${listing.location}`}
                 description={`${listing.description?.substring(0, 160)}...`}
@@ -415,101 +525,219 @@ const PropertyDetails = () => {
                 })}
             </script>
 
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Nunito+Sans:wght@300;400;500;600;700;800;900&display=swap');`}</style>
-
-            {/* Elegant Luxury Top Accent Bar */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c] shadow-xs" />
-
-            {/* ── Breadcrumb & Navigation ── */}
-            <div className="hidden sm:block bg-white border-b border-slate-100 sticky z-20 shadow-xs" style={{ top: 'var(--navbar-height)' }}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-slate-700 hover:text-[#c9a84c] font-bold text-sm transition-all py-1 px-2.5 rounded-lg hover:bg-slate-50">
-                            <ArrowLeft size={16} /> {t('property_details.back')}
-                        </button>
-                        <span className="text-slate-300">|</span>
-                        <span className="text-xs font-bold text-[#c9a84c] uppercase tracking-widest">{getFormattedType()}</span>
+            {/* ── 99acres Top Breadcrumb Bar ── */}
+            <div className="bg-white border-b border-slate-200 text-xs py-2.5 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 text-slate-500 font-medium overflow-hidden text-[11px] sm:text-xs">
+                        <button onClick={() => navigate('/')} className="hover:text-blue-600 transition-colors">Home</button>
+                        <ChevronRight size={12} className="text-slate-400 shrink-0" />
+                        <button onClick={() => navigate('/search')} className="hover:text-blue-600 transition-colors">Properties in {listing.location?.split(',')[0] || 'Gujarat'}</button>
+                        <ChevronRight size={12} className="text-slate-400 shrink-0" />
+                        <span className="text-slate-800 font-semibold truncate max-w-[200px] sm:max-w-xs">{listing.title}</span>
                     </div>
-                    <div className="text-[11px] font-extrabold text-slate-400 tracking-wider uppercase truncate max-w-full sm:max-w-md">
-                        {listing.areaName ? `${listing.areaName}, ` : ''}{listing.location}
+
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
+                        <span>Posted: <strong className="text-slate-700">{new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">ID: #{cleanId.substring(0, 8)}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            {/* ── 99acres Main Header Banner Box ── */}
+            <div className="bg-white border-b border-slate-200 py-5 sm:py-6 shadow-2xs">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
-                {/* ── Hero Info Section: Title, Badges, Price ── */}
-                <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 p-4 sm:p-8 shadow-xs mb-5 sm:mb-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
-                        <div className="space-y-2 sm:space-y-3 max-w-3xl">
-                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                {listing.status === 'Available' && (
-                                    <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
-                                        <Check size={10} className="stroke-[3px]" /> {t('property_details.available')}
-                                    </span>
-                                )}
+                        {/* Price & Title Left Column */}
+                        <div className="space-y-2 flex-1">
+                            {/* Badges row */}
+                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${listing.status === 'Available' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                                    }`}>
+                                    {listing.status === 'Available' || listing.status === 'Active' ? 'AVAILABLE' : listing.status}
+                                </span>
+
                                 {listing.listingType === 'Verified' && (
-                                    <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
-                                        <CheckCircle2 size={10} className="stroke-[2.5px]" /> {t('property_details.verified')}
+                                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                        <ShieldCheck size={12} className="text-blue-600" /> VERIFIED PROPERTY
                                     </span>
                                 )}
+
                                 {listing.isBookingEnabled && (
-                                    <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
-                                        <Zap size={10} className="fill-current stroke-[2px]" /> {t('property_details.token_enabled')}
-                                    </span>
-                                )}
-                                {listing.isFeatured && (
-                                    <span className="inline-flex items-center gap-1 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider">
-                                        ★ {t('property_details.featured')}
+                                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                        <Zap size={11} className="fill-amber-500 text-amber-500" /> TOKEN BOOKING READY
                                     </span>
                                 )}
                             </div>
 
-                            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
+                            {/* Main Title */}
+                            <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-tight tracking-tight">
                                 {listing.title}
                             </h1>
 
-                            <div className="flex items-center gap-1.5 text-slate-500 text-xs sm:text-sm font-semibold">
-                                <MapPin size={14} className="text-[#c9a84c] shrink-0 sm:w-4 sm:h-4" />
-                                <span className="hover:text-slate-800 transition-colors">
+                            {/* Address & Locality */}
+                            <div className="flex items-center gap-1.5 text-slate-600 text-xs sm:text-sm font-medium">
+                                <MapPin size={16} className="text-blue-600 shrink-0" />
+                                <span>
                                     {listing.plotNumber ? `Plot ${listing.plotNumber}, ` : ''}
                                     {listing.areaName ? `${listing.areaName}, ` : ''}
-                                    {listing.location}
+                                    <strong className="text-slate-800">{listing.location}</strong>
                                 </span>
                             </div>
                         </div>
 
-                        {/* Large Beautiful Price Display */}
-                        <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-100 min-w-[200px] sm:min-w-[240px] flex flex-col justify-center mt-2 lg:mt-0">
-                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 sm:mb-1">{t('property_details.total_valuation')}</span>
-                            <div className="text-2xl sm:text-4xl font-black text-slate-950 flex items-baseline gap-1">
-                                <span className="text-xl sm:text-2xl font-bold text-[#c9a84c]">₹</span>
-                                {listing.price?.toLocaleString('en-IN')}
+                        {/* Price & Primary Header Actions */}
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 lg:gap-6 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
+                            {/* Price Block */}
+                            <div className="flex flex-col">
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Asking Price</span>
+                                <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-1">
+                                    {formatIndianPrice(listing.price)}
+                                </div>
+                                {ratePerSqft && (
+                                    <span className="text-xs font-semibold text-slate-500 mt-0.5">
+                                        @ ₹{ratePerSqft.toLocaleString('en-IN')} per {getUnitLabel(originalUnit)}
+                                    </span>
+                                )}
                             </div>
-                            <div className="text-[10px] sm:text-xs text-slate-500 font-bold mt-1 bg-white/70 py-1 px-2.5 rounded-lg border border-slate-100 inline-block self-start">
-                                @ ₹{Math.round(listing.price / originalAreaValue).toLocaleString('en-IN')} / {getUnitLabel(originalUnit)}
+
+                            {/* Header Buttons */}
+                            <div className="flex items-center gap-2.5 ml-auto sm:ml-0">
+                                <button
+                                    onClick={() => scrollToSection('dealer-section')}
+                                    className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-5 py-2.5 sm:py-3 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2 uppercase tracking-wide"
+                                >
+                                    <PhoneCall size={15} />
+                                    <span>Contact Dealer</span>
+                                </button>
+
+                                <button
+                                    onClick={handleFavorite}
+                                    className={`p-2.5 sm:p-3 rounded-lg border transition-all text-xs font-bold flex items-center gap-1.5 ${isFavorite
+                                        ? 'bg-rose-50 border-rose-200 text-rose-600'
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    title="Shortlist Property"
+                                >
+                                    <Heart size={16} className={isFavorite ? 'fill-rose-600' : ''} />
+                                    <span className="hidden sm:inline">{isFavorite ? 'Shortlisted' : 'Shortlist'}</span>
+                                </button>
+
+                                <button
+                                    onClick={handleShareOptions}
+                                    className="p-2.5 sm:p-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg transition-all"
+                                    title="Share"
+                                >
+                                    <Share2 size={16} />
+                                </button>
                             </div>
                         </div>
+
                     </div>
                 </div>
+            </div>
 
-                {/* ── Main Responsive Grid ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* ── 99acres Sticky Navigation Tab Bar ── */}
+            <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-2xs">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scrollbar-none py-1 text-xs font-bold text-slate-600">
+                        <button
+                            onClick={() => scrollToSection('overview')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'overview'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Overview
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('highlights')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'highlights'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Key Highlights
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('specs')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'specs'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Specifications
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('about')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'about'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            About Property
+                        </button>
+                        {listing.amenities?.length > 0 && (
+                            <button
+                                onClick={() => scrollToSection('amenities')}
+                                className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'amenities'
+                                    ? 'border-blue-600 text-blue-600 font-extrabold'
+                                    : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                    }`}
+                            >
+                                Amenities
+                            </button>
+                        )}
+                        <button
+                            onClick={() => scrollToSection('map-section')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'map-section'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Locality & Map
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('dealer-section')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'dealer-section'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Dealer & Enquiry
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('reviews-section')}
+                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'reviews-section'
+                                ? 'border-blue-600 text-blue-600 font-extrabold'
+                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                }`}
+                        >
+                            Reviews ({reviewsData?.count || 0})
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-                    {/* ── Left Column: Media, Details, Features, Map, Reviews ── */}
-                    <div className="lg:col-span-2 space-y-8">
+            {/* ── Main Body Container ── */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
-                        {/* 1. Gallery Section */}
-                        <div className="bg-white sm:rounded-3xl border-y sm:border border-slate-100 p-0 sm:p-5 shadow-none sm:shadow-xs -mx-4 sm:mx-0 overflow-hidden">
-                            <div className="relative rounded-none sm:rounded-2xl overflow-hidden bg-slate-950 aspect-video group shadow-none sm:shadow-inner">
+                {/* ── Section 1: Overview & Split Hero Grid ── */}
+                <section id="overview" className="scroll-mt-36">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                        {/* Image Showcase - 7 Cols */}
+                        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-3">
+                            <div className="relative aspect-16/10 rounded-xl overflow-hidden bg-slate-950 group">
                                 {listing.images?.length > 0 ? (
                                     <img
                                         src={getImageUrl(listing.images[mainImageIndex])}
                                         alt={listing.title}
-                                        fetchpriority="high"
-                                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
+                                        className="w-full h-full object-cover cursor-pointer transition-transform duration-500 group-hover:scale-102"
+                                        onClick={() => setIsLightboxOpen(true)}
                                     />
-                                ) : (listing.locationMode === 'map' && listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) ? (
+                                ) : (listing.locationMode === 'map' && listing.mapCoordinates?.lat && listing.mapCoordinates?.lng) ? (
                                     <div className="w-full h-full relative z-0">
                                         <MapContainer
                                             center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
@@ -521,787 +749,743 @@ const PropertyDetails = () => {
                                             <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
                                                 <Popup>{listing.title}</Popup>
                                             </Marker>
-                                            <MapRecenter position={{ lat: parseFloat(listing.mapCoordinates.lat), lng: parseFloat(listing.mapCoordinates.lng) }} />
                                         </MapContainer>
-                                        <div className="absolute bottom-4 left-4 bg-slate-900/85 backdrop-blur-xs text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider z-10 pointer-events-none">
-                                            🗺️ Satellite Location Map
-                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FAF9F6] to-[#e2d9c5]/40 text-slate-700 p-6 text-center gap-3">
-                                        <div className="w-14 h-14 bg-[#1a2340]/5 rounded-full flex items-center justify-center text-[#c9a84c]">
-                                            <Image size={28} />
-                                        </div>
-                                        <div className="max-w-md">
-                                            <h4 className="text-sm font-extrabold uppercase tracking-widest text-[#1a2340] mb-1">
-                                                No Photos Available
-                                            </h4>
-                                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                                                The seller has not uploaded photos for this property yet. Please refer to the location coordinates map or contact the builder/seller directly for more details.
-                                            </p>
-                                        </div>
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-500 p-6 text-center">
+                                        <Image size={40} className="text-slate-400 mb-2" />
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600">No Property Images Uploaded</span>
+                                        <span className="text-[11px] text-slate-400 mt-1">Check location map or enquiry with dealer</span>
                                     </div>
                                 )}
 
-                                {/* Floating Overlays for Mobile Only */}
-                                <div className="sm:hidden absolute top-4 left-4 z-30">
-                                    <button
-                                        onClick={() => navigate(-1)}
-                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
-                                    >
-                                        <ArrowLeft size={16} strokeWidth={2.5} />
-                                    </button>
-                                </div>
-                                <div className="sm:hidden absolute top-4 right-4 z-30 flex gap-2">
-                                    <button
-                                        onClick={handleFavorite}
-                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-800 active:scale-90 transition-all"
-                                    >
-                                        <Heart size={16} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-700'} strokeWidth={2} />
-                                    </button>
-                                    <button
-                                        onClick={handleShareOptions}
-                                        className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-[#c9a84c] active:scale-90 transition-all"
-                                    >
-                                        <Share2 size={16} strokeWidth={2} />
-                                    </button>
-                                </div>
-
-                                {/* Floating Overlay for Desktop */}
-                                <div className="hidden sm:flex absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 items-end justify-between z-10 pointer-events-none">
-                                    <div>
-                                        {listing.images?.length > 0 && (
-                                            <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                                                {t('property_details.image')} {mainImageIndex + 1} / {listing.images.length}
-                                            </span>
-                                        )}
+                                {/* Overlay Badge on Image */}
+                                {listing.images?.length > 0 && (
+                                    <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-3 py-1 rounded-md flex items-center gap-1.5 pointer-events-none">
+                                        <Image size={13} />
+                                        <span>Property ({mainImageIndex + 1}/{listing.images.length})</span>
                                     </div>
+                                )}
 
+                                {listing.images?.length > 0 && (
                                     <button
-                                        onClick={handleShareOptions}
-                                        className="bg-white hover:bg-slate-50 text-slate-900 p-2 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs font-bold pointer-events-auto"
-                                        title="Share Property"
+                                        onClick={() => setIsLightboxOpen(true)}
+                                        className="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white p-2 rounded-md transition-all shadow-sm"
+                                        title="View Fullscreen"
                                     >
-                                        <Share2 size={14} className="text-[#c9a84c]" />
-                                        <span>{t('property_details.share_listing')}</span>
+                                        <Maximize2 size={15} />
                                     </button>
-                                </div>
+                                )}
                             </div>
 
-                            {/* Thumbnails Container */}
+                            {/* Thumbnail Row */}
                             {listing.images?.length > 1 && (
-                                <div className="flex gap-2.5 overflow-x-auto px-4 sm:px-0 mt-3 sm:mt-4 pb-2 scrollbar-thin scrollbar-thumb-slate-200">
+                                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-300">
                                     {listing.images.map((img, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setMainImageIndex(idx)}
-                                            className={`shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all relative ${mainImageIndex === idx
-                                                ? 'border-[#c9a84c] scale-98 shadow-sm ring-2 ring-[#c9a84c]/20'
-                                                : 'border-slate-100 opacity-70 hover:opacity-100 hover:scale-98'
+                                            className={`shrink-0 w-16 h-14 rounded-lg overflow-hidden border-2 transition-all ${mainImageIndex === idx ? 'border-blue-600 ring-2 ring-blue-100 scale-95' : 'border-slate-200 opacity-70 hover:opacity-100'
                                                 }`}
                                         >
-                                            <img src={getImageUrl(img)} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" loading="lazy" />
+                                            <img src={getImageUrl(img)} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* 2. Simplified Core Overview Specs */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                            {/* Spec 1: Plot Area */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.plot_size')}</span>
-                                <div className="flex flex-col gap-1.5">
-                                    <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">{getConvertedArea()}</span>
+                        {/* 99acres Key Spec Summary Grid Box - 5 Cols */}
+                        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-5">
+                            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-3 border-b border-slate-100 flex items-center justify-between">
+                                <span>Property Details</span>
+                                <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded">Verified</span>
+                            </h2>
+
+                            <div className="grid grid-cols-2 gap-4">
+
+                                {/* Spec: Area */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                        <span>Area</span>
+                                        <LandPlot size={14} className="text-blue-600" />
+                                    </div>
+                                    <div className="text-base font-extrabold text-slate-900">{getConvertedArea()}</div>
                                     <select
                                         value={displayUnit}
                                         onChange={e => setDisplayUnit(e.target.value)}
-                                        className="text-[9px] sm:text-[10px] font-black bg-slate-50 border border-slate-100 text-slate-600 px-2 py-0.5 sm:py-1 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#c9a84c] w-full"
+                                        className="text-[10px] font-bold bg-white border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded mt-1.5 w-full focus:outline-none focus:border-blue-600"
                                     >
                                         {Object.keys(conversionFactors).map(u => (
                                             <option key={u} value={u}>{getUnitLabel(u)}</option>
                                         ))}
                                     </select>
                                 </div>
-                            </div>
 
-                            {/* Spec 2: Property Type */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.category')}</span>
-                                <div className="mt-auto">
-                                    <span className="text-sm sm:text-lg font-extrabold text-slate-900 block truncate">{getFormattedType()}</span>
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">{listing.propertyType === 'Plot' ? t('search_page.plots') : t('search_page.lands')}</span>
-                                </div>
-                            </div>
-
-                            {/* Spec 3: Listed Date */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.listed_on')}</span>
-                                <div className="mt-auto">
-                                    <span className="text-sm sm:text-lg font-extrabold text-slate-900 block truncate">
-                                        {new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                    </span>
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">
-                                        {new Date(listing.createdAt).getFullYear()}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Spec 4: Land Touch */}
-                            <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-xs">
-                                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 sm:mb-2">{t('property_details.status')}</span>
-                                <div className="mt-auto">
-                                    <span className={`inline-flex text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${listing.status === 'Available' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                                        }`}>
-                                        {listing.status === 'Available' ? t('property_details.available') : listing.status}
-                                    </span>
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">{t('property_details.ready_for_sale')}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 3. About Section */}
-                        <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
-                            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <FileText size={20} className="text-[#c9a84c]" /> {t('property_details.about_this_property')}
-                            </h3>
-                            <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-5" />
-                            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium">
-                                {listing.description || t('property_details.no_desc')}
-                            </p>
-                        </div>
-
-                        {/* 4. Redesigned Detailed Specifications (Jargon-free) */}
-                        <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
-                            <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2" >
-                                <SlidersHorizontal size={20} className="text-[#c9a84c]" /> {t('property_details.specifications')}
-                            </h3>
-                            <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-6" />
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* Prop Category */}
-                                <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                    <Layers className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.category_label')}</span>
-                                        <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                            {listing.propertyType === 'Plot' ? t('search_page.plots') : (listing.propertyType === 'Land' ? t('search_page.lands') : t('property_details.plot_or_land', 'Plot / Land'))}
-                                        </span>
+                                {/* Spec: Configuration / Subtype */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                        <span>Type</span>
+                                        <Building2 size={14} className="text-blue-600" />
+                                    </div>
+                                    <div className="text-sm font-extrabold text-slate-900 truncate">{getFormattedType()}</div>
+                                    <div className="text-[10px] font-semibold text-slate-500 mt-1">
+                                        {listing.propertyType === 'Plot' ? listing.plotType : listing.landType || 'Standard'}
                                     </div>
                                 </div>
 
-                                {/* Plot Subtype */}
-                                {listing.propertyType === 'Plot' && listing.plotType && listing.plotType !== 'None' && (
-                                    <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                        <LandPlot className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                        <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.plot_classification')}</span>
-                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                                {t(`search_page.${listing.plotType.toLowerCase().replace('-', '_')}`, listing.plotType)}
-                                            </span>
+                                {/* Spec: Price Details */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                        Total Price
+                                    </div>
+                                    <div className="text-base font-extrabold text-slate-900">{formatIndianPrice(listing.price)}</div>
+                                    {ratePerSqft && (
+                                        <div className="text-[10px] font-semibold text-slate-500 mt-1">
+                                            @ ₹{ratePerSqft}/sqft
                                         </div>
-                                    </div>
-                                )}
-                                {listing.propertyType === 'Land' && listing.landType && listing.landType !== 'None' && (
-                                    <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                        <LandPlot className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                        <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.land_classification')}</span>
-                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                                {t(`search_page.${listing.landType.toLowerCase().replace('-', '_')}`, listing.landType)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Location Details */}
-                                {(listing.city || listing.locality) && (
-                                    <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                        <MapPin className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                        <div>
-                                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.city_locality')}</span>
-                                            <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                                {listing.locality ? `${listing.locality}, ` : ''}{listing.city || ''}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Owner Profile */}
-                                <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                    <UserRound className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.listed_by')}</span>
-                                        <span className="text-sm font-extrabold text-slate-950 mt-0.5 block">
-                                            {listing.ownerType === 'Broker' ? t('property_details.builder_agency') : t('property_details.direct_owner')}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Key Highlights (Pill format instead of dry lists) */}
-                                <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl sm:col-span-2">
-                                    <ShieldCheck className="text-[#c9a84c] shrink-0 mt-0.5" size={18} />
-                                    <div className="w-full">
-                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('property_details.highlights')}</span>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {listing.cornerPlot && (
-                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">{t('property_details.corner_plot')}</span>
-                                            )}
-                                            {listing.roadTouch && (
-                                                <span className="bg-[#c9a84c]/10 text-[#85651b] text-[10px] font-black px-3 py-1.5 rounded-lg border border-[#c9a84c]/20 uppercase tracking-wider">{t('property_details.road_touch')}</span>
-                                            )}
-                                            {listing.isAgricultural && (
-                                                <span className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-wider">{t('property_details.agricultural')}</span>
-                                            )}
-                                            {!listing.cornerPlot && !listing.roadTouch && !listing.isAgricultural && (
-                                                <span className="text-xs font-medium text-slate-400">{t('property_details.std_zone')}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 5. Amenities Section */}
-                        {listing.amenities?.length > 0 && (
-                            <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-xs">
-                                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                    <CheckCircle2 size={20} className="text-[#c9a84c]" /> {t('property_details.amenities_title')}
-                                </h3>
-                                <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-5" />
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                    {listing.amenities.map((amenity, idx) => (
-                                        <div key={idx} className="flex items-center gap-2.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100 transition-colors hover:bg-slate-100/50">
-                                            <Check size={16} className="text-[#c9a84c] shrink-0 stroke-[2.5px]" />
-                                            <span className="text-xs font-bold text-slate-800">{amenity}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 6. Satellite Map Location */}
-                        {(listing.locationMode === 'map' && listing.mapCoordinates && !isNaN(parseFloat(listing.mapCoordinates.lat)) && !isNaN(parseFloat(listing.mapCoordinates.lng))) && (
-                            <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-xs">
-                                <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2" >
-                                            <MapPin size={20} className="text-[#c9a84c]" /> {t('property_details.satellite_map')}
-                                        </h3>
-                                        <div className="h-0.5 w-16 bg-[#c9a84c]/30 mt-2" />
-                                    </div>
-                                    {listing.mapConfig && (
-                                        <button
-                                            onClick={() => navigate(`/shared-map/${listing.mapConfig.shareId}`)}
-                                            className="bg-slate-900 text-white hover:bg-[#c9a84c] hover:text-slate-950 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-md self-start sm:self-center"
-                                        >
-                                            <Layers size={14} className="text-[#c9a84c]" /> {t('property_details.interactive_map_btn')}
-                                        </button>
                                     )}
                                 </div>
 
-                                <div className="h-80 w-full relative z-0">
-                                    <MapContainer
-                                        center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
-                                        zoom={15}
-                                        style={{ height: '100%', width: '100%' }}
-                                        scrollWheelZoom={false}
-                                    >
-                                        <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                        <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
-                                            <Popup>
-                                                <div className="font-bold text-slate-900">{listing.title}</div>
-                                                <div className="text-xs text-slate-500">{listing.location}</div>
-                                            </Popup>
-                                        </Marker>
-                                        <MapRecenter position={{ lat: parseFloat(listing.mapCoordinates.lat), lng: parseFloat(listing.mapCoordinates.lng) }} />
-                                    </MapContainer>
+                                {/* Spec: Address */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                        <span>Address</span>
+                                        <MapPin size={14} className="text-blue-600" />
+                                    </div>
+                                    <div className="text-xs font-bold text-slate-900 truncate">{listing.location}</div>
+                                    <div className="text-[10px] font-semibold text-slate-500 mt-1 truncate">
+                                        {listing.areaName ? `${listing.areaName}, ` : ''}{listing.city || 'Gujarat'}
+                                    </div>
                                 </div>
 
-                                <div className="p-4 bg-slate-50 flex items-center gap-3 border-t border-slate-100">
-                                    <div className="w-8 h-8 rounded-lg bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c] shrink-0">
-                                        <Navigation size={16} />
+                                {/* Spec: Facing & Features */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                        <span>Road & Touch</span>
+                                        <Compass size={14} className="text-blue-600" />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-500 leading-normal">
-                                        {t('property_details.google_satellite_hint')}
+                                    <div className="text-xs font-extrabold text-slate-900">
+                                        {listing.roadTouch ? 'Road Touch' : 'Internal Access'}
+                                    </div>
+                                    <div className="text-[10px] font-semibold text-slate-500 mt-1">
+                                        {listing.cornerPlot ? 'Corner Plot (2-side)' : 'Standard Frontage'}
+                                    </div>
+                                </div>
+
+                                {/* Spec: Ownership */}
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                        Ownership & Listed By
+                                    </div>
+                                    <div className="text-xs font-extrabold text-slate-900">
+                                        {listing.ownerType === 'Broker' ? 'Authorized Agent' : 'Direct Owner'}
+                                    </div>
+                                    <div className="text-[10px] font-semibold text-emerald-600 mt-1">
+                                        {listing.status === 'Available' ? 'Ready for Possession' : listing.status}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Token Reservation Callout Card */}
+                            {listing.isBookingEnabled && listing.tokenAmount > 0 && !listing.isTokened && (
+                                <div className="p-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-xl text-white space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                                            <Zap size={12} className="fill-amber-400" /> Instant Token Reservation
+                                        </span>
+                                        <span className="text-xs font-extrabold text-white">₹{listing.tokenAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-200 leading-relaxed font-medium">
+                                        Reserve this property instantly online to lock the price and block other buyers.
                                     </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 7. Videos and Documentation */}
-                        {(listing.documents?.length > 0 || listing.videos?.length > 0) && (
-                            <div className="bg-[#FAF9F5] border border-[#c9a84c]/30 rounded-3xl p-6 sm:p-8 shadow-xs">
-                                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                    <ShieldCheck size={22} className="text-[#c9a84c]" /> {t('property_details.verified_docs')}
-                                </h3>
-                                <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-6" />
-
-                                {listing.videos?.length > 0 && (
-                                    <div className="mb-6">
-                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.drone_footage')}</h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {listing.videos.map((vid, idx) => (
-                                                <div key={idx} className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm aspect-video">
-                                                    <video src={getImageUrl(vid)} controls className="w-full h-full object-cover" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {listing.documents?.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.legal_papers')}</h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {listing.documents.map((doc, idx) => (
-                                                <a
-                                                    key={idx}
-                                                    href={getImageUrl(doc)}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="flex items-center gap-3 p-4 bg-white border border-slate-100 hover:border-[#c9a84c] rounded-xl transition-all shadow-xs group"
-                                                >
-                                                    <div className="bg-slate-950 p-2.5 rounded-xl text-white group-hover:bg-[#c9a84c] group-hover:text-slate-950 transition-colors">
-                                                        <FileText size={18} />
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#c9a84c] transition-colors truncate">{t('property_details.legal_document')} {idx + 1}</div>
-                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                                                            {t('property_details.click_to_view')} <ExternalLink size={10} />
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 8. Reviews and Ratings */}
-                        <div className="bg-white rounded-3xl border border-slate-100 p-5 sm:p-6 shadow-xs">
-                            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2" >
-                                <MessageCircle size={20} className="text-[#c9a84c]" /> {t('property_details.buyer_reviews')}
-                            </h3>
-                            <div className="h-0.5 w-16 bg-[#c9a84c]/30 mb-4" />
-
-                            {/* Average Rating Block */}
-                            {reviewsData?.averageRating > 0 && (
-                                <div className="mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                    <div className="text-3xl font-black text-slate-950">{reviewsData.averageRating}</div>
-                                    <div>
-                                        <div className="flex gap-0.5">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star
-                                                    key={i}
-                                                    size={16}
-                                                    className={`stroke-[1.5px] ${i < Math.round(reviewsData.averageRating) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-slate-200'}`}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-0.5">
-                                            {t('property_details.based_on')} {reviewsData?.count || 0} {reviewsData?.count === 1 ? t('property_details.review_count') : t('property_details.reviews_count')}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Reviews List */}
-                            {reviewsLoading ? (
-                                <div className="space-y-3">
-                                    <div className="animate-pulse bg-slate-50 rounded-2xl h-24 w-full"></div>
-                                </div>
-                            ) : reviewsData.reviews?.length > 0 ? (
-                                <div className="space-y-3 mb-4 max-h-72 overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                                    {reviewsData?.reviews?.map((review) => (
-                                        <div key={review._id} className="flex gap-3.5 p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl">
-                                            <div className="w-8.5 h-8.5 rounded-full bg-slate-950 flex items-center justify-center text-[#c9a84c] font-black text-xs shrink-0">
-                                                {review.user?.name?.charAt(0) || 'U'}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                                    <span className="font-extrabold text-slate-950 text-xs">{review.user?.name || t('property_details.anonymous')}</span>
-                                                    <span className="text-[9px] text-slate-400 font-bold">
-                                                        {new Date(review.createdAt).toLocaleDateString('en-IN')}
-                                                    </span>
-                                                </div>
-                                                <div className="flex gap-0.5 mb-1.5">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            size={12}
-                                                            className={`stroke-[1.5px] ${i < review.rating ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-slate-200'}`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <p className="text-slate-600 text-xs font-medium leading-relaxed">{review.comment}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 mb-4">
-                                    <MessageCircle size={32} className="mx-auto text-slate-300 mb-2.5" />
-                                    <h4 className="text-xs font-bold text-slate-900 mb-0.5">{t('property_details.no_reviews')}</h4>
-                                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">{t('property_details.reviews_feedback_hint')}</p>
-                                </div>
-                            )}
-
-                            {/* Add Review Form */}
-                            {isAuthenticated && (
-                                <div className="border-t border-slate-100 pt-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('property_details.post_feedback')}</h4>
-                                    <form onSubmit={handleSubmitReview} className="space-y-3">
-                                        <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t('property_details.assign_stars')}</label>
-                                            {renderStars()}
-                                        </div>
-                                        <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t('property_details.your_experience')}</label>
-                                            <textarea
-                                                value={newReview.comment}
-                                                onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                                                placeholder={t('property_details.review_placeholder')}
-                                                rows="3"
-                                                className="w-full p-3 border border-slate-200 rounded-xl focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/10 transition-all font-medium text-xs placeholder:text-slate-400 focus:outline-none bg-slate-50/50"
-                                                disabled={submittingReview}
-                                            />
-                                        </div>
-                                        <button
-                                            type="submit"
-                                            disabled={submittingReview || !newReview.comment.trim()}
-                                            className="w-full py-3 bg-slate-950 hover:bg-[#c9a84c] hover:text-slate-950 text-white font-extrabold text-xs rounded-xl transition-all uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
-                                        >
-                                            {submittingReview ? t('property_details.submitting_review') : t('property_details.submit_review')}
-                                        </button>
-                                    </form>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* ── Right Column: Premium Sticky Sidebar (Desktop only) ── */}
-                    <div className="space-y-6">
-                        <div className="sticky top-[152px] space-y-6 hidden lg:block">
-
-                            {/* Seller & Action Card */}
-                            <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-md space-y-5">
-                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                    <Users size={15} className="text-[#c9a84c]" /> {t('property_details.seller_contact')}
-                                </h3>
-
-                                <div
-                                    onClick={() => navigate(`/seller/${listing.createdBy?._id || listing.createdBy}`)}
-                                    className="flex items-center gap-3.5 p-3.5 bg-slate-50 hover:bg-slate-100/50 border border-slate-100 rounded-2xl cursor-pointer transition-all group"
-                                >
-                                    <div className="w-11 h-11 rounded-full bg-slate-950 flex items-center justify-center text-[#c9a84c] font-black text-base shrink-0 group-hover:scale-105 transition-all">
-                                        {listing.createdBy?.name?.charAt(0) || 'U'}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="font-extrabold text-slate-900 text-sm truncate group-hover:text-[#c9a84c] transition-colors">{listing.createdBy?.name || t('property_details.authorized_seller')}</div>
-                                        <span className="inline-flex items-center gap-0.5 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
-                                            <UserCheck size={9} />
-                                            {listing.createdBy?.role || 'Broker'}
-                                        </span>
-                                    </div>
-                                    <ChevronRight size={16} className="text-slate-400 shrink-0 transition-transform group-hover:translate-x-1" />
-                                </div>
-
-                                {isAuthenticated && (user?.id === listing.createdBy?._id || user?._id === listing.createdBy?._id) ? (
                                     <button
-                                        onClick={() => navigate('/dashboard')}
-                                        className="w-full py-3.5 bg-slate-950 hover:bg-[#c9a84c] text-white hover:text-slate-950 font-extrabold text-xs rounded-2xl transition-all uppercase tracking-widest shadow-sm"
+                                        onClick={handleReserveToken}
+                                        disabled={submitting}
+                                        className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs rounded-lg transition-all uppercase tracking-wider shadow-md"
                                     >
-                                        {t('property_details.manage_listings')}
+                                        {submitting ? 'Initiating Gate...' : 'Reserve Property Now'}
                                     </button>
-                                ) : (
-                                    <div className="space-y-2.5">
-                                        <button
-                                            onClick={handleSiteVisitRequest}
-                                            disabled={requestingVisit}
-                                            className="w-full py-3.5 bg-slate-950 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60 text-white font-extrabold text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
-                                        >
-                                            <Calendar size={14} className="stroke-[2.5px] text-[#c9a84c]" />
-                                            {requestingVisit ? t('property_details.requesting_visit') : t('property_details.request_site_visit')}
-                                        </button>
-
-                                        <button
-                                            onClick={handleWhatsApp}
-                                            className="w-full py-3.5 bg-[#25d366] hover:bg-[#1fd35e] text-white font-extrabold text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
-                                        >
-                                            <MessageCircle size={14} className="fill-current" />
-                                            WhatsApp Chat
-                                        </button>
-
-                                        <button
-                                            onClick={handleFavorite}
-                                            className={`w-full py-3.5 font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest border border-slate-200 ${isFavorite
-                                                ? 'bg-rose-50 text-rose-700 border-rose-100'
-                                                : 'bg-white text-slate-800 hover:border-[#c9a84c] hover:bg-slate-50'
-                                                }`}
-                                        >
-                                            <Heart size={14} className={isFavorite ? 'fill-current' : ''} />
-                                            {isFavorite ? t('property_details.saved_listing') : t('property_details.save_to_favorites')}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Token Reservation Card */}
-                            {listing.isBookingEnabled && listing.tokenAmount > 0 && (systemSettings?.isInstantBookingEnabled !== false || listing.isTokened) && (
-                                <div className={`rounded-3xl p-6 border shadow-md transition-all ${listing.isTokened
-                                    ? 'bg-emerald-50/50 border-emerald-100'
-                                    : systemSettings?.isInstantBookingEnabled === false
-                                        ? 'bg-slate-50 border-slate-100 opacity-80'
-                                        : 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border-slate-900 text-white'
-                                    }`}>
-                                    <h3 className={`text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-1.5 ${listing.isTokened
-                                        ? 'text-emerald-700'
-                                        : systemSettings?.isInstantBookingEnabled === false
-                                            ? 'text-slate-400'
-                                            : 'text-[#c9a84c]'
-                                        }`}>
-                                        {listing.isTokened ? (
-                                            <><CheckCircle2 size={15} /> {t('property_details.land_reserved')}</>
-                                        ) : systemSettings?.isInstantBookingEnabled === false ? (
-                                            <><ZapOff size={15} /> {t('property_details.booking_suspended')}</>
-                                        ) : (
-                                            <><Zap size={15} className="fill-current" /> {t('property_details.instant_booking')}</>
-                                        )}
-                                    </h3>
-
-                                    {!listing.isTokened && systemSettings?.isInstantBookingEnabled !== false && (
-                                        <div className="space-y-4">
-                                            <div>
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Reservation Token</span>
-                                                <div className="text-3xl font-black text-white flex items-baseline gap-1" >
-                                                    <span className="text-lg font-bold text-[#c9a84c]">₹</span>
-                                                    {listing.tokenAmount?.toLocaleString('en-IN')}
-                                                </div>
-                                                <span className="text-[10px] text-slate-400 font-medium block mt-1 leading-normal">
-                                                    {t('property_details.token_desc')}
-                                                </span>
-                                            </div>
-                                            <button
-                                                onClick={handleReserveToken}
-                                                disabled={submitting}
-                                                className="w-full py-3.5 bg-linear-to-r from-[#c9a84c] to-[#b8933a] hover:from-[#b8933a] hover:to-[#a67c00] disabled:bg-[#d1c9b8] text-slate-950 font-black text-xs rounded-2xl shadow-lg transition-all uppercase tracking-widest"
-                                            >
-                                                {submitting ? t('property_details.initiating_gate') : t('property_details.reserve_securely')}
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {!listing.isTokened && systemSettings?.isInstantBookingEnabled === false && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-slate-500 leading-relaxed">
-                                                {t('property_details.booking_paused_desc')}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {listing.isTokened && (
-                                        <div className="text-center bg-white/80 border border-emerald-100 rounded-2xl p-4">
-                                            <span className="text-xs text-emerald-800 font-extrabold block">✓ {t('property_details.property_booked')}</span>
-                                            <span className="text-[10px] text-slate-500 font-bold block mt-1">
-                                                {t('property_details.reserved_on')} {new Date(listing.tokenedAt).toLocaleDateString('en-IN')}
-                                            </span>
-                                        </div>
-                                    )}
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* ── Tablet View Sidebar Inline Drawer (Show CTA panel between content and footer on tablet view) ── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:hidden mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border border-slate-100 rounded-3xl p-6 shadow-md">
-                    <div>
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                            <Users size={14} className="text-[#c9a84c]" /> {t('property_details.seller_reference')}
-                        </h3>
-                        <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <div className="w-10 h-10 rounded-full bg-slate-950 flex items-center justify-center text-[#c9a84c] font-black text-sm shrink-0">
-                                {listing.createdBy?.name?.charAt(0) || 'U'}
+                        </div>
+
+                    </div>
+                </section>
+
+                {/* ── Section 2: Why You Should Consider This Property (99acres Highlights Box) ── */}
+                <section id="highlights" className="scroll-mt-36">
+                    <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 sm:p-6 shadow-2xs">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                <Sparkles size={20} />
                             </div>
                             <div>
-                                <div className="font-extrabold text-slate-900 text-xs">{listing.createdBy?.name || t('property_details.agent')}</div>
-                                <span className="inline-flex items-center gap-0.5 bg-[#fffaf0] border border-[#fef3c7] text-[#b45309] text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
-                                    {listing.createdBy?.role || 'Broker'}
-                                </span>
+                                <h3 className="text-base font-extrabold text-slate-900">Why you should consider this property?</h3>
+                                <p className="text-xs text-slate-500 font-medium">Key advantages & highlights of this verified listing</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {getListingHighlights().map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2.5 p-3 bg-white rounded-xl border border-blue-100/60 shadow-2xs">
+                                    <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+                                    <span className="text-xs font-bold text-slate-800">{item.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 3: Specifications ── */}
+                <section id="specs" className="scroll-mt-36">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
+                        <h3 className="text-base font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
+                            <SlidersHorizontal size={18} className="text-blue-600" />
+                            <span>Detailed Property Specifications</span>
+                        </h3>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-xs py-2">
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Property Classification</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{getFormattedType()}</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Plot Area</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{getConvertedArea()} ({getUnitLabel(displayUnit)})</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Price / Valuation</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{formatIndianPrice(listing.price)}</span>
+                            </div>
+
+                            {listing.plotNumber && (
+                                <div className="space-y-1">
+                                    <span className="text-slate-400 font-medium block">Plot / Survey Number</span>
+                                    <span className="font-extrabold text-slate-900 text-sm">{listing.plotNumber}</span>
+                                </div>
+                            )}
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Location / Locality</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{listing.location}</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Ownership Status</span>
+                                <span className="font-extrabold text-slate-900 text-sm">Freehold / Verified</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Listed By</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{listing.ownerType === 'Broker' ? 'Authorized Agent / Dealer' : 'Direct Land Owner'}</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Road Frontage</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{listing.roadTouch ? 'Direct Road Facing' : 'Internal Layout Road'}</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-slate-400 font-medium block">Token Booking</span>
+                                <span className="font-extrabold text-slate-900 text-sm">{listing.isBookingEnabled ? 'Available Online' : 'Standard Inquiry'}</span>
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col justify-center gap-2">
-                        {isAuthenticated && (user?.id === listing.createdBy?._id || user?._id === listing.createdBy?._id) ? (
-                            <button
-                                onClick={() => navigate('/dashboard')}
-                                className="w-full py-3.5 bg-slate-950 text-white font-extrabold text-xs rounded-2xl uppercase tracking-widest"
-                            >
-                                {t('navbar.dashboard')}
-                            </button>
+                </section>
+
+                {/* ── Section 4: About Property ── */}
+                <section id="about" className="scroll-mt-36">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
+                        <h3 className="text-base font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
+                            <FileText size={18} className="text-blue-600" />
+                            <span>About Property</span>
+                        </h3>
+
+                        <div className="text-xs sm:text-sm text-slate-600 leading-relaxed space-y-3 font-normal">
+                            <p className={expandDescription ? '' : 'line-clamp-4'}>
+                                {listing.description || 'This prime property offers excellent accessibility and clear legal titles. Contact the authorized seller for more details or to schedule a site visit.'}
+                            </p>
+
+                            {listing.description && listing.description.length > 250 && (
+                                <button
+                                    onClick={() => setExpandDescription(!expandDescription)}
+                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 underline focus:outline-none"
+                                >
+                                    {expandDescription ? 'Show Less ▲' : 'Read More >>'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 5: Amenities ── */}
+                {listing.amenities?.length > 0 && (
+                    <section id="amenities" className="scroll-mt-36">
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
+                            <h3 className="text-base font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-blue-600" />
+                                <span>Amenities & Features</span>
+                            </h3>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                {listing.amenities.map((amenity, idx) => (
+                                    <div key={idx} className="flex items-center gap-2.5 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <Check size={16} className="text-blue-600 shrink-0 stroke-[2.5]" />
+                                        <span className="text-xs font-bold text-slate-800">{amenity}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* ── Section 6: Locality & Map ── */}
+                <section id="map-section" className="scroll-mt-36">
+                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                                    <MapPin size={18} className="text-blue-600" />
+                                    <span>Explore Locality & Satellite Map</span>
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">{listing.location}</p>
+                            </div>
+
+                            {listing.mapConfig && (
+                                <button
+                                    onClick={() => navigate(`/shared-map/${listing.mapConfig.shareId}`)}
+                                    className="bg-slate-900 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-center"
+                                >
+                                    <Layers size={14} /> Interactive GIS Map
+                                </button>
+                            )}
+                        </div>
+
+                        {(listing.locationMode === 'map' && listing.mapCoordinates?.lat && listing.mapCoordinates?.lng) ? (
+                            <div className="h-80 w-full relative z-0">
+                                <MapContainer
+                                    center={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}
+                                    zoom={15}
+                                    style={{ height: '100%', width: '100%' }}
+                                    scrollWheelZoom={false}
+                                >
+                                    <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                    <Marker position={[parseFloat(listing.mapCoordinates.lat), parseFloat(listing.mapCoordinates.lng)]}>
+                                        <Popup>
+                                            <div className="font-bold text-slate-900">{listing.title}</div>
+                                            <div className="text-xs text-slate-500">{listing.location}</div>
+                                        </Popup>
+                                    </Marker>
+                                    <MapRecenter position={{ lat: parseFloat(listing.mapCoordinates.lat), lng: parseFloat(listing.mapCoordinates.lng) }} />
+                                </MapContainer>
+                            </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={handleSiteVisitRequest}
-                                    className="py-3 bg-slate-950 text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-1 uppercase tracking-widest"
-                                >
-                                    <Calendar size={13} className="text-[#c9a84c]" /> {t('search_page.contact')}
-                                </button>
-                                <button
-                                    onClick={handleWhatsApp}
-                                    className="py-3 bg-[#25d366] text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-1 uppercase tracking-widest"
-                                >
-                                    <MessageCircle size={13} className="fill-current" /> WhatsApp
-                                </button>
+                            <div className="p-8 text-center bg-slate-50 text-slate-500 text-xs font-medium">
+                                <Navigation size={28} className="mx-auto text-slate-400 mb-2" />
+                                Exact GPS coordinates not pinned. Location: <strong>{listing.location}</strong>
                             </div>
                         )}
                     </div>
+                </section>
+
+                {/* ── Section 7: Dealer Details & Send Enquiry (99acres Form) ── */}
+                <section id="dealer-section" className="scroll-mt-36">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-xs">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                            {/* Dealer Profile - Left 4 Cols */}
+                            <div className="lg:col-span-5 space-y-4 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
+                                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Dealer Details</h3>
+
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-md">
+                                        {listing.createdBy?.name?.charAt(0) || 'D'}
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-extrabold text-slate-900">{listing.createdBy?.name || 'Authorized Seller'}</h4>
+                                        <span className="inline-block bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200 uppercase tracking-wider mt-1">
+                                            {listing.createdBy?.role || 'Seller'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    {showPhoneNumber ? (
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-900 font-extrabold text-sm flex items-center justify-between">
+                                            <span>📞 {listing.createdBy?.phone || '+91 9409553232'}</span>
+                                            <a href={`tel:${listing.createdBy?.phone}`} className="text-xs text-blue-600 hover:underline">Call Now</a>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowPhoneNumber(true)}
+                                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs"
+                                        >
+                                            <Phone size={15} /> View Phone Number
+                                        </button>
+                                    )}
+
+                                    <button
+                                        onClick={handleWhatsApp}
+                                        className="w-full py-3 bg-[#25d366] hover:bg-[#20bd5a] text-white font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs"
+                                    >
+                                        <MessageCircle size={15} className="fill-current" /> WhatsApp Chat
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Send Enquiry Form - Right 7 Cols */}
+                            <div className="lg:col-span-7 space-y-4">
+                                <h3 className="text-base font-extrabold text-slate-900">Send enquiry to Dealer</h3>
+
+                                <form onSubmit={handleSiteVisitRequest} className="space-y-4">
+                                    {/* User Role Radio Selector */}
+                                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
+                                        <span>You are:</span>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="roleType"
+                                                checked={userRoleType === 'Individual'}
+                                                onChange={() => setUserRoleType('Individual')}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            Individual
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="roleType"
+                                                checked={userRoleType === 'Dealer'}
+                                                onChange={() => setUserRoleType('Dealer')}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            Dealer / Agent
+                                        </label>
+                                    </div>
+
+                                    {/* Name & Phone Inputs */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Your Full Name *"
+                                                value={inquiryName}
+                                                onChange={e => setInquiryName(e.target.value)}
+                                                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <input
+                                                type="tel"
+                                                required
+                                                placeholder="Your Phone Number *"
+                                                value={inquiryPhone}
+                                                onChange={e => setInquiryPhone(e.target.value)}
+                                                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Message box */}
+                                    <div>
+                                        <textarea
+                                            rows="3"
+                                            value={inquiryMsg}
+                                            onChange={e => setInquiryMsg(e.target.value)}
+                                            placeholder="Write message to dealer..."
+                                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={requestingVisit}
+                                        className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold text-xs rounded-lg transition-all uppercase tracking-wider shadow-sm flex items-center justify-center gap-2"
+                                    >
+                                        <Send size={14} />
+                                        <span>{requestingVisit ? 'Sending Enquiry...' : 'Send Enquiry'}</span>
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Similar Projects & Land Parcels Section (99acres Production-Level UI) ── */}
+                {similarData && similarData.length > 0 && (
+                    <section id="similar-properties" className="scroll-mt-36">
+                        <div className="font-['Nunito_Sans',sans-serif]">
+                            
+                            {/* Section Header */}
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                                        {language === 'gu' ? 'સમાન પ્રોજેક્ટ્સ અને પ્લોટ્સ' : 'Similar Projects & Land Parcels'}
+                                    </h2>
+                                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                                        {language === 'gu' ? 'આ વિસ્તારમાં પસંદ કરેલા શ્રેષ્ઠ પ્લોટ્સ' : 'Handpicked properties matching this location & land category'}
+                                    </p>
+                                </div>
+
+                                {/* Slider Navigation Arrows */}
+                                <div className="hidden sm:flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const el = document.getElementById('similar-carousel-container');
+                                            if (el) el.scrollBy({ left: -320, behavior: 'smooth' });
+                                        }}
+                                        className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center shadow-xs cursor-pointer transition-all"
+                                        title="Scroll Left"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const el = document.getElementById('similar-carousel-container');
+                                            if (el) el.scrollBy({ left: 320, behavior: 'smooth' });
+                                        }}
+                                        className="w-10 h-10 rounded-full bg-[#2563eb] text-white hover:bg-blue-700 flex items-center justify-center shadow-md cursor-pointer transition-all hover:scale-105"
+                                        title="Scroll Right"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Horizontal Carousel List */}
+                            <div
+                                id="similar-carousel-container"
+                                className="flex items-stretch gap-5 overflow-x-auto scrollbar-none pb-4 snap-x snap-mandatory"
+                            >
+                                {similarData.map((item) => (
+                                    <div
+                                        key={item._id}
+                                        onClick={() => navigate(`/listings/${item._id}`)}
+                                        className="w-[280px] sm:w-[320px] shrink-0 snap-start bg-white rounded-2xl overflow-hidden border border-slate-200/90 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                                    >
+                                        {/* Image Container with Dark Gradient Overlay */}
+                                        <div className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden">
+                                            {item.images?.[0] ? (
+                                                <img
+                                                    src={getImageUrl(item.images[0])}
+                                                    alt={item.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                                                    <Building2 size={28} className="text-slate-600 mb-1" />
+                                                    <span className="text-[10px] font-black uppercase tracking-wider">VERIFIED LAND PARCEL</span>
+                                                </div>
+                                            )}
+
+                                            {/* Bottom Gradient Overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
+
+                                            {/* Top Left Badge: Property Type / Verified */}
+                                            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-900 shadow-md">
+                                                <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                                                <span>{item.listingType === 'Verified' ? 'VERIFIED' : (item.landType || item.propertyType || 'PLOT')}</span>
+                                            </div>
+
+                                            {/* Top Right Heart Icon */}
+                                            <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-950/30 backdrop-blur-md text-white flex items-center justify-center shadow-md">
+                                                <Heart size={15} />
+                                            </div>
+
+                                            {/* Bottom Image Floating Text */}
+                                            <div className="absolute bottom-2.5 left-3 text-white text-[11px] font-bold tracking-wide">
+                                                {item.roadTouch ? '✓ Road Touch' : (item.status === 'Active' ? 'Available' : item.status)}
+                                            </div>
+                                        </div>
+
+                                        {/* Card Body */}
+                                        <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <h4 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 tracking-tight">
+                                                    {item.title}
+                                                </h4>
+                                                <p className="text-xs font-semibold text-slate-500 line-clamp-1 mt-0.5">
+                                                    {item.landType || item.plotType || 'Land Parcel'} in {item.location || 'Gujarat'}
+                                                </p>
+                                            </div>
+
+                                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-sm sm:text-base font-black text-slate-900">
+                                                        {formatIndianPrice(item.price)}
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-bold text-blue-600 group-hover:underline inline-flex items-center gap-1">
+                                                    <span>View Details</span>
+                                                    <ArrowUpRight size={13} />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                        </div>
+                    </section>
+                )}
+
+
+                {/* ── Section 8: Reviews & Feedback ── */}
+                <section id="reviews-section" className="scroll-mt-36">
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-5">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                                <MessageCircle size={18} className="text-blue-600" />
+                                <span>Ratings & Reviews</span>
+                            </h3>
+
+                            {reviewsData?.averageRating > 0 && (
+                                <div className="flex items-center gap-2 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                                    <Star size={16} className="text-amber-500 fill-amber-400" />
+                                    <span className="font-extrabold text-slate-900 text-sm">{reviewsData.averageRating}</span>
+                                    <span className="text-[10px] text-slate-500 font-semibold">({reviewsData.count} reviews)</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Reviews list */}
+                        {reviewsLoading ? (
+                            <div className="animate-pulse bg-slate-100 h-20 rounded-xl"></div>
+                        ) : reviewsData?.reviews?.length > 0 ? (
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                {reviewsData.reviews.map((rev) => (
+                                    <div key={rev._id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-extrabold text-slate-900 text-xs">{rev.user?.name || 'Verified User'}</span>
+                                            <span className="text-[10px] text-slate-400">{new Date(rev.createdAt).toLocaleDateString('en-IN')}</span>
+                                        </div>
+                                        <div className="flex gap-0.5">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} size={12} className={i < rev.rating ? 'text-amber-500 fill-amber-400' : 'text-slate-300'} />
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-slate-600 font-medium">{rev.comment}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-slate-400 italic">No reviews yet for this listing. Be the first to add feedback!</p>
+                        )}
+
+                        {/* Add Review */}
+                        {isAuthenticated && (
+                            <form onSubmit={handleSubmitReview} className="pt-3 border-t border-slate-100 space-y-3">
+                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Leave Feedback</h4>
+                                {renderStars()}
+                                <textarea
+                                    value={newReview.comment}
+                                    onChange={e => setNewReview({ ...newReview, comment: e.target.value })}
+                                    rows="2"
+                                    placeholder="Write your review about this property or seller..."
+                                    className="w-full p-2.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={submittingReview}
+                                    className="px-5 py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-all uppercase tracking-wider"
+                                >
+                                    {submittingReview ? 'Submitting...' : 'Post Review'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </section>
+
+            </div>
+
+            {/* ── Mobile Sticky Bottom Action Bar ── */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-4 py-3 shadow-lg lg:hidden flex items-center justify-between gap-3">
+                <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Price</span>
+                    <span className="text-base font-extrabold text-slate-900">{formatIndianPrice(listing.price)}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleWhatsApp}
+                        className="p-2.5 bg-[#25d366] text-white rounded-lg transition-all shadow-xs"
+                        title="WhatsApp"
+                    >
+                        <MessageCircle size={18} className="fill-current" />
+                    </button>
+
+                    <button
+                        onClick={() => scrollToSection('dealer-section')}
+                        className="px-4 py-2.5 bg-blue-600 text-white text-xs font-extrabold rounded-lg uppercase tracking-wider shadow-sm flex items-center gap-1.5"
+                    >
+                        <PhoneCall size={14} /> Contact Dealer
+                    </button>
                 </div>
             </div>
 
-            {/* ── 📱 Mobile Sticky Bottom Bar (Stunning floating layout for mobile viewports) ── */}
-            {!isAuthenticated || (user?.id !== listing.createdBy?._id && user?._id !== listing.createdBy?._id) ? (
-                <div className="fixed bottom-4 left-4 right-4 z-40 bg-white/95 backdrop-blur-md border border-slate-100 shadow-2xl rounded-2xl px-4 py-3 md:hidden flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">{t('search_page.total_price')}</span>
-                        <div className="text-base font-black text-slate-950 truncate" >
-                            ₹{listing.price?.toLocaleString('en-IN')}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                        <button
-                            onClick={handleWhatsApp}
-                            className="w-10 h-10 bg-[#25d366] text-white rounded-full flex items-center justify-center transition-all shadow-md shrink-0 hover:scale-105 active:scale-95"
-                            title="Chat on WhatsApp"
-                        >
-                            <MessageCircle size={18} className="fill-current" />
-                        </button>
-
-                        {listing.isBookingEnabled && !listing.isTokened && systemSettings?.isInstantBookingEnabled !== false ? (
-                            <>
-                                <button
-                                    onClick={handleSiteVisitRequest}
-                                    disabled={requestingVisit}
-                                    className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center text-slate-800 shadow-sm active:scale-95 transition-all"
-                                    title={t('search_page.contact')}
-                                >
-                                    <Calendar size={16} className="text-slate-600" />
-                                </button>
-                                <button
-                                    onClick={handleReserveToken}
-                                    disabled={submitting}
-                                    className="h-10 px-4 bg-gradient-to-r from-[#c9a84c] to-[#b8933a] hover:from-[#b8933a] hover:to-[#a67c00] text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 uppercase tracking-widest shadow-md transition-all active:scale-95 shrink-0"
-                                >
-                                    <Zap size={11} className="fill-current" /> {t('property_details.reserve_securely')}
-                                </button>
-                            </>
-                        ) : (
-                            <button
-                                onClick={handleSiteVisitRequest}
-                                disabled={requestingVisit}
-                                className="h-10 px-5 bg-slate-950 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md active:scale-95 transition-all"
-                            >
-                                <Calendar size={14} className="text-[#c9a84c]" />
-                                <span>{requestingVisit ? '...' : t('search_page.contact')}</span>
-                            </button>
-                        )}
-                    </div>
-                </div>
-            ) : null}
-
-            {/* Receipt Modal */}
-            <ReceiptModal isOpen={showReceipt} onClose={() => setShowReceipt(false)} receiptData={receiptData} />
-
-            {/* Share Options Modal */}
-            {showShareModal && (
+            {/* Lightbox Modal */}
+            {isLightboxOpen && listing.images?.length > 0 && (
                 <div
-                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200"
-                    onClick={() => setShowShareModal(false)}
+                    className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
+                    onClick={() => setIsLightboxOpen(false)}
                 >
-                    <div
-                        className="bg-white border border-[#e2d9c5]/60 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200"
-                        onClick={e => e.stopPropagation()}
+                    <button
+                        onClick={() => setIsLightboxOpen(false)}
+                        className="absolute top-4 right-4 text-white hover:text-slate-300 p-2 bg-slate-800/80 rounded-full"
                     >
-                        {/* Close button */}
-                        <button
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50 transition-colors"
-                            onClick={() => setShowShareModal(false)}
-                        >
-                            <X size={18} />
-                        </button>
+                        <X size={20} />
+                    </button>
+                    <img
+                        src={getImageUrl(listing.images[mainImageIndex])}
+                        alt="Enlarged Property View"
+                        className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                    />
+                </div>
+            )}
 
-                        <h3 className="text-lg font-black text-[#1a2340] mb-4 pr-8 uppercase tracking-wider" style={{ fontFamily: "'Nunito Sans', sans-serif" }}>
-                            Share Property
-                        </h3>
-
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            {/* WhatsApp */}
-                            <a
-                                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${listing?.title || 'Property'} - ${listing?.location || ''}: ${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 transition-all text-emerald-800"
-                            >
-                                <div className="w-10 h-10 bg-[#25d366] text-white rounded-full flex items-center justify-center shadow-sm">
-                                    <MessageCircle size={18} className="fill-current" />
-                                </div>
-                                <span className="text-xs font-bold">WhatsApp</span>
-                            </a>
-
-                            {/* Twitter / X */}
-                            <a
-                                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${listing?.title || 'Property'} in ${listing?.location || ''}`)}&url=${encodeURIComponent(`${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all text-slate-800"
-                            >
-                                <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-sm">
-                                    <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                    </svg>
-                                </div>
-                                <span className="text-xs font-bold">Twitter / X</span>
-                            </a>
-
-                            {/* Facebook */}
-                            <a
-                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${getWebsiteBaseUrl()}/listings/${cleanId}`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 hover:bg-blue-50 transition-all text-blue-800"
-                            >
-                                <div className="w-10 h-10 bg-[#1877f2] text-white rounded-full flex items-center justify-center shadow-sm">
-                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                                    </svg>
-                                </div>
-                                <span className="text-xs font-bold">Facebook</span>
-                            </a>
-
-                            {/* Copy Link */}
+            {/* Share Modal */}
+            {showShareModal && (
+                <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" onClick={() => setShowShareModal(false)}>
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-extrabold text-slate-900 text-base">Share Property</h3>
+                            <button onClick={() => setShowShareModal(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(`${getWebsiteBaseUrl()}/listings/${cleanId}`);
-                                    toast.success(t('property_details.link_copied') || 'Listing link copied to clipboard');
+                                    toast.success('Link copied to clipboard!');
                                     setShowShareModal(false);
                                 }}
-                                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-amber-50/50 border border-amber-100 hover:bg-amber-50 transition-all text-amber-800"
+                                className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold"
                             >
-                                <div className="w-10 h-10 bg-[#c9a84c] text-white rounded-full flex items-center justify-center shadow-sm">
-                                    <Share2 size={18} />
-                                </div>
-                                <span className="text-xs font-bold">Copy Link</span>
+                                Copy Link
+                            </button>
+                            <button
+                                onClick={handleWhatsApp}
+                                className="p-3 bg-[#25d366] text-white rounded-xl text-xs font-bold"
+                            >
+                                WhatsApp
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Receipt Modal */}
+            <ReceiptModal isOpen={showReceipt} onClose={() => setShowReceipt(false)} receiptData={receiptData} />
         </div>
     );
 };

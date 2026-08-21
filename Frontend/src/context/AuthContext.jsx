@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
 
     // Set baseURL
-    axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+    axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     const clearAuth = () => {
         setToken(null);
@@ -132,8 +132,22 @@ export const AuthProvider = ({ children }) => {
         return res.data;
     };
 
+    const updateProfileDetails = async (details) => {
+        const res = await axios.put('/api/auth/updatedetails', details);
+        if (res.data?.data) {
+            setUser(res.data.data);
+        }
+        return res.data;
+    };
+
     const register = async (userData) => {
         const res = await axios.post('/api/auth/register', userData);
+        if (res.data?.token) {
+            const { token: newToken, user: newUser } = res.data;
+            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            setToken(newToken);
+            setUser(newUser);
+        }
         return res.data;
     };
 
@@ -173,6 +187,12 @@ export const AuthProvider = ({ children }) => {
         return res.data;
     };
 
+    const updateFavorites = (newFavorites) => {
+        if (user) {
+            setUser(prevUser => (prevUser ? { ...prevUser, favorites: newFavorites } : null));
+        }
+    };
+
     const logout = () => {
         clearAuth();
     };
@@ -190,6 +210,9 @@ export const AuthProvider = ({ children }) => {
             forgotPassword,
             resetPassword,
             deleteAccount,
+            updateFavorites,
+            updateProfileDetails,
+            setUser,
             logout,
             isAuthenticated: !!user
         }}>

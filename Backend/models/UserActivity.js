@@ -12,7 +12,7 @@ const userActivitySchema = new mongoose.Schema({
     }, 
     actionType: { 
         type: String, 
-        enum: ['SEARCH', 'VIEW', 'CONTACT', 'FAVORITE'], 
+        enum: ['SEARCH', 'VIEW', 'CONTACT', 'FAVORITE', 'ENQUIRY'], 
         required: true 
     },
     actionDetails: {

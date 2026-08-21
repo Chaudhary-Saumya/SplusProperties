@@ -379,7 +379,8 @@ exports.updateListing = asyncHandler(async (req, res, next) => {
     }
 
     // Make sure user is listing owner or admin
-    if (listing.createdBy.toString() !== req.user.id && req.user.role !== 'Admin') {
+    const ownerIdStr = listing.createdBy?._id ? listing.createdBy._id.toString() : listing.createdBy.toString();
+    if (ownerIdStr !== req.user.id.toString() && req.user.role !== 'Admin') {
         return res.status(401).json({ success: false, error: 'Not authorized to update this listing' });
     }
 
@@ -438,7 +439,8 @@ exports.deleteListing = asyncHandler(async (req, res, next) => {
     }
 
     // Make sure user is listing owner or admin
-    if (listing.createdBy.toString() !== req.user.id && req.user.role !== 'Admin') {
+    const deleteOwnerIdStr = listing.createdBy?._id ? listing.createdBy._id.toString() : listing.createdBy.toString();
+    if (deleteOwnerIdStr !== req.user.id.toString() && req.user.role !== 'Admin') {
         return res.status(401).json({ success: false, error: 'Not authorized to delete this listing' });
     }
 

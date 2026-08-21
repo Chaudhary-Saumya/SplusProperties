@@ -1,31 +1,26 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
-import { MapContainer, TileLayer, Marker, Polygon, Popup, useMap, useMapEvents, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polygon, Popup, useMapEvents, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import jsPDF from 'jspdf';
-import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import {
-  MapPin, Ruler, Download, RotateCcw, Crosshair, Satellite,
-  Target, X, Map, GripHorizontal, ChevronRight, Building2,
-  FileText, Maximize2, Minimize2, Trash2, PenLine, StopCircle,
-  AreaChart, Navigation, Layers, Plus, Palette, Share2, Copy, Check,
-  ExternalLink, Search, ArrowRight, ArrowLeft, ChevronUp, ChevronDown,
-  CheckCircle2, Info, Pencil, Eye, EyeOff, LandPlot, SlidersHorizontal, Globe
+  MapPin, Ruler, Download, RotateCcw, Satellite,
+  Target, X, Map, FileText, Maximize2, Trash2, PenLine,
+  AreaChart, Navigation, Layers, Plus, Share2, Copy, Check,
+  ExternalLink, Search, ArrowRight, ArrowLeft,
+  CheckCircle2, Info, LandPlot, SlidersHorizontal, Globe, Sparkles
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { getWebsiteBaseUrl } from '../utils/url';
 import { savePdfCrossPlatform } from '../utils/pdfDownloader';
 
-// ── Leaflet marker fix ───────────────────────────────────────────
+// Leaflet marker default icon fix
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -36,25 +31,25 @@ L.Icon.Default.mergeOptions({
 const TILES = {
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: 'Satellite' },
   hybrid: { url: 'https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', label: 'Hybrid' },
-  road: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Road' },
+  road: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Road Map' },
 };
 
 const COLORS = [
-  { name: 'Gold', value: '#c9a84c' },
-  { name: 'Green', value: '#10b981' },
-  { name: 'Blue', value: '#0ea5e9' },
-  { name: 'Red', value: '#ef4444' },
-  { name: 'Orange', value: '#f59e0b' },
-  { name: 'Purple', value: '#a855f7' },
-  { name: 'White', value: '#ffffff' },
+  { name: 'Blue', value: '#2563eb' },
+  { name: 'Emerald', value: '#10b981' },
+  { name: 'Amber', value: '#d97706' },
+  { name: 'Rose', value: '#ef4444' },
+  { name: 'Purple', value: '#8b5cf6' },
+  { name: 'Slate', value: '#334155' },
 ];
 
-// ─── Guided step hints (using translation keys) ───────────────────
-// Icons are rendered inline using Lucide components (no emojis)
-const STEP_KEYS = {
-  idle: { iconName: 'pointer', title: 'boundary_map.step_idle_title', subtitle: 'boundary_map.step_idle_sub' },
-  drawing: { iconName: 'pin', title: 'boundary_map.step_drawing_title', subtitle: 'boundary_map.step_drawing_sub' },
-  done: { iconName: 'check', title: 'boundary_map.step_done_title', subtitle: 'boundary_map.step_done_sub' },
+const MapZoomTracker = ({ onZoomChange }) => {
+  const map = useMapEvents({
+    zoomend() {
+      onZoomChange(map.getZoom());
+    }
+  });
+  return null;
 };
 
 const BoundaryMap = () => {
@@ -65,28 +60,25 @@ const BoundaryMap = () => {
   const { t, language, toggleLanguage } = useLanguage();
 
   const [center, setCenter] = useState([28.6139, 77.2090]);
-  const [polygons, setPolygons] = useState([{ points: [], color: '#c9a84c', label: 'Plot 1', area: null }]);
+  const [polygons, setPolygons] = useState([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [unit, setUnit] = useState('acres');
+  const [unit, setUnit] = useState('sqft');
   const [isDrawing, setIsDrawing] = useState(false);
   const [tileMode, setTileMode] = useState('hybrid');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(18);
   const [shareUrl, setShareUrl] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Bottom sheet state: 'peek' | 'half' | 'full'
   const [sheetState, setSheetState] = useState('peek');
-  // Active tab in sheet: 'plots' | 'tools' | 'export'
   const [activeTab, setActiveTab] = useState('plots');
-  // Share modal
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
 
-  // Tutorial overlay
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialSlide, setTutorialSlide] = useState(0);
 
@@ -101,19 +93,18 @@ const BoundaryMap = () => {
     }
   }, []);
 
-  // ── Auto-request GPS location on mount (unless editing a saved map) ──
   useEffect(() => {
-    if (editId) return; // Don't auto-locate when loading a saved map
+    if (editId) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = [pos.coords.latitude, pos.coords.longitude];
         setCenter(loc);
         if (mapRef.current) mapRef.current.flyTo(loc, 18, { duration: 1.5 });
       },
-      () => { /* silently ignore if denied */ },
+      () => {},
       { enableHighAccuracy: true }
     );
-  }, []);
+  }, [editId]);
 
   const closeTutorial = () => {
     setShowTutorial(false);
@@ -149,8 +140,11 @@ const BoundaryMap = () => {
           if (mapRef.current) mapRef.current.flyTo([fp.lat, fp.lng], 18);
         }
       }
-    } catch { toast.error('Failed to load map data'); }
-    finally { setLoading(false); }
+    } catch {
+      toast.error('Failed to load map data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateArea = (points) => {
@@ -166,7 +160,23 @@ const BoundaryMap = () => {
         sqyd: Math.round(sqm * 1.19599).toLocaleString('en-IN'),
         acres: (sqm / 4046.86).toLocaleString('en-IN', { maximumFractionDigits: 3 }),
       };
-    } catch { return null; }
+    } catch {
+      return null;
+    }
+  };
+
+  const formatPolyArea = (polyArea, unitVal) => {
+    if (!polyArea) return '';
+    if (unitVal === 'acres') return `${polyArea.acres || '0'} ac`;
+    if (unitVal === 'sqyd') {
+      if (polyArea.sqyd) return `${polyArea.sqyd} sq.yd`;
+      const sqftVal = parseFloat(polyArea.sqft?.replace(/,/g, '') || 0);
+      if (sqftVal > 0) return `${Math.round(sqftVal / 9).toLocaleString('en-IN')} sq.yd`;
+      const sqmVal = parseFloat(polyArea.sqm?.replace(/,/g, '') || 0);
+      if (sqmVal > 0) return `${Math.round(sqmVal * 1.19599).toLocaleString('en-IN')} sq.yd`;
+      return '0 sq.yd';
+    }
+    return `${polyArea.sqft || '0'} sq.ft`;
   };
 
   const addPointAtCenter = () => {
@@ -219,7 +229,7 @@ const BoundaryMap = () => {
           interactive={false}
           icon={L.divIcon({
             className: 'edge-label-icon',
-            html: `<div style="background:rgba(16,24,40,0.85);color:${poly.color};border:1px solid ${poly.color}40;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:900;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);transform:translate(-50%, -50%);">${labelText}</div>`,
+            html: `<div style="background:rgba(255,255,255,0.95);color:#0f172a;border:1.5px solid ${poly.color};padding:2px 7px;border-radius:8px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:translate(-50%, -50%);">${labelText}</div>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0]
           })}
@@ -229,8 +239,7 @@ const BoundaryMap = () => {
   };
 
   const MapEvents = () => {
-    const map = useMap();
-    useMapEvents({
+    const map = useMapEvents({
       click(e) {
         if (!isDrawing) return;
         setPolygons(prev => {
@@ -265,7 +274,6 @@ const BoundaryMap = () => {
   const startDrawing = () => { setIsDrawing(true); setSheetState('peek'); };
   const stopDrawing = () => {
     setIsDrawing(false);
-    // After drawing stops, expand sheet to show results + next steps
     if (!isDesktop) setSheetState('half');
   };
 
@@ -280,7 +288,7 @@ const BoundaryMap = () => {
 
   const deletePlot = (idx) => {
     if (polygons.length === 1) {
-      setPolygons([{ points: [], color: '#c9a84c', label: 'Plot 1', area: null }]);
+      setPolygons([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
       return;
     }
     const f = polygons.filter((_, i) => i !== idx);
@@ -290,7 +298,7 @@ const BoundaryMap = () => {
 
   const resetAll = () => {
     if (window.confirm(t('boundary_map.clear_confirm'))) {
-      setPolygons([{ points: [], color: '#c9a84c', label: 'Plot 1', area: null }]);
+      setPolygons([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
       setActiveIndex(0);
       setIsDrawing(false);
     }
@@ -358,7 +366,7 @@ const BoundaryMap = () => {
       try {
         const canvas = await html2canvas(document.querySelector('.leaflet-container'), { useCORS: true, scale: 0.5, logging: false });
         thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-      } catch { }
+      } catch {}
 
       const mapState = {
         title: 'Land Plot Boundary Map',
@@ -388,28 +396,12 @@ const BoundaryMap = () => {
     finally { setSaving(false); }
   };
 
-  const exportKML = () => {
-    let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document><name>Land Plots — Kharsan Properties</name>`;
-    polygons.forEach(p => {
-      if (p.points.length < 3) return;
-      const coords = [...p.points, p.points[0]].map(pt => `${pt.lng},${pt.lat},0`).join(' ');
-      kml += `\n<Placemark><name>${p.label}</name><Style><PolyStyle><color>7f${p.color.replace('#', '').split('').reverse().join('')}</color></PolyStyle></Style><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
-    });
-    kml += `\n</Document>\n</kml>`;
-    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'land-plots.kml'; a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const exportPDF = async () => {
     const mapEl = document.querySelector('.leaflet-container');
     if (!mapEl) return toast.error('Map not found');
     const toastId = toast.loading('Generating Report...');
 
     const originalGetComputedStyle = window.getComputedStyle;
-    // Monkey patch getComputedStyle to sanitize oklab/oklch values on the fly
     window.getComputedStyle = function(el, pseudoEl) {
       const style = originalGetComputedStyle(el, pseudoEl);
       return new Proxy(style, {
@@ -429,19 +421,24 @@ const BoundaryMap = () => {
     };
 
     try {
-      // Delay to allow map tiles to settle
       await new Promise(r => setTimeout(r, 800));
 
       const canvas = await html2canvas(mapEl, {
         useCORS: true,
-        allowTaint: false, // Prevents security errors with external tiles
+        allowTaint: false,
         scale: 1.5,
         logging: false,
         backgroundColor: '#1a2340',
         imageTimeout: 20000,
         ignoreElements: (element) => {
-          // Ignore Leaflet zoom and layers controls to avoid oklab elements and keep map clean
-          return element.classList.contains('leaflet-control');
+          return (
+            element.classList.contains('leaflet-control') ||
+            element.classList.contains('leaflet-popup') ||
+            element.classList.contains('leaflet-tooltip') ||
+            element.classList.contains('custom-tooltip') ||
+            element.classList.contains('drawing-handle') ||
+            element.classList.contains('edge-label-icon')
+          );
         }
       });
 
@@ -467,7 +464,6 @@ const BoundaryMap = () => {
       };
 
       const croppedCanvas = cropCanvasToAspectRatio(canvas, 1.8);
-
       let imgData = null;
       try {
         imgData = croppedCanvas.toDataURL('image/jpeg', 0.8);
@@ -487,7 +483,6 @@ const BoundaryMap = () => {
       doc.text('PREMIUM LAND MAPPING SOLUTIONS', pageWidth / 2, 30, { align: 'center' });
       doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', pageWidth / 2, 38, { align: 'center' });
 
-      // "Powered by Kharsan Properties" in top-right of Navy header block
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       const poweredLabel = 'Powered by ';
@@ -495,17 +490,16 @@ const BoundaryMap = () => {
       const pWidth = doc.getTextWidth(poweredLabel);
       const cWidth = doc.getTextWidth(companyLabel);
       const totalPWidth = pWidth + cWidth;
-      const poweredX = pageWidth - 15 - totalPWidth; // 15mm from right edge
+      const poweredX = pageWidth - 15 - totalPWidth;
       const poweredY = 10;
 
-      doc.setTextColor(200, 200, 200); // light gray on dark navy
+      doc.setTextColor(200, 200, 200);
       doc.text(poweredLabel, poweredX, poweredY);
 
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(201, 168, 76); // Gold
+      doc.setTextColor(201, 168, 76);
       doc.text(companyLabel, poweredX + pWidth, poweredY);
 
-      // Link redirecting to properties.kharsan.com
       doc.link(poweredX, poweredY - 3, totalPWidth, 5, { url: 'https://properties.kharsan.com' });
 
       if (imgData) {
@@ -539,27 +533,23 @@ const BoundaryMap = () => {
       doc.setFontSize(12); doc.setFont('helvetica', 'bold');
       doc.text(`TOTAL: ${total} ACRES`, pageWidth / 2, y + 5, { align: 'center' });
 
-      // Footer divider line
       doc.setDrawColor(226, 232, 240);
       doc.setLineWidth(0.3);
       doc.line(20, pageHeight - 18, pageWidth - 20, pageHeight - 18);
 
-      // Play Store notice (clickable, center-aligned gray text)
       doc.setFontSize(8.5);
-      doc.setTextColor(156, 163, 175); // Gray #9ca3af
+      doc.setTextColor(156, 163, 175);
       doc.setFont('helvetica', 'bold');
       const playText = 'Kharsan Properties App is available on Google Play Store';
       const playWidth = doc.getTextWidth(playText);
       doc.text(playText, pageWidth / 2, pageHeight - 11, { align: 'center' });
       doc.link(pageWidth / 2 - playWidth / 2, pageHeight - 14, playWidth, 4, { url: 'https://play.google.com/store/apps/details?id=com.kharsan.properties' });
 
-      // Legal & Date line
       doc.setFontSize(7.5);
       doc.setTextColor(156, 163, 175);
       doc.setFont('helvetica', 'normal');
       doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only · Generated: ${date}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
 
-      // Save filename with formatted date
       const today = new Date();
       const dd = String(today.getDate()).padStart(2, '0');
       const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -576,7 +566,6 @@ const BoundaryMap = () => {
       console.error('PDF export error:', err);
       toast.update(toastId, { render: t('boundary_map.report_failed'), type: 'error', isLoading: false, autoClose: 3000 });
     } finally {
-      // Restore getComputedStyle
       window.getComputedStyle = originalGetComputedStyle;
     }
   };
@@ -588,23 +577,8 @@ const BoundaryMap = () => {
     toast.success(t('boundary_map.link_copied'));
   };
 
-  // Current step state for hint bar
   const activePoly = polygons[activeIndex];
-  const hintState = isDrawing
-    ? (activePoly?.points?.length >= 3 ? 'done' : 'drawing')
-    : 'idle';
-  const stepData = STEP_KEYS[hintState];
-
-  // Icon map for hint bar steps
-  const StepIcon = ({ name, ...props }) => {
-    if (name === 'pointer') return <MapPin {...props} />;
-    if (name === 'pin') return <Target {...props} />;
-    if (name === 'check') return <CheckCircle2 {...props} />;
-    return null;
-  };
-
-  // Sheet heights: peek = just handle + controls, half = 45vh, full = 90vh
-  const sheetHeights = { peek: 'calc(env(safe-area-inset-bottom, 0px) + 90px)', half: '50dvh', full: '90dvh' };
+  const sheetHeights = { peek: 'calc(env(safe-area-inset-bottom, 0px) + 85px)', half: '52dvh', full: '90dvh' };
 
   const onSheetTouchStart = (e) => {
     dragStart.current = e.touches[0].clientY;
@@ -620,40 +594,32 @@ const BoundaryMap = () => {
   const totalArea = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0);
 
   return (
-    <div className="h-[100dvh] w-screen overflow-hidden relative bg-[#0a0f1e]">
+    <div className="h-[100dvh] w-screen overflow-hidden relative bg-slate-900 font-['Nunito_Sans',sans-serif] antialiased select-none">
       <SEO title={t('boundary_map.title')} description={t('boundary_map.description')} />
       <style>{`
-        .gold-marker { pointer-events: auto !important; z-index: 1000 !important; }
-        .gold-marker > div { cursor: crosshair !important; transition: transform 0.15s ease; }
-        .custom-tooltip { background: rgba(26,35,64,0.97) !important; border: 1px solid rgba(201,168,76,0.4) !important; border-radius: 10px !important; color: white !important; font-weight: 800 !important; font-size: 11px !important; padding: 6px 10px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; white-space: nowrap !important; }
-        .custom-tooltip::before { border-top-color: rgba(26,35,64,0.97) !important; }
-        .no-scroll { overflow: hidden; }
+        .custom-tooltip { background: rgba(255,255,255,0.96) !important; border: 1.5px solid #2563eb !important; border-radius: 10px !important; color: #0f172a !important; font-weight: 800 !important; font-size: 11px !important; padding: 4px 10px !important; box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important; white-space: nowrap !important; }
+        .custom-tooltip::before { border-top-color: rgba(255,255,255,0.96) !important; }
         .leaflet-container { cursor: ${isDrawing ? 'crosshair' : 'grab'} !important; }
-        .sheet-enter { animation: sheetUp 0.35s cubic-bezier(0.32,0.72,0,1); }
-        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .tab-active { background: #c9a84c; color: #1a2340; }
-        .tab-inactive { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
         ::-webkit-scrollbar { display: none; }
         * { scrollbar-width: none; }
 
         @media (min-width: 768px) {
           .map-control-panel {
-            top: 24px !important;
+            top: 76px !important;
             bottom: 24px !important;
             right: 24px !important;
             left: auto !important;
             width: 380px !important;
-            height: calc(100vh - 48px) !important;
-            border-radius: 24px !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
+            height: calc(100vh - 100px) !important;
+            border-radius: 28px !important;
+            border: 1px solid rgba(226,232,240,0.9) !important;
             transform: none !important;
-            animation: none !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+            box-shadow: 0 20px 50px rgba(15,23,42,0.25) !important;
           }
         }
       `}</style>
 
-      {/* ═══════════════ FULL SCREEN MAP ═══════════════ */}
+      {/* Full Screen GIS Map */}
       <MapContainer
         center={center}
         zoom={18}
@@ -665,44 +631,47 @@ const BoundaryMap = () => {
       >
         <TileLayer url={TILES[tileMode].url} attribution="" maxZoom={21} crossOrigin={true} />
         <MapEvents />
+        <MapZoomTracker onZoomChange={setCurrentZoom} />
 
-        {polygons.map((poly, pIdx) => (
-          <React.Fragment key={pIdx}>
-            {poly.points.length > 0 && (
-              <Polygon
-                positions={poly.points}
-                pathOptions={{
-                  color: poly.color,
-                  weight: activeIndex === pIdx ? 3 : 2,
-                  opacity: 1,
-                  fillColor: poly.color,
-                  fillOpacity: activeIndex === pIdx ? 0.25 : 0.12,
-                  dashArray: activeIndex === pIdx && isDrawing ? '6,10' : ''
-                }}
-                eventHandlers={{ click: () => setActiveIndex(pIdx) }}
-              >
-                {!isDrawing && poly.area && (
-                  <Tooltip direction="center" offset={[0, 0]} opacity={1} permanent className="custom-tooltip">
-                    <div className="text-center">
-                      <div style={{ color: poly.color }} className="font-black">{poly.label}</div>
-                      <div className="text-white/70 text-[10px]">
-                        {unit === 'acres' ? `${poly.area.acres} ${t('tools_page.acre').toLowerCase()}` : `${poly.area.sqft} ${t('tools_page.sqft').toLowerCase()}`}
+        {polygons.map((poly, pIdx) => {
+          const showTooltip = currentZoom >= 15;
+          const showEdgeLabels = currentZoom >= 16;
+          return (
+            <React.Fragment key={pIdx}>
+              {poly.points.length > 0 && (
+                <Polygon
+                  positions={poly.points}
+                  pathOptions={{
+                    color: poly.color || '#2563eb',
+                    weight: activeIndex === pIdx ? 3.5 : 2.5,
+                    opacity: 1,
+                    fillColor: poly.color || '#2563eb',
+                    fillOpacity: activeIndex === pIdx ? 0.3 : 0.2,
+                    dashArray: activeIndex === pIdx && isDrawing ? '6,10' : ''
+                  }}
+                  eventHandlers={{ click: () => setActiveIndex(pIdx) }}
+                >
+                  {!isDrawing && poly.area && showTooltip && (
+                    <Tooltip direction="center" offset={[0, 0]} opacity={1} permanent className="custom-tooltip">
+                      <div className="text-center">
+                        <div style={{ color: poly.color || '#2563eb' }} className="font-black text-xs">{poly.label}</div>
+                        <div className="text-slate-600 text-[10px] font-mono mt-0.5">
+                          {formatPolyArea(poly.area, unit)}
+                        </div>
                       </div>
+                    </Tooltip>
+                  )}
+                  <Popup>
+                    <div className="text-center font-bold text-slate-900 min-w-[130px] p-1">
+                      <div className="text-base mb-1 font-black">{poly.label}</div>
+                      <div style={{ color: poly.color || '#2563eb' }} className="font-black text-sm">{formatPolyArea(poly.area, unit)}</div>
+                      <div className="text-xs opacity-60 font-mono mt-0.5">{poly.area?.sqft} {t('tools_page.sqft')}</div>
                     </div>
-                  </Tooltip>
-                )}
-                <Popup>
-                  <div className="text-center font-bold text-[#1a2340] min-w-[120px]">
-                    <div className="text-base mb-1">{poly.label}</div>
-                    <div style={{ color: poly.color }} className="font-black">{poly.area?.acres} {t('tools_page.acre')}</div>
-                    <div className="text-xs opacity-50">{poly.area?.sqft} {t('tools_page.sqft')}</div>
-                  </div>
-                </Popup>
-              </Polygon>
-            )}
+                  </Popup>
+                </Polygon>
+              )}
 
-            {/* Real-time edge dimensions displayed on map */}
-            {renderEdgeLabels(poly)}
+              {showEdgeLabels && renderEdgeLabels(poly)}
 
             {activeIndex === pIdx && poly.points.map((pt, ptIdx) => (
               <Marker
@@ -712,242 +681,237 @@ const BoundaryMap = () => {
                 eventHandlers={{ dragend: (e) => updatePoint(pIdx, ptIdx, e.target.getLatLng()) }}
                 icon={L.divIcon({
                   className: 'drawing-handle',
-                  html: `<div style="background:${poly.color};width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
+                  html: `<div style="background:${poly.color};width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.3);"></div>`,
                   iconSize: [14, 14], iconAnchor: [7, 7]
                 })}
               />
             ))}
           </React.Fragment>
-        ))}
+        );
+      })}
       </MapContainer>
 
-      {/* ═══════════════ TARGET CROSSHAIR ═══════════════ */}
+      {/* Target Crosshair HUD Overlay (Clean + Sign Only) */}
       {isDrawing && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000] flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-[#c9a84c] rounded-full animate-pulse flex items-center justify-center">
-            <div className="w-2 h-2 bg-[#c9a84c] rounded-full" />
-          </div>
-          <div className="absolute w-12 h-0.5 bg-[#c9a84c]/40" />
-          <div className="absolute h-12 w-0.5 bg-[#c9a84c]/40" />
+          <div className="w-9 h-1 bg-blue-600 rounded-full shadow-md" />
+          <div className="absolute h-9 w-1 bg-blue-600 rounded-full shadow-md" />
         </div>
       )}
 
-      {/* ═══════════════ TOP LEFT: BACK, LANG & HELP BUTTONS ═══════════════ */}
-      <div className="absolute top-3 left-3 md:top-6 md:left-6 z-[1001] flex items-center gap-2 max-w-[calc(100vw-80px)] overflow-x-auto">
+      {/* Top Mobile Bar (Single Compact Row) */}
+      <div className="absolute top-3 left-3 right-3 md:top-4 md:left-6 md:right-auto z-[1001] flex items-center justify-between gap-2">
         <button
           onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
-          className="h-11 px-4 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-2.5 text-white shadow-2xl active:scale-95 transition-all shrink-0"
+          className="h-10 px-3.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0 font-black text-xs uppercase"
         >
-          <ArrowLeft size={16} className="text-[#c9a84c]" />
-          <span className="text-[11px] font-black uppercase tracking-widest">{t('boundary_map.back')}</span>
+          <ArrowLeft size={15} className="text-blue-600" />
+          <span>{t('boundary_map.back')}</span>
         </button>
-        <button
-          onClick={toggleLanguage}
-          className="h-11 px-4 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-2 text-white shadow-2xl active:scale-95 transition-all font-black text-xs uppercase shrink-0"
-        >
-          <Globe size={14} className="text-[#c9a84c]" />
-          {language === 'en' ? 'ગુજરાતી' : 'English'}
-        </button>
-        <button
-          onClick={() => { setShowTutorial(true); setTutorialSlide(0); }}
-          className="h-11 w-11 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center text-[#c9a84c] shadow-2xl active:scale-95 transition-all shrink-0"
-        >
-          <Info size={18} />
-        </button>
+
+        <div className="h-10 px-4 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl items-center gap-2 text-slate-900 shadow-md shrink-0 hidden sm:flex">
+          <LandPlot size={16} className="text-blue-600" />
+          <span className="text-xs font-black tracking-tight">Smart Boundary Mapping Tool</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/saved-maps')}
+            className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
+            title="My Saved Maps"
+          >
+            <MapPin size={14} className="text-blue-600" />
+            <span className="hidden sm:inline">Saved Maps</span>
+          </button>
+
+          <button
+            onClick={toggleLanguage}
+            className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
+          >
+            <Globe size={14} className="text-blue-600" />
+            {language === 'en' ? 'ગુજરાતી' : 'English'}
+          </button>
+
+          <button
+            onClick={() => { setShowTutorial(true); setTutorialSlide(0); }}
+            className="h-10 w-10 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center justify-center text-slate-700 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Map Guide & Tutorial"
+          >
+            <Info size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* ═══════════════ TOP RIGHT: STATUS PILL ═══════════════ */}
-      {/* <div className="absolute top-3 right-3 z-[1001]">
-        <div className={`h-9 px-4 rounded-full flex items-center gap-2 border shadow-xl backdrop-blur-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-          isDrawing ? 'bg-[#c9a84c] border-[#c9a84c]/50 text-[#1a2340]' : 'bg-[#1a2340]/90 border-white/10 text-white/60'
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isDrawing ? 'bg-[#1a2340] animate-ping' : 'bg-[#c9a84c] animate-pulse'}`} />
-          {isDrawing ? t('boundary_map.drawing_pts').replace('{count}', activePoly?.points?.length || 0) : t('boundary_map.ready')}
+      {/* Floating Drawing Status Banner */}
+      {(isDrawing || (activePoly?.points?.length > 0)) && (
+        <div className="absolute top-16 left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/95 border border-slate-200/90 rounded-full shadow-lg text-slate-900 text-xs font-bold backdrop-blur-xl">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            <span className="font-black text-[11px] uppercase tracking-wider text-slate-800">
+              {isDrawing ? `Drawing Plot (${activePoly?.points?.length || 0} Points)` : `Plot Mapped`}
+            </span>
+            {activePoly?.area && (
+              <span className="font-black text-blue-700 font-mono">
+                · {formatPolyArea(activePoly.area, unit)}
+              </span>
+            )}
+          </div>
         </div>
-      </div> */}
+      )}
 
-      {/* ═══════════════ SEARCH OVERLAY ═══════════════ */}
+      {/* Search Overlay */}
       {searchOpen && (
-        <div className="absolute inset-0 z-[1100] bg-[#0a0f1e]/80 backdrop-blur-sm flex flex-col items-center pt-16 px-4">
-          <form onSubmit={handleSearch} className="w-full max-w-md">
-            <div className="bg-[#1a2340] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-              <div className="flex items-center px-5 py-4 gap-3 border-b border-white/5">
-                <Search size={18} className="text-[#c9a84c] shrink-0" />
+        <div className="absolute inset-0 z-[1100] bg-slate-950/70 backdrop-blur-md flex flex-col items-center pt-16 px-4">
+          <form onSubmit={handleSearch} className="w-full max-w-lg">
+            <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="flex items-center px-5 py-4 gap-3 border-b border-slate-100">
+                <Search size={20} className="text-blue-600 shrink-0" />
                 <input
                   autoFocus
                   type="text"
                   placeholder={t('boundary_map.search_placeholder')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent text-white text-sm font-bold placeholder:text-white/25 outline-none"
+                  className="flex-1 bg-transparent text-slate-900 text-sm font-extrabold placeholder:text-slate-400 outline-none"
                 />
-                <button type="button" onClick={() => setSearchOpen(false)} className="text-white/30 hover:text-white p-1">
-                  <X size={18} />
+                <button type="button" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+                  <X size={20} />
                 </button>
               </div>
               <button
                 type="submit"
                 disabled={searchLoading}
-                className="w-full py-4 bg-[#c9a84c] text-[#1a2340] font-black text-sm uppercase tracking-widest disabled:opacity-50 transition-all active:scale-98"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 transition-all cursor-pointer"
               >
-                <span className="flex items-center justify-center gap-2">{searchLoading ? (t('search_page.searching') || 'Searching...') : <><Search size={14} /> {t('boundary_map.search_btn')}</>}</span>
+                <span className="flex items-center justify-center gap-2">
+                  {searchLoading ? 'Searching location...' : <><Search size={15} /> {t('boundary_map.search_btn')}</>}
+                </span>
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* ═══════════════ FLOATING ACTION BUTTONS (Left Side) ═══════════════ */}
+      {/* Floating Action Buttons Left Dock */}
       <div
         className="absolute left-3 md:left-6 z-[1001] flex flex-col gap-2.5 transition-all duration-300"
-        style={{ bottom: isDrawing ? '90px' : (isDesktop ? '24px' : `calc(${sheetHeights[sheetState]} + 16px)`) }}
+        style={{ bottom: isDrawing ? '95px' : (isDesktop ? '28px' : `calc(${sheetHeights[sheetState]} + 16px)`) }}
       >
-        {/* GPS */}
         <button
           onClick={getLocation}
           title={t('boundary_map.navigate_my_location')}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl border transition-all active:scale-90 ${loading ? 'bg-[#c9a84c] border-[#c9a84c]/50' : 'bg-[#1a2340]/95 border-white/10 backdrop-blur-xl'
-            }`}
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg border transition-all active:scale-90 cursor-pointer ${
+            loading ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/95 border-slate-200 text-slate-800 backdrop-blur-xl hover:text-blue-600 hover:bg-white'
+          }`}
         >
-          {loading
-            ? <div className="w-4 h-4 border-2 border-[#1a2340] border-t-transparent rounded-full animate-spin" />
-            : <Navigation size={18} className="text-[#c9a84c]" />
-          }
+          {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Navigation size={18} />}
         </button>
 
-        {/* Search */}
         <button
           onClick={() => setSearchOpen(true)}
-          className="w-12 h-12 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+          title="Search Location"
+          className="w-11 h-11 bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 hover:text-blue-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer"
         >
-          <Search size={18} className="text-[#c9a84c]" />
+          <Search size={18} />
         </button>
 
-        {/* Map Layer */}
         <button
           onClick={cycleTile}
           title={t('boundary_map.map_type')}
-          className="w-12 h-12 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+          className="w-11 h-11 bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 hover:text-blue-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer"
         >
-          <Layers size={18} className="text-[#c9a84c]" />
+          <Layers size={18} />
         </button>
 
-        {/* Unit Toggle */}
         <button
           onClick={() => setUnit(u => u === 'acres' ? 'sqft' : u === 'sqft' ? 'sqyd' : 'acres')}
-          className="w-12 h-12 bg-[#1a2340]/95 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+          title="Change Measurement Unit"
+          className="w-11 h-11 bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 hover:text-blue-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer"
         >
-          <span className="text-[#c9a84c] text-[10px] font-black uppercase">
+          <span className="text-[10px] font-black uppercase">
             {unit === 'acres' ? 'AC' : unit === 'sqft' ? 'FT²' : 'YD²'}
           </span>
         </button>
       </div>
 
-      {/* ═══════════════ FLOATING DRAWING ACTION PANEL ═══════════════ */}
+      {/* Mobile Floating Drawing Control Bar */}
       {isDrawing && (
-        <div className="absolute bottom-[24px] left-0 right-0 z-[1001] flex justify-center px-4 pointer-events-auto">
-          <div className="flex items-center gap-3.5 px-4 py-2.5 bg-[#101828]/95 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
-
-            {/* Undo Button */}
+        <div className="absolute bottom-5 left-3 right-3 z-[1001] flex justify-center pointer-events-auto">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-2.5 flex items-center gap-2 justify-between">
             <button
               onClick={undoLastPoint}
               disabled={!activePoly?.points?.length}
               title={t('boundary_map.undo_point')}
-              className="w-11 h-11 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/70 hover:text-white disabled:opacity-20 disabled:pointer-events-none active:scale-90 transition-all shrink-0"
+              className="w-11 h-11 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all shrink-0 cursor-pointer"
             >
-              <RotateCcw size={15} />
+              <RotateCcw size={16} />
             </button>
 
-            {/* Add Corner FAB */}
             <button
               onClick={addPointAtCenter}
               title={t('boundary_map.add_corner_hint')}
-              className="h-12 px-6 bg-[#c9a84c] border border-[#c9a84c]/30 text-[#1a2340] rounded-full shadow-lg font-black text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-all shrink-0"
+              className="flex-1 h-11 bg-[#1a2340] hover:bg-slate-900 text-white rounded-xl shadow-md font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
             >
-              <Target size={16} className="animate-pulse" />
+              <Plus size={16} className="text-amber-400" />
               <span>{t('boundary_map.add_corner')}</span>
             </button>
 
-            {/* Done / Stop Button */}
             <button
               onClick={stopDrawing}
               title={t('boundary_map.stop_drawing')}
-              className="w-11 h-11 bg-red-500 border border-red-400/30 rounded-full flex items-center justify-center text-white active:scale-90 transition-all shrink-0"
+              className="w-11 h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all shrink-0 cursor-pointer"
             >
-              <Check size={16} />
+              <Check size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* ═══════════════ HINT BAR (shows when drawing) ═══════════════ */}
-      {(isDrawing || hintState !== 'idle') && (
-        <div className="absolute top-[68px] left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl border backdrop-blur-xl text-[11px] font-bold transition-all ${hintState === 'done'
-              ? 'bg-[#101828]/95 border-emerald-500/30 text-emerald-400'
-              : 'bg-[#101828]/95 border-[#c9a84c]/30 text-[#c9a84c]'
-            }`}>
-            <StepIcon name={stepData.iconName} size={14} />
-            <span className="font-black uppercase tracking-wider">{t(stepData.title)}</span>
-            {activePoly?.points?.length > 0 && (
-              <span className="text-white/40 px-1.5 py-0.5 bg-white/5 rounded-full text-[9px] font-bold">
-                {activePoly.points.length} pts
-              </span>
-            )}
-            {activePoly?.area && (
-              <span className="text-white/60 font-black">
-                · {activePoly.area.acres} ac
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════ BOTTOM SHEET ═══════════════ */}
+      {/* Bottom Sheet / Desktop Control Panel */}
       <div
         ref={sheetRef}
-        className="map-control-panel absolute bottom-0 left-0 right-0 z-[1002] bg-[#101828] sheet-enter"
+        className="map-control-panel absolute bottom-0 left-0 right-0 z-[1002] bg-white/95 text-slate-900 backdrop-blur-2xl"
         style={{
-          height: isDrawing && !isDesktop ? '0px' : (isDesktop ? 'calc(100vh - 48px)' : sheetHeights[sheetState]),
+          height: isDrawing && !isDesktop ? '0px' : (isDesktop ? 'calc(100vh - 100px)' : sheetHeights[sheetState]),
           transition: 'all 0.35s cubic-bezier(0.32,0.72,0,1)',
-          borderRadius: isDesktop ? '24px' : '24px 24px 0 0',
+          borderRadius: isDesktop ? '28px' : '24px 24px 0 0',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          borderTop: isDrawing && !isDesktop ? 'none' : '1px solid rgba(255,255,255,0.1)',
-          boxShadow: isDrawing && !isDesktop ? 'none' : '0 -20px 60px rgba(0,0,0,0.6)'
+          borderTop: isDrawing && !isDesktop ? 'none' : '1px solid rgba(226,232,240,0.9)',
+          boxShadow: isDrawing && !isDesktop ? 'none' : '0 -15px 40px rgba(15,23,42,0.12)'
         }}
         onTouchStart={isDesktop ? undefined : onSheetTouchStart}
         onTouchEnd={isDesktop ? undefined : onSheetTouchEnd}
       >
-        {/* Desktop-only Header */}
+        {/* Desktop Sidebar Header */}
         {isDesktop && (
-          <div className="px-6 py-5 border-b border-white/5 shrink-0 flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-slate-100 shrink-0 flex items-center justify-between bg-slate-50/60">
             <div>
-              <h3 className="text-white font-black text-base tracking-tight">{t('boundary_map.title')}</h3>
-              <p className="text-[#c9a84c] text-[10px] font-black uppercase tracking-widest mt-1">
+              <h3 className="text-slate-900 font-black text-base tracking-tight">{t('boundary_map.title')}</h3>
+              <p className="text-blue-600 text-xs font-black uppercase tracking-widest mt-0.5">
                 {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'} · {totalArea > 0 ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}` : t('boundary_map.no_boundary')}
               </p>
             </div>
-            <Map size={24} className="text-[#c9a84c]" />
+            <Map size={24} className="text-blue-600" />
           </div>
         )}
 
-        {/* Drag Handle & Summary Header */}
+        {/* Mobile Swipe Handle */}
         {!isDesktop && (
           <div
             onClick={() => { if (sheetState === 'peek') setSheetState('half'); }}
-            className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-pointer select-none"
+            className="flex flex-col items-center pt-2.5 pb-1.5 shrink-0 cursor-pointer select-none"
           >
-            <div className="w-12 h-1.5 bg-white/10 rounded-full mb-3 shrink-0" />
+            <div className="w-10 h-1 bg-slate-300 rounded-full mb-2 shrink-0" />
 
             {sheetState === 'peek' && (
               <div className="w-full flex items-center justify-between px-5 py-1">
                 <div className="flex flex-col">
-                  <span className="text-white/40 text-[9px] font-black uppercase tracking-widest text-left">
+                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest text-left">
                     {polygons.length} {polygons.length > 1 ? 'Plots' : 'Plot'}
                   </span>
-                  <span className="text-white font-black text-sm">
+                  <span className="text-slate-900 font-black text-sm font-mono">
                     {totalArea > 0
                       ? `${totalArea.toFixed(3)} ${t('tools_page.acre').toLowerCase()}`
                       : t('boundary_map.no_boundary')}
@@ -955,25 +919,19 @@ const BoundaryMap = () => {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); startDrawing(); }}
-                  className="h-10 px-5 bg-[#c9a84c] text-[#1a2340] rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-lg"
+                  className="h-9 px-4 bg-[#1a2340] text-white rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-md cursor-pointer"
                 >
                   <PenLine size={13} />
                   <span>{t('boundary_map.start_drawing')}</span>
                 </button>
               </div>
             )}
-
-            {sheetState !== 'peek' && (
-              <div className="text-white/30 text-[9px] font-black uppercase tracking-widest pb-1">
-                {t('boundary_map.title')}
-              </div>
-            )}
           </div>
         )}
 
-        {/* Tab Bar - only shows when expanded */}
+        {/* Tab Navigation Bar */}
         {(sheetState !== 'peek' || isDesktop) && (
-          <div className="flex gap-2 px-4 pb-2 shrink-0">
+          <div className="flex gap-2 px-4 py-2.5 border-b border-slate-100 shrink-0">
             {[
               { id: 'plots', icon: <MapPin size={13} />, label: t('boundary_map.plots_tab'), count: polygons.length },
               { id: 'tools', icon: <SlidersHorizontal size={13} />, label: t('boundary_map.tools_tab') },
@@ -982,57 +940,66 @@ const BoundaryMap = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${activeTab === tab.id ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/5 text-white/40'
-                  }`}
+                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                  activeTab === tab.id
+                    ? 'bg-[#1a2340] text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
               >
                 {tab.icon} {tab.label}
-                {tab.count !== undefined && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${activeTab === tab.id ? 'bg-[#1a2340]/20' : 'bg-white/10'}`}>{tab.count}</span>}
+                {tab.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
         )}
 
-        {/* Sheet Content (scrollable) - only shows when expanded */}
+        {/* Tab Content Container */}
         {(sheetState !== 'peek' || isDesktop) && (
-          <div className="flex-1 overflow-y-auto px-4 pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: 'touch' }}>
 
-            {/* ── PLOTS TAB ── */}
+            {/* TAB 1: PLOTS */}
             {activeTab === 'plots' && (
-              <div className="space-y-3 pt-1">
-                {/* Total area summary */}
+              <div className="space-y-3">
                 {totalArea > 0 && (
-                  <div className="bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-3.5 flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] text-white/40 font-black uppercase tracking-widest">{t('boundary_map.total_area')}</div>
-                      <div className="text-[#c9a84c] text-xl font-black">{totalArea.toFixed(3)} <span className="text-sm font-bold opacity-60">{t('tools_page.acre').toLowerCase()}</span></div>
+                      <div className="text-[10px] text-blue-700 font-black uppercase tracking-widest">{t('boundary_map.total_area')}</div>
+                      <div className="text-slate-900 text-xl font-black font-mono mt-0.5">
+                        {totalArea.toFixed(3)} <span className="text-xs font-extrabold text-slate-600">{t('tools_page.acre').toLowerCase()}</span>
+                      </div>
                     </div>
-                    <AreaChart size={28} className="text-[#c9a84c]" />
+                    <AreaChart size={28} className="text-blue-600 opacity-80" />
                   </div>
                 )}
 
-                {/* Plots list */}
                 {polygons.map((poly, idx) => (
                   <div
                     key={idx}
                     onClick={() => setActiveIndex(idx)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${activeIndex === idx
-                        ? 'bg-white/[0.06] border-white/20 shadow-lg'
-                        : 'bg-white/[0.03] border-white/5 active:bg-white/[0.06]'
-                      }`}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      activeIndex === idx
+                        ? 'bg-slate-50 border-blue-500 shadow-md'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      {/* Color indicator */}
-                      <div className="w-1 h-12 rounded-full shrink-0" style={{ background: poly.color }} />
+                      <div className="w-1.5 h-10 rounded-full shrink-0" style={{ background: poly.color }} />
                       <div className="flex-1 min-w-0">
                         <input
                           type="text"
                           value={poly.label}
                           onChange={e => updatePlotField(idx, 'label', e.target.value)}
                           onClick={e => e.stopPropagation()}
-                          className="w-full bg-transparent border-none p-0 text-sm font-black text-white outline-none placeholder:text-white/25 mb-0.5"
+                          className="w-full bg-transparent border-none p-0 text-sm font-black text-slate-900 outline-none placeholder:text-slate-400 mb-0.5"
                           placeholder={t('boundary_map.plot_name_placeholder')}
                         />
-                        <div className="text-[11px] text-white/40 font-medium">
+                        <div className="text-xs text-slate-500 font-semibold font-mono">
                           {poly.area
                             ? `${poly.area.acres} ${t('tools_page.acre').toLowerCase()} · ${poly.area.sqft} ${t('tools_page.sqft').toLowerCase()}`
                             : poly.points.length > 0
@@ -1041,75 +1008,75 @@ const BoundaryMap = () => {
                           }
                         </div>
                       </div>
-                      {/* Badge */}
+
                       {activeIndex === idx && (
-                        <div className="bg-[#c9a84c]/20 text-[#c9a84c] text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shrink-0">{t('boundary_map.active_badge')}</div>
+                        <div className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider shrink-0">
+                          {t('boundary_map.active_badge')}
+                        </div>
                       )}
+
                       <button
                         onClick={e => { e.stopPropagation(); deletePlot(idx); }}
-                        className="p-2 hover:bg-red-500/20 text-white/20 hover:text-red-400 rounded-xl transition-all active:scale-90 shrink-0"
+                        className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all cursor-pointer shrink-0"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
 
-                    {/* Color picker - show only for active */}
                     {activeIndex === idx && (
-                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-white/30 font-black uppercase tracking-wider mr-1">{t('boundary_map.color_label')}</span>
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-200 flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider mr-1">
+                          {t('boundary_map.color_label')}:
+                        </span>
                         {COLORS.map(c => (
                           <button
                             key={c.value}
                             onClick={e => { e.stopPropagation(); updatePlotField(idx, 'color', c.value); }}
-                            className={`w-6 h-6 rounded-full border-2 transition-transform active:scale-90 ${poly.color === c.value ? 'border-white scale-110' : 'border-transparent hover:scale-110'}`}
+                            className={`w-5 h-5 rounded-full border-2 transition-transform active:scale-90 cursor-pointer ${
+                              poly.color === c.value ? 'border-slate-900 scale-110' : 'border-transparent hover:scale-110'
+                            }`}
                             style={{ background: c.value }}
                           />
                         ))}
                       </div>
                     )}
 
-                    {/* Start/Done Drawing Toggle */}
                     {activeIndex === idx && (
-                      <div className="mt-3 pt-3 border-t border-white/5 flex gap-2" onClick={e => e.stopPropagation()}>
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-200 flex gap-2" onClick={e => e.stopPropagation()}>
                         {!isDrawing ? (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); startDrawing(); }}
-                            className="flex-1 py-2 bg-[#c9a84c] hover:bg-[#b8943e] text-[#1a2340] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                            className="flex-1 py-2 bg-[#1a2340] hover:bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
                           >
-                            <PenLine size={12} />
+                            <PenLine size={13} />
                             <span>{t('boundary_map.start_drawing')}</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); stopDrawing(); }}
-                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
                           >
-                            <Check size={12} />
+                            <Check size={13} />
                             <span>Done Drawing</span>
                           </button>
                         )}
                       </div>
                     )}
 
-                    {/* Segment Lengths - show only for active */}
                     {activeIndex === idx && poly.points.length >= 2 && (
-                      <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5" onClick={e => e.stopPropagation()}>
-                        <div className="text-[10px] text-white/30 font-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                          <Ruler size={10} className="text-[#c9a84c]" />
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-200 space-y-1.5" onClick={e => e.stopPropagation()}>
+                        <div className="text-[10px] text-blue-700 font-extrabold uppercase tracking-wider flex items-center gap-1">
+                          <Ruler size={11} />
                           {t('boundary_map.segment_lengths')}
                         </div>
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
                           {getSegmentLengths(poly.points).map((seg, sIdx) => (
-                            <div key={sIdx} className="bg-white/[0.02] border border-white/5 rounded-xl p-2 flex items-center justify-between text-[11px]">
-                              <span className="text-white/40 font-bold">
-                                {t('boundary_map.side_label').replace('{index}', `${seg.from}→${seg.to}`)}
-                              </span>
-                              <span className="text-[#c9a84c] font-black">
-                                {unit === 'acres' || unit === 'sqyd'
-                                  ? `${seg.meters} m (${seg.feet} ft)`
-                                  : `${seg.feet} ft`}
+                            <div key={sIdx} className="bg-slate-100 border border-slate-200 rounded-lg p-1.5 flex items-center justify-between text-[11px]">
+                              <span className="text-slate-600 font-bold">Side {seg.from}→{seg.to}</span>
+                              <span className="text-blue-700 font-black font-mono">
+                                {unit === 'acres' || unit === 'sqyd' ? `${seg.meters}m` : `${seg.feet}ft`}
                               </span>
                             </div>
                           ))}
@@ -1119,248 +1086,190 @@ const BoundaryMap = () => {
                   </div>
                 ))}
 
-                {/* ── NEXT STEPS CARD — shows when any plot has a completed boundary ── */}
                 {totalArea > 0 && !isDrawing && (
-                  <div className="bg-gradient-to-br from-[#c9a84c]/15 to-[#c9a84c]/5 border border-[#c9a84c]/30 rounded-2xl p-4 space-y-3">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 space-y-2.5">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                      <span className="text-white font-black text-xs uppercase tracking-widest">
-                        {language === 'en' ? 'Boundary Complete' : 'સીમા પૂર્ણ થઈ'}
+                      <CheckCircle2 size={16} className="text-emerald-600" />
+                      <span className="text-emerald-950 font-black text-xs uppercase tracking-widest">
+                        {language === 'en' ? 'Boundary Mapping Complete' : 'સીમા પૂર્ણ થઈ'}
                       </span>
                     </div>
-                    <p className="text-white/50 text-[11px] leading-relaxed">
-                      {language === 'en'
-                        ? 'Your land boundary has been drawn. You can now save & share the map link, or download a PDF report.'
-                        : 'તમારી જમીનની સીમા દોરાઈ ગઈ છે. હવે તમે નકશાની લિંક સેવ કરી શેર કરી શકો છો, અથવા PDF રીપોર્ટ ડાઉનલોડ કરી શકો છો.'}
+                    <p className="text-slate-600 text-xs font-medium leading-relaxed">
+                      Your boundary is mapped. You can save, share or export a PDF report.
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setActiveTab('export'); handleSaveAndShare(); }}
                         disabled={saving}
-                        className="flex-1 py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+                        className="flex-1 py-2.5 bg-[#1a2340] hover:bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
                       >
                         <Share2 size={14} />
-                        {language === 'en' ? 'Save & Share' : 'સેવ અને શેર'}
+                        Save & Share
                       </button>
                       <button
                         onClick={exportPDF}
-                        className="flex-1 py-3 bg-white/[0.06] border border-white/15 text-white rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <FileText size={14} className="text-[#c9a84c]" />
-                        {language === 'en' ? 'PDF Report' : 'PDF રીપોર્ટ'}
+                        <FileText size={14} className="text-blue-600" />
+                        PDF Report
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Empty state — no boundary drawn yet, show clear guide */}
-                {totalArea === 0 && !isDrawing && polygons.every(p => p.points.length === 0) && (
-                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 text-center space-y-3">
-                    <Navigation size={28} className="text-[#c9a84c] mx-auto" />
-                    <div className="text-white font-black text-sm">
-                      {language === 'en' ? 'Ready to Measure Your Land' : 'જમીન માપવા તૈયાર'}
-                    </div>
-                    <p className="text-white/40 text-xs leading-relaxed">
-                      {language === 'en'
-                        ? 'Navigate to your land location on the map, then tap "Start Drawing" below to mark boundary corners.'
-                        : 'નકશા પર તમારી જમીન શોધો, પછી સીમાના ખૂણા નક્કી કરવા નીચે "દોરવાનું શરૂ કરો" દબાવો.'}
-                    </p>
-                    <button
-                      onClick={startDrawing}
-                      className="w-full py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
-                    >
-                      <PenLine size={14} />
-                      {t('boundary_map.start_drawing')}
-                    </button>
-                  </div>
-                )}
-
-                {/* Add new plot */}
                 <button
                   onClick={addNewPlot}
-                  className="w-full py-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-[#c9a84c]/40 text-white/30 hover:text-[#c9a84c] text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-600 text-slate-600 hover:text-blue-600 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
-                  <Plus size={16} /> {t('boundary_map.add_new_plot')}
+                  <Plus size={15} /> {t('boundary_map.add_new_plot')}
                 </button>
 
-                {/* Quick undo/reset */}
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={undoLastPoint}
-                    className="flex-1 py-3 bg-white/[0.04] border border-white/10 rounded-2xl text-white/50 font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="flex-1 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-200 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <RotateCcw size={14} /> {t('boundary_map.undo_point')}
+                    <RotateCcw size={13} /> Undo
                   </button>
                   <button
                     onClick={resetAll}
-                    className="flex-1 py-3 bg-red-500/5 border border-red-500/20 rounded-2xl text-red-400/70 font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="flex-1 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Trash2 size={14} /> {t('boundary_map.clear_all')}
+                    <Trash2 size={13} /> Clear All
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ── TOOLS TAB ── */}
+            {/* TAB 2: TOOLS & LAYERS */}
             {activeTab === 'tools' && (
-              <div className="space-y-3 pt-1">
-                {/* Map Layer */}
+              <div className="space-y-3">
                 <div>
-                  <div className="text-[10px] text-white/30 font-black uppercase tracking-widest mb-2 px-1">{t('boundary_map.map_type')}</div>
+                  <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">{t('boundary_map.map_type')}</div>
                   <div className="grid grid-cols-3 gap-2">
                     {Object.entries(TILES).map(([key, val]) => (
                       <button
                         key={key}
                         onClick={() => setTileMode(key)}
-                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${tileMode === key ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
-                          }`}
+                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                          tileMode === key
+                            ? 'bg-[#1a2340] text-white font-black shadow-md'
+                            : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
+                        }`}
                       >
-                        {key === 'satellite' ? <Satellite size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} /> : key === 'hybrid' ? <Layers size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} /> : <Map size={18} className={tileMode === key ? 'text-[#1a2340]' : 'text-[#c9a84c]'} />}
-                        <span>
-                          {key === 'satellite'
-                            ? (language === 'gu' ? 'સેટેલાઇટ' : 'Satellite')
-                            : key === 'hybrid'
-                              ? (language === 'gu' ? 'હાઇબ્રિડ' : 'Hybrid')
-                              : (language === 'gu' ? 'રોડ નકશો' : 'Road Map')}
-                        </span>
+                        {key === 'satellite' ? <Satellite size={18} /> : key === 'hybrid' ? <Layers size={18} /> : <Map size={18} />}
+                        <span>{val.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Measurement Unit */}
                 <div>
-                  <div className="text-[10px] text-white/30 font-black uppercase tracking-widest mb-2 px-1">{t('boundary_map.measurement_unit')}</div>
+                  <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">{t('boundary_map.measurement_unit')}</div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { value: 'acres', icon: <LandPlot size={18} /> },
-                      { value: 'sqft', icon: <Maximize2 size={18} /> },
-                      { value: 'sqyd', icon: <Ruler size={18} /> },
+                      { value: 'acres', label: 'Acres (એકર)', icon: <LandPlot size={16} /> },
+                      { value: 'sqft', label: 'Sq. Feet (ચો.ફૂટ)', icon: <Maximize2 size={16} /> },
+                      { value: 'sqyd', label: 'Sq. Yards (ગજ)', icon: <Ruler size={16} /> },
                     ].map(u => (
                       <button
                         key={u.value}
                         onClick={() => setUnit(u.value)}
-                        className={`py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center gap-1.5 ${unit === u.value ? 'bg-[#c9a84c] text-[#1a2340]' : 'bg-white/[0.04] border border-white/10 text-white/50'
-                          }`}
+                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                          unit === u.value
+                            ? 'bg-[#1a2340] text-white font-black shadow-md'
+                            : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
+                        }`}
                       >
-                        <span className={unit === u.value ? 'text-[#1a2340]' : 'text-[#c9a84c]'}>{u.icon}</span>
-                        <span>
-                          {u.value === 'acres'
-                            ? t('tools_page.acre')
-                            : u.value === 'sqft'
-                              ? t('tools_page.sqft')
-                              : t('tools_page.sqyrd')}
-                        </span>
+                        {u.icon}
+                        <span>{u.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* GPS */}
                 <button
                   onClick={() => { getLocation(); setSheetState('peek'); }}
-                  className="w-full py-4 bg-white/[0.04] border border-white/10 rounded-2xl text-white font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className="w-full py-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 rounded-xl text-slate-900 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <Navigation size={18} className="text-[#c9a84c]" />
+                  <Navigation size={16} className="text-blue-600" />
                   {t('boundary_map.navigate_my_location')}
                 </button>
-
-                {/* Undo + Reset */}
-                <div className="flex gap-2">
-                  <button onClick={undoLastPoint} className="flex-1 py-3.5 bg-white/[0.04] border border-white/10 rounded-2xl text-white/50 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95">
-                    <RotateCcw size={14} /> {t('boundary_map.undo_point')}
-                  </button>
-                  <button onClick={resetAll} className="flex-1 py-3.5 bg-red-500/[0.08] border border-red-500/20 rounded-2xl text-red-400 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95">
-                    <Trash2 size={14} /> {t('boundary_map.clear_all')}
-                  </button>
-                </div>
               </div>
             )}
 
-            {/* ── EXPORT TAB ── */}
+            {/* TAB 3: EXPORT & REPORT */}
             {activeTab === 'export' && (
-              <div className="space-y-3 pt-1">
-                {/* Summary card */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 space-y-2">
-                  <div className="text-[10px] text-white/30 font-black uppercase tracking-widest">{t('boundary_map.summary')}</div>
+              <div className="space-y-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
+                  <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('boundary_map.summary')}</div>
                   {polygons.map((p, i) => (
                     p.area && (
-                      <div key={i} className="flex items-center justify-between">
+                      <div key={i} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                          <span className="text-white/70 text-xs font-bold">{p.label}</span>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />
+                          <span className="text-slate-900 font-bold">{p.label}</span>
                         </div>
-                        <span className="text-[#c9a84c] text-xs font-black">{p.area.acres} {t('tools_page.acre').toLowerCase()}</span>
+                        <span className="text-blue-700 font-mono font-black">{p.area.acres} {t('tools_page.acre').toLowerCase()}</span>
                       </div>
                     )
                   ))}
                   {totalArea > 0 && (
-                    <div className="pt-2 border-t border-white/10 flex justify-between">
-                      <span className="text-white/40 text-xs font-black uppercase">{t('boundary_map.total')}</span>
-                      <span className="text-white font-black text-sm">{totalArea.toFixed(3)} {t('tools_page.acre').toLowerCase()}</span>
+                    <div className="pt-2 border-t border-slate-200 flex justify-between text-xs">
+                      <span className="text-slate-500 font-black uppercase">{t('boundary_map.total')}</span>
+                      <span className="text-slate-900 font-black font-mono text-sm">{totalArea.toFixed(3)} {t('tools_page.acre').toLowerCase()}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Save & Share */}
                 <button
                   onClick={handleSaveAndShare}
                   disabled={saving}
-                  className="w-full py-5 bg-[#c9a84c] text-[#1a2340] rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-60 shadow-lg"
+                  className="w-full py-3.5 bg-[#1a2340] hover:bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
                 >
-                  {saving
-                    ? <><div className="w-4 h-4 border-2 border-[#1a2340]/40 border-t-[#1a2340] rounded-full animate-spin" /> {t('boundary_map.saving')}</>
-                    : <><Share2 size={18} /> {t('boundary_map.save_generate_link')}</>
-                  }
+                  {saving ? 'Saving Map...' : <><Share2 size={16} /> {t('boundary_map.save_generate_link')}</>}
                 </button>
 
-                {/* PDF Report */}
                 <button
                   onClick={exportPDF}
-                  className="w-full py-4 bg-white/[0.04] border border-white/10 rounded-2xl text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className="w-full py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                 >
-                  <FileText size={18} className="text-[#c9a84c]" /> {t('boundary_map.pdf_report')}
+                  <FileText size={16} className="text-blue-600" /> {t('boundary_map.pdf_report')}
                 </button>
-
-                {/* KML Export */}
-                {/* <button
-                  onClick={exportKML}
-                  className="w-full py-4 bg-white/[0.04] border border-white/10 rounded-2xl text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
-                >
-                  <Download size={18} className="text-[#c9a84c]" /> {t('boundary_map.kml_file')}
-                </button> */}
               </div>
             )}
+
           </div>
         )}
       </div>
 
-      {/* ═══════════════ SHARE MODAL ═══════════════ */}
+      {/* Share Modal */}
       {showShare && shareUrl && (
-        <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-[#101828] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-emerald-500/10 border-b border-emerald-500/20 p-5 flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-                <CheckCircle2 size={24} className="text-emerald-400" />
+        <div className="fixed inset-0 z-[2000] bg-slate-950/70 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="bg-emerald-50 border-b border-emerald-100 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                <CheckCircle2 size={20} className="text-emerald-600" />
               </div>
               <div>
-                <div className="text-white font-black text-base">{t('boundary_map.map_saved')}</div>
-                <div className="text-white/50 text-xs font-medium">{t('boundary_map.shareable_ready')}</div>
+                <div className="text-slate-900 font-black text-sm">{t('boundary_map.map_saved')}</div>
+                <div className="text-slate-500 text-[11px] font-medium">{t('boundary_map.shareable_ready')}</div>
               </div>
-              <button onClick={() => setShowShare(false)} className="ml-auto text-white/30 hover:text-white p-2">
-                <X size={20} />
+              <button onClick={() => setShowShare(false)} className="ml-auto text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+                <X size={18} />
               </button>
             </div>
-            <div className="p-5 space-y-4">
-              <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+            <div className="p-4 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-white/30 font-black uppercase tracking-wider mb-1">{t('boundary_map.share_link')}</div>
-                  <div className="text-white/70 text-xs font-bold truncate">{shareUrl}</div>
+                  <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider mb-0.5">{t('boundary_map.share_link')}</div>
+                  <div className="text-slate-900 font-mono text-xs font-bold truncate">{shareUrl}</div>
                 </div>
                 <button
                   onClick={copyLink}
-                  className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${copied ? 'bg-emerald-500 text-white' : 'bg-[#c9a84c] text-[#1a2340]'
-                    }`}
+                  className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                    copied ? 'bg-emerald-600 text-white' : 'bg-[#1a2340] text-white'
+                  }`}
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                 </button>
@@ -1369,98 +1278,95 @@ const BoundaryMap = () => {
                 href={shareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 bg-white/[0.04] border border-white/10 rounded-2xl text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
+                className="w-full py-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-900 font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <ExternalLink size={16} className="text-[#c9a84c]" /> {t('boundary_map.open_map')}
+                <ExternalLink size={15} className="text-blue-600" /> {t('boundary_map.open_map')}
               </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══════════════ TUTORIAL OVERLAY ═══════════════ */}
+      {/* Tutorial Overlay Modal */}
       {showTutorial && (
-        <div className="fixed inset-0 z-[2100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#101828] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <h3 className="text-white font-black text-lg flex items-center gap-2">
-                  <Map size={20} className="text-[#c9a84c]" /> {t('boundary_map.tutorial_title')}
+        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-slate-900 font-black text-sm flex items-center gap-2">
+                  <Map size={18} className="text-blue-600" /> {t('boundary_map.tutorial_title')}
                 </h3>
-                <button onClick={closeTutorial} className="text-white/30 hover:text-white p-1">
-                  <X size={20} />
+                <button onClick={closeTutorial} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+                  <X size={18} />
                 </button>
               </div>
 
-              {/* Slider content */}
-              <div className="space-y-4 py-2">
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col items-center text-center space-y-3 min-h-[220px] justify-center">
+              <div className="space-y-3 py-1">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center text-center space-y-2 min-h-[180px] justify-center">
                   {tutorialSlide === 0 && (
                     <>
-                      <div className="animate-bounce"><Search size={36} className="text-[#c9a84c]" /></div>
-                      <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step1_title')}</div>
-                      <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step1_desc')}</p>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Search size={24} /></div>
+                      <div className="text-slate-900 font-black text-xs">{t('boundary_map.tutorial_step1_title')}</div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">{t('boundary_map.tutorial_step1_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 1 && (
                     <>
-                      <div className="animate-pulse"><Target size={36} className="text-[#c9a84c]" /></div>
-                      <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step2_title')}</div>
-                      <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step2_desc')}</p>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Target size={24} /></div>
+                      <div className="text-slate-900 font-black text-xs">{t('boundary_map.tutorial_step2_title')}</div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">{t('boundary_map.tutorial_step2_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 2 && (
                     <>
-                      <div><Ruler size={36} className="text-[#c9a84c]" /></div>
-                      <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step3_title')}</div>
-                      <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step3_desc')}</p>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Ruler size={24} /></div>
+                      <div className="text-slate-900 font-black text-xs">{t('boundary_map.tutorial_step3_title')}</div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">{t('boundary_map.tutorial_step3_desc')}</p>
                     </>
                   )}
                   {tutorialSlide === 3 && (
                     <>
-                      <div><Download size={36} className="text-[#c9a84c]" /></div>
-                      <div className="text-[#c9a84c] font-black text-sm">{t('boundary_map.tutorial_step4_title')}</div>
-                      <p className="text-white/60 text-xs leading-relaxed">{t('boundary_map.tutorial_step4_desc')}</p>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Download size={24} /></div>
+                      <div className="text-slate-900 font-black text-xs">{t('boundary_map.tutorial_step4_title')}</div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">{t('boundary_map.tutorial_step4_desc')}</p>
                     </>
                   )}
                 </div>
 
-                {/* Progress Indicators */}
                 <div className="flex justify-center gap-1.5">
                   {[0, 1, 2, 3].map(idx => (
                     <button
                       key={idx}
                       onClick={() => setTutorialSlide(idx)}
-                      className={`h-1.5 rounded-full transition-all ${tutorialSlide === idx ? 'w-6 bg-[#c9a84c]' : 'w-1.5 bg-white/10'}`}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${tutorialSlide === idx ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-200'}`}
                     />
                   ))}
                 </div>
               </div>
 
-              {/* Navigation buttons */}
-              <div className="flex gap-3">
-                {tutorialSlide > 0 ? (
+              <div className="flex gap-2">
+                {tutorialSlide > 0 && (
                   <button
                     onClick={() => setTutorialSlide(s => s - 1)}
-                    className="flex-1 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95"
+                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-800 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <ArrowLeft size={14} /> {t('boundary_map.back')}
+                    <ArrowLeft size={13} /> {t('boundary_map.back')}
                   </button>
-                ) : null}
+                )}
 
                 {tutorialSlide < 3 ? (
                   <button
                     onClick={() => setTutorialSlide(s => s + 1)}
-                    className="flex-1 py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95"
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    Next <ArrowRight size={14} />
+                    Next <ArrowRight size={13} />
                   </button>
                 ) : (
                   <button
                     onClick={closeTutorial}
-                    className="flex-1 py-3 bg-[#c9a84c] text-[#1a2340] rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95"
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <Check size={14} /> {t('boundary_map.close_tutorial')}
+                    <Check size={13} /> {t('boundary_map.close_tutorial')}
                   </button>
                 )}
               </div>

@@ -7,7 +7,8 @@ import {
     UploadCloud, MapPin, Tag, Navigation, Target, Maximize, X, Building2,
     IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff,
     LayoutDashboard, Eye, Edit3, PanelRightClose, PanelRightOpen, ExternalLink,
-    PlusCircle, Sparkles, Search as SearchIcon
+    PlusCircle, Sparkles, Search as SearchIcon, CheckCircle2, Zap, Check,
+    Trash2, Image as ImageIcon, Info, ShieldCheck, Compass, LandPlot, Sparkle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { useQuery } from '@tanstack/react-query';
@@ -28,63 +29,19 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
-function MapSearch({ onSelect }) {
-    const { t } = useLanguage();
-    const [query, setQuery] = useState('');
-    const [mapSuggestions, setMapSuggestions] = useState([]);
-    const [showMapSuggestions, setShowMapSuggestions] = useState(false);
 
-    useEffect(() => {
-        const t = setTimeout(async () => {
-            if (query.length > 2) {
-                try {
-                    const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
-                    setMapSuggestions(res.data);
-                    setShowMapSuggestions(true);
-                } catch (e) { console.error(e); }
-            } else {
-                setMapSuggestions([]);
-                setShowMapSuggestions(false);
-            }
-        }, 600);
-        return () => clearTimeout(t);
-    }, [query]);
 
-    return (
-        <div className="absolute top-4 left-4 z-[1000] w-64 md:w-80">
-            <div className="relative">
-                <div className="flex items-center bg-white rounded-xl shadow-xl border border-[#1a2340]/10 overflow-hidden">
-                    <div className="pl-4 text-[#1a2340]/40"><SearchIcon size={14} /></div>
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder={t('create_listing.search_map_placeholder')}
-                        className="w-full px-3 py-3 text-xs font-bold text-[#1a2340] outline-none placeholder:text-[#1a2340]/30"
-                    />
-                </div>
-                {showMapSuggestions && mapSuggestions.length > 0 && (
-                    <ul className="absolute top-full left-0 w-full bg-white mt-1 rounded-xl shadow-2xl border border-[#1a2340]/10 overflow-hidden max-h-60 overflow-y-auto">
-                        {mapSuggestions.map((s, idx) => (
-                            <li
-                                key={idx}
-                                onClick={() => {
-                                    const coords = { lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
-                                    onSelect(coords, s.display_name);
-                                    setQuery(s.display_name.split(',')[0]);
-                                    setShowMapSuggestions(false);
-                                }}
-                                className="px-4 py-3 hover:bg-[#f8f5ee] cursor-pointer border-b border-[#f8f5ee] last:border-0"
-                            >
-                                <p className="text-xs font-black text-[#1a2340]">{s.display_name.split(',')[0]}</p>
-                                <p className="text-[10px] text-[#1a2340]/40 font-medium truncate">{s.display_name}</p>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        </div>
-    );
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+    const R = 6371; // Radius of Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
 async function reverseGeocode(lat, lng) {
@@ -118,38 +75,31 @@ function MapRecenter({ position }) {
     return null;
 }
 
-// Step indicator pill
-const StepPill = ({ number, label, active, done }) => (
-    <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all border ${done ? 'bg-[#c9a84c] text-[#1a2340] border-[#c9a84c]'
-            : active ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340]'
-                : 'bg-transparent text-[#1a2340]/40 border-[#1a2340]/20'
-        }`}>
-        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${done ? 'bg-[#1a2340] text-[#c9a84c]'
-                : active ? 'bg-[#c9a84c] text-[#1a2340]'
-                    : 'bg-[#1a2340]/10 text-[#1a2340]/40'
-            }`}>{done ? '✓' : number}</span>
-        {label}
-    </div>
-);
-
 // Section card wrapper
-const SectionCard = ({ icon, title, subtitle, children, accent, className = "" }) => (
-    <div className={`relative bg-white rounded-3xl border border-[#1a2340]/10 shadow-sm transition-all hover:shadow-md ${className}`}>
-        <div className="flex items-start gap-3 sm:gap-4 px-4 sm:px-7 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#f8f5ee]">
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${accent ? 'bg-[#c9a84c]' : 'bg-[#1a2340]'}`}>
-                {React.cloneElement(icon, { size: 16, className: accent ? 'text-[#1a2340]' : 'text-[#c9a84c]' })}
+const SectionCard = ({ icon, title, subtitle, children, badge }) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden transition-all hover:shadow-xs">
+        <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                    {icon}
+                </div>
+                <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">{title}</h3>
+                    {subtitle && <p className="text-slate-500 text-xs font-normal">{subtitle}</p>}
+                </div>
             </div>
-            <div>
-                <h3 className="font-extrabold text-[#1a2340] text-sm sm:text-base uppercase tracking-widest leading-tight">{title}</h3>
-                {subtitle && <p className="text-[#1a2340]/50 text-[10px] sm:text-xs font-medium mt-0.5">{subtitle}</p>}
-            </div>
+            {badge && (
+                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 uppercase tracking-wider">
+                    {badge}
+                </span>
+            )}
         </div>
-        <div className="px-4 sm:px-7 py-5 sm:py-6">{children}</div>
+        <div className="p-5 sm:p-7">{children}</div>
     </div>
 );
 
-const inputCls = "w-full px-5 py-3.5 rounded-xl border border-[#1a2340]/15 bg-[#f8f5ee]/60 focus:ring-2 focus:ring-[#c9a84c]/40 focus:border-[#c9a84c] outline-none transition-all font-semibold text-[#1a2340] text-base placeholder:text-[#1a2340]/30";
-const labelCls = "block text-[10px] font-black text-[#1a2340]/50 mb-2 uppercase tracking-[0.15em]";
+const inputCls = "w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50/40 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all font-semibold text-slate-800 text-xs sm:text-sm placeholder:text-slate-400";
+const labelCls = "block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider";
 
 const unitLabels = {
     en: {
@@ -174,18 +124,6 @@ const unitLabels = {
         sqft: 'ચોરસ ફૂટ',
         gaj: 'ગજ / વાર',
     }
-};
-
-const toBase = {
-    guntha: 1,
-    hectare: 98.84,
-    aare: 0.98,
-    vigha_bada: 23.78,
-    vigha_chhota: 16.19,
-    acre: 40,
-    sqm: 0.0098,
-    sqft: 1/1089,
-    gaj: 9/1089,
 };
 
 const CreateListing = () => {
@@ -225,6 +163,46 @@ const CreateListing = () => {
     const [areaValue, setAreaValue] = useState('');
     const [areaUnit, setAreaUnit] = useState('sqft');
     const [images, setImages] = useState(null);
+    const [imagePreviews, setImagePreviews] = useState([]);
+    const [videos, setVideos] = useState(null);
+    const [videoPreviews, setVideoPreviews] = useState([]);
+    const [geocodedAddressCoords, setGeocodedAddressCoords] = useState(null);
+
+
+    // Auto-recenter map when City or Locality changes
+    useEffect(() => {
+        const searchLoc = [formData.areaName, formData.city, "Gujarat, India"].filter(Boolean).join(', ');
+        if (!formData.city && !formData.areaName) return;
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchLoc)}&limit=1`);
+                if (res.data && res.data.length > 0) {
+                    const { lat, lon } = res.data[0];
+                    const pos = { lat: parseFloat(lat), lng: parseFloat(lon) };
+                    setGeocodedAddressCoords(pos);
+
+                    // Auto-sync map coordinates to typed address if user hasn't set map coordinates yet
+                    if (!formData.mapCoordinates.lat) {
+                        setFormData(prev => ({
+                            ...prev,
+                            mapCoordinates: pos
+                        }));
+                    }
+                }
+            } catch (e) {
+                console.error("Address auto-geocode error", e);
+            }
+        }, 700);
+
+        return () => clearTimeout(timer);
+    }, [formData.city, formData.areaName]);
+
+    const distanceKm = (formData.mapCoordinates.lat && geocodedAddressCoords?.lat)
+        ? getDistanceKm(formData.mapCoordinates.lat, formData.mapCoordinates.lng, geocodedAddressCoords.lat, geocodedAddressCoords.lng)
+        : 0;
+
+    const isLocationMisaligned = distanceKm > 25;
 
     const { data: systemSettings } = useQuery({
         queryKey: ['systemSettings'],
@@ -251,6 +229,71 @@ const CreateListing = () => {
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+    const handleMediaChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        
+        const imgFiles = [];
+        const vidFiles = [];
+        const imgPrevs = [...imagePreviews];
+        const vidPrevs = [...videoPreviews];
+
+        files.forEach(file => {
+            if (file.type.startsWith('video/')) {
+                vidFiles.push(file);
+                vidPrevs.push(URL.createObjectURL(file));
+            } else {
+                imgFiles.push(file);
+                imgPrevs.push(URL.createObjectURL(file));
+            }
+        });
+
+        if (imgFiles.length > 0) {
+            setImages(prev => {
+                const dt = new DataTransfer();
+                if (prev) Array.from(prev).forEach(f => dt.items.add(f));
+                imgFiles.forEach(f => dt.items.add(f));
+                return dt.files;
+            });
+            setImagePreviews(imgPrevs);
+        }
+
+        if (vidFiles.length > 0) {
+            setVideos(prev => {
+                const dt = new DataTransfer();
+                if (prev) Array.from(prev).forEach(f => dt.items.add(f));
+                vidFiles.forEach(f => dt.items.add(f));
+                return dt.files;
+            });
+            setVideoPreviews(vidPrevs);
+        }
+    };
+
+    const removeImagePreview = (index) => {
+        if (!images) return;
+        const dt = new DataTransfer();
+        const files = Array.from(images);
+        files.forEach((file, i) => {
+            if (i !== index) dt.items.add(file);
+        });
+        setImages(dt.files);
+        const newPreviews = imagePreviews.filter((_, i) => i !== index);
+        setImagePreviews(newPreviews);
+    };
+
+    const removeVideoPreview = (index) => {
+        if (!videos) return;
+        const dt = new DataTransfer();
+        const files = Array.from(videos);
+        files.forEach((file, i) => {
+            if (i !== index) dt.items.add(file);
+        });
+        setVideos(dt.files);
+        const newPreviews = videoPreviews.filter((_, i) => i !== index);
+        setVideoPreviews(newPreviews);
+    };
+
+
+
     const detectMyLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
@@ -271,7 +314,6 @@ const CreateListing = () => {
         }
     };
 
-
     useEffect(() => {
         axios.get('/api/auth/me')
             .then(res => {
@@ -284,24 +326,24 @@ const CreateListing = () => {
             .catch(err => console.error('Failed to fetch payout accounts:', err));
     }, [formData.payoutAccountId]);
 
-    const getCalculatedRates = () => {
+    const formatIndianPricePreview = (price) => {
+        const num = Number(price);
+        if (!num || isNaN(num) || num <= 0) return null;
+        if (num >= 10000000) {
+            return `₹ ${(num / 10000000).toFixed(2).replace(/\.00$/, '')} Cr`;
+        }
+        if (num >= 100000) {
+            return `₹ ${(num / 100000).toFixed(2).replace(/\.00$/, '')} Lac`;
+        }
+        return `₹ ${num.toLocaleString('en-IN')}`;
+    };
+
+    const calculatedRatePerSqft = () => {
         const p = parseFloat(formData.price);
         const a = parseFloat(areaValue);
         if (isNaN(p) || isNaN(a) || p <= 0 || a <= 0) return null;
-
-        const currentLang = language === 'gu' ? 'gu' : 'en';
-        const rateForSelected = p / a;
-        const selectedLabel = unitLabels[currentLang][areaUnit] || areaUnit;
-
-        return {
-            selected: {
-                label: selectedLabel,
-                rate: rateForSelected
-            }
-        };
+        return Math.round(p / a);
     };
-
-    const rateResults = getCalculatedRates();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -321,39 +363,56 @@ const CreateListing = () => {
                     }
                 }
             }
-            let finalLocation = formData.location;
-            // Only use explicit map pin coords — never auto-geocode from address
-            let coords = locationMethod === 'map' ? { ...formData.mapCoordinates } : { lat: null, lng: null };
-            
-            if (locationMethod === 'address') {
-                const addrParts = [
-                    formData.plotNumber ? `Plot/Survey ${formData.plotNumber}` : '',
-                    formData.areaName,
-                    formData.locality,  // taluka
-                    formData.city,
-                    "Gujarat, India"
-                ].filter(Boolean);
-                finalLocation = addrParts.join(', ');
+
+            let uploadedVideoPaths = [];
+            if (videos && videos.length > 0) {
+                for (let i = 0; i < videos.length; i++) {
+                    const vidData = new FormData();
+                    vidData.append('file', videos[i]);
+                    const uploadRes = await axios.post('/api/uploads', vidData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    if (uploadRes.data.success) {
+                        uploadedVideoPaths.push(uploadRes.data.data);
+                    }
+                }
             }
 
-            const isAgri = formData.propertyType === 'Land' 
+            let coords = formData.mapCoordinates?.lat ? { ...formData.mapCoordinates } : { lat: null, lng: null };
+
+            const addrParts = [
+                formData.plotNumber ? `Plot/Survey ${formData.plotNumber}` : '',
+                formData.areaName,
+                formData.locality ? `Taluka: ${formData.locality}` : '',
+                formData.city,
+                formData.pincode ? `PIN: ${formData.pincode}` : '',
+                "Gujarat, India"
+            ].filter(Boolean);
+
+            const finalLocation = addrParts.length > 0 ? addrParts.join(', ') : (formData.location || 'Gujarat, India');
+            const locMode = coords.lat ? 'map' : 'address';
+
+            const isAgri = formData.propertyType === 'Land'
                 ? (formData.landType === 'Agricultural')
                 : (formData.plotType === 'Agricultural' || formData.isAgricultural);
 
             const listingPayload = {
                 ...formData,
                 location: finalLocation,
+                locationMode: locMode,
                 mapCoordinates: coords,
                 area: `${areaValue} ${areaUnit}`,
                 price: Number(formData.price),
                 images: uploadedImagePaths,
+                videos: uploadedVideoPaths,
                 plotNumber: formData.plotNumber,
                 areaName: formData.areaName,
                 isAgricultural: isAgri,
                 cornerPlot: formData.propertyType === 'Plot' ? formData.cornerPlot : false
             };
             await axios.post('/api/listings', listingPayload);
-            toast.success('Listing successfully created!');
+
+            toast.success('Property listing successfully published!');
             navigate('/dashboard');
         } catch (err) {
             console.error(err);
@@ -363,164 +422,208 @@ const CreateListing = () => {
         }
     };
 
-    if (!user || (user.role !== 'Seller' && user.role !== 'Broker')) {
+    if (!user) {
         return (
-            <div className="min-h-screen bg-[#f8f5ee] flex items-center justify-center">
-                <div className="bg-white rounded-3xl border border-red-100 shadow p-10 text-center max-w-md">
-                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <X size={28} className="text-red-500" />
+            <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 text-center max-w-md space-y-4">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+                        <Building2 size={28} />
                     </div>
-                    <h2 className="text-xl font-black text-[#1a2340] mb-2">Access Denied</h2>
-                    <p className="text-[#1a2340]/60 font-medium">Only Sellers and Brokers can create listings.</p>
+                    <h2 className="text-xl font-extrabold text-slate-900">Please Login to Continue</h2>
+                    <p className="text-slate-500 font-medium text-xs">You must be logged in to post your land or plot listing.</p>
+                    <button onClick={() => navigate('/login')} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md">
+                        Login to Post Property
+                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f5ee]">
-            <div className="bg-[#1a2340] text-white px-6 py-10 md:px-16 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#c9a84c]/5 rounded-full blur-3xl -mr-32 -mt-32" />
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen pb-20 text-slate-800 antialiased">
+
+            {/* ── Top Header Banner ── */}
+            <div className="bg-slate-900 text-white border-b border-slate-800 py-8 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <div className="flex items-center gap-2 text-[#c9a84c] text-[10px] font-black uppercase tracking-[0.3em] mb-3">
-                            <Building2 size={12} />
-                            <span>Kharsan Admin</span>
+                        <div className="flex items-center gap-2 text-blue-400 text-[10px] font-extrabold uppercase tracking-widest mb-2">
+                            <Building2 size={13} />
+                            <span>Seller Portal</span>
                             <ChevronRight size={10} />
-                            <span>{t('create_listing.breadcrumb')}</span>
+                            <span>Create New Property Listing</span>
                         </div>
-                        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white leading-tight">
-                            {t('create_listing.legacy_title')}
+                        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                            {t('create_listing.title')}
                         </h1>
-                        <p className="text-white/50 font-semibold mt-2 text-sm max-w-md">{t('create_listing.legacy_subtitle')}</p>
+                        <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">{t('create_listing.subtitle')}</p>
                     </div>
 
-                    <div className="hidden lg:flex items-center gap-4">
+                    <div className="hidden lg:flex items-center gap-3">
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
-                            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-3 rounded-2xl transition-all border border-white/10 group"
+                            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl transition-all border border-slate-700 text-xs font-bold uppercase tracking-wider"
                         >
-                            {showSidebar ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-                            <span className="font-black text-xs uppercase tracking-widest">
-                                {showSidebar ? t('create_listing.hide_portfolio') : t('create_listing.view_portfolio')}
-                            </span>
+                            {showSidebar ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+                            <span>{showSidebar ? t('create_listing.hide_portfolio') : t('create_listing.view_portfolio')}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-                <div className="flex flex-col lg:flex-row gap-10 items-start">
+            {/* ── Main Container ── */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-                    <motion.div
-                        layout
-                        className={`transition-all duration-500 w-full ${showSidebar ? 'lg:w-[65%]' : 'lg:w-full'}`}
-                    >
+                    {/* Left Form Column */}
+                    <div className={`transition-all duration-300 w-full ${showSidebar ? 'lg:w-[68%]' : 'lg:w-full'}`}>
                         {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mb-8 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-3xl font-bold flex items-center gap-3"
-                            >
-                                <X size={18} className="shrink-0" /> {error}
-                            </motion.div>
+                            <div className="mb-6 bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-xl text-xs font-bold flex items-center justify-between">
+                                <span>❌ {error}</span>
+                                <button onClick={() => setError(null)}><X size={16} /></button>
+                            </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-8">
-                            <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar mb-4">
-                                <StepPill number="1" label={t('create_listing.step1')} done active />
-                                <StepPill number="2" label={t('create_listing.step2')} active />
-                                <StepPill number="3" label={t('create_listing.step3')} active={false} />
-                            </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
 
-                            <SectionCard icon={<Building2 />} title={t('create_listing.prop_details_title')} subtitle={t('create_listing.prop_details_subtitle')}>
-                                <div className="space-y-8">
+                            {/* Section 1: Property Details */}
+                            <SectionCard
+                                icon={<Building2 size={18} />}
+                                title={t('create_listing.prop_details_title')}
+                                subtitle={t('create_listing.prop_details_subtitle')}
+                                badge="Step 1 of 4"
+                            >
+                                <div className="space-y-6">
+
+                                    {/* Property Title */}
                                     <div>
-                                        <label className={labelCls}>{t('create_listing.prop_title_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
+                                        <label className={labelCls}>
+                                            Property Title <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
-                                            type="text" name="title" required
-                                            value={formData.title} onChange={handleChange}
+                                            type="text"
+                                            name="title"
+                                            required
+                                            value={formData.title}
+                                            onChange={handleChange}
                                             className={inputCls}
-                                            placeholder={t('create_listing.prop_title_ph')}
+                                            placeholder="e.g. 4500 Sq.Ft Commercial Plot on Main Highway"
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* Category Switcher & Subtype */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className={labelCls}>{t('create_listing.prop_category_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
-                                            <select
-                                                name="propertyType"
-                                                value={formData.propertyType}
-                                                onChange={e => setFormData({ ...formData, propertyType: e.target.value, plotType: 'None', landType: 'None' })}
-                                                className={inputCls + ' cursor-pointer'}
-                                            >
-                                                <option value="Plot">Plot</option>
-                                                <option value="Land">Land</option>
-                                            </select>
+                                            <label className={labelCls}>
+                                                Property Category <span className="text-rose-500">*</span>
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, propertyType: 'Plot', plotType: 'None', landType: 'None' })}
+                                                    className={`py-2.5 text-xs font-extrabold rounded-lg transition-all ${formData.propertyType === 'Plot'
+                                                        ? 'bg-blue-600 text-white shadow-xs'
+                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        }`}
+                                                >
+                                                    Plot
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, propertyType: 'Land', plotType: 'None', landType: 'None' })}
+                                                    className={`py-2.5 text-xs font-extrabold rounded-lg transition-all ${formData.propertyType === 'Land'
+                                                        ? 'bg-blue-600 text-white shadow-xs'
+                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        }`}
+                                                >
+                                                    Land
+                                                </button>
+                                            </div>
                                         </div>
+
                                         {formData.propertyType === 'Plot' && (
                                             <div>
-                                                <label className={labelCls}>{t('create_listing.plot_subtype_lbl')}</label>
+                                                <label className={labelCls}>Plot Subtype</label>
                                                 <select
                                                     name="plotType"
                                                     value={formData.plotType}
                                                     onChange={e => setFormData({ ...formData, plotType: e.target.value })}
-                                                    className={inputCls + ' cursor-pointer'}
+                                                    className={inputCls}
                                                 >
-                                                    <option value="None">{t('create_listing.plot_subtype_select')}</option>
-                                                    <option value="Residential">{t('create_listing.plot_opt_res')}</option>
-                                                    <option value="Commercial">{t('create_listing.plot_opt_comm')}</option>
-                                                    <option value="Industrial">{t('create_listing.plot_opt_ind')}</option>
-                                                    <option value="Agricultural">{t('create_listing.plot_opt_agri')}</option>
-                                                    <option value="Other">{t('create_listing.plot_opt_oth')}</option>
+                                                    <option value="None">Select Plot Classification...</option>
+                                                    <option value="Residential">Residential Plot</option>
+                                                    <option value="Commercial">Commercial Plot</option>
+                                                    <option value="Industrial">Industrial Plot</option>
+                                                    <option value="Agricultural">Agricultural Plot</option>
+                                                    <option value="Other">Other Category</option>
                                                 </select>
                                             </div>
                                         )}
+
                                         {formData.propertyType === 'Land' && (
                                             <div>
-                                                <label className={labelCls}>{t('create_listing.land_subtype_lbl')}</label>
+                                                <label className={labelCls}>Land Subtype</label>
                                                 <select
                                                     name="landType"
                                                     value={formData.landType}
                                                     onChange={e => setFormData({ ...formData, landType: e.target.value })}
-                                                    className={inputCls + ' cursor-pointer'}
+                                                    className={inputCls}
                                                 >
-                                                    <option value="None">{t('create_listing.land_subtype_select')}</option>
-                                                    <option value="Agricultural">{t('create_listing.plot_opt_agri')}</option>
-                                                    <option value="Non-Agricultural">{t('create_listing.land_opt_na')}</option>
-                                                    <option value="Industrial">{t('create_listing.plot_opt_ind')}</option>
-                                                    <option value="Commercial">{t('create_listing.plot_opt_comm')}</option>
-                                                    <option value="Other">{t('create_listing.plot_opt_oth')}</option>
+                                                    <option value="None">Select Land Classification...</option>
+                                                    <option value="Agricultural">Agricultural Soil Land</option>
+                                                    <option value="Non-Agricultural">Non-Agricultural (NA) Land</option>
+                                                    <option value="Industrial">Industrial Land</option>
+                                                    <option value="Commercial">Commercial Land</option>
+                                                    <option value="Other">Other Land</option>
                                                 </select>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Price & Area Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className={labelCls}>{t('create_listing.price_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
+                                            <label className={labelCls}>
+                                                Total Asking Price (₹) <span className="text-rose-500">*</span>
+                                            </label>
                                             <div className="relative">
-                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                                                 <input
-                                                    type="number" name="price" required min="1000"
-                                                    value={formData.price} onChange={handleChange}
-                                                    className={inputCls + ' pl-12'}
-                                                    placeholder={t('create_listing.price_ph')}
+                                                    type="number"
+                                                    name="price"
+                                                    required
+                                                    min="1000"
+                                                    value={formData.price}
+                                                    onChange={handleChange}
+                                                    className={inputCls + ' pl-9'}
+                                                    placeholder="e.g. 2500000"
                                                 />
                                             </div>
+                                            {formatIndianPricePreview(formData.price) && (
+                                                <span className="inline-block mt-1 text-[11px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                                    {formatIndianPricePreview(formData.price)}
+                                                </span>
+                                            )}
                                         </div>
+
                                         <div>
-                                            <label className={labelCls}>{t('create_listing.area_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
-                                            <div className="flex gap-3">
+                                            <label className={labelCls}>
+                                                Area & Unit <span className="text-rose-500">*</span>
+                                            </label>
+                                            <div className="flex gap-2">
                                                 <input
-                                                    type="number" required min="0.001" step="any"
-                                                    value={areaValue} onChange={(e) => setAreaValue(e.target.value)}
+                                                    type="number"
+                                                    required
+                                                    min="0.001"
+                                                    step="any"
+                                                    value={areaValue}
+                                                    onChange={(e) => setAreaValue(e.target.value)}
                                                     className={inputCls + ' w-2/3'}
-                                                    placeholder={t('create_listing.area_ph')}
+                                                    placeholder="e.g. 4500"
                                                 />
                                                 <select
-                                                    value={areaUnit} onChange={(e) => setAreaUnit(e.target.value)}
-                                                    className={inputCls + ' w-1/3 cursor-pointer'}
+                                                    value={areaUnit}
+                                                    onChange={(e) => setAreaUnit(e.target.value)}
+                                                    className={inputCls + ' w-1/3 text-xs'}
                                                 >
                                                     {Object.keys(unitLabels[language === 'gu' ? 'gu' : 'en']).map((key) => (
                                                         <option key={key} value={key}>
@@ -529,64 +632,63 @@ const CreateListing = () => {
                                                     ))}
                                                 </select>
                                             </div>
+                                            {calculatedRatePerSqft() && (
+                                                <span className="inline-block mt-1 text-[11px] font-semibold text-slate-500">
+                                                    @ ₹{calculatedRatePerSqft()?.toLocaleString('en-IN')} / sqft
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Price per unit rate display — temporarily disabled */}
-                                    {/* {rateResults && (
-                                        <div className="flex justify-end mt-2">
-                                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-xl text-xs sm:text-sm font-black text-[#1a2340]">
-                                                <span>1 {rateResults.selected.label} =</span>
-                                                <span className="text-[#b8933a] text-sm sm:text-base font-black">
-                                                    ₹{rateResults.selected.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )} */}
-
-
+                                    {/* Description */}
                                     <div>
-                                        <label className={labelCls}>{t('create_listing.description_lbl')}<span className="text-red-500 font-bold ml-1">*</span></label>
+                                        <label className={labelCls}>
+                                            Detailed Property Description <span className="text-rose-500">*</span>
+                                        </label>
                                         <textarea
-                                            name="description" required rows="6"
-                                            value={formData.description} onChange={handleChange}
+                                            name="description"
+                                            required
+                                            rows="4"
+                                            value={formData.description}
+                                            onChange={handleChange}
                                             className={inputCls + ' resize-none'}
-                                            placeholder={t('create_listing.description_ph')}
+                                            placeholder="Write a clear description including road connectivity, nearby landmarks, soil quality, or development potential..."
                                         />
                                     </div>
 
+                                    {/* Property Feature Checkboxes */}
                                     <div>
-                                        <label className={labelCls}>{t('create_listing.attributes_lbl')}</label>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-[#f8f5ee]/40 border border-[#1a2340]/10 rounded-2xl">
+                                        <label className={labelCls}>Key Attribute Badges</label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
                                             {formData.propertyType === 'Plot' && (
-                                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.cornerPlot}
                                                         onChange={e => setFormData({ ...formData, cornerPlot: e.target.checked })}
-                                                        className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                                     />
-                                                    <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_corner')}</span>
+                                                    <span className="text-xs font-bold text-slate-700">Corner Plot (2-side)</span>
                                                 </label>
                                             )}
-                                            <label className="flex items-center gap-3 cursor-pointer select-none">
+                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                 <input
                                                     type="checkbox"
                                                     checked={formData.roadTouch}
                                                     onChange={e => setFormData({ ...formData, roadTouch: e.target.checked })}
-                                                    className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                                 />
-                                                <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_road')}</span>
+                                                <span className="text-xs font-bold text-slate-700">Direct Road Touch</span>
                                             </label>
                                             {formData.propertyType === 'Plot' && (
-                                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.isAgricultural}
                                                         onChange={e => setFormData({ ...formData, isAgricultural: e.target.checked })}
-                                                        className="w-4 h-4 rounded border-[#1a2340]/15 text-[#c9a84c] focus:ring-[#c9a84c]"
+                                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                                     />
-                                                    <span className="text-xs font-bold text-[#1a2340]/70">{t('create_listing.attr_agri')}</span>
+                                                    <span className="text-xs font-bold text-slate-700">Agricultural Soil</span>
                                                 </label>
                                             )}
                                         </div>
@@ -594,109 +696,164 @@ const CreateListing = () => {
                                 </div>
                             </SectionCard>
 
+                            {/* Section 2: Location & GPS Mapping */}
                             <SectionCard
-                                icon={<MapPin />}
+                                icon={<MapPin size={18} />}
                                 title={t('create_listing.location_title')}
                                 subtitle={t('create_listing.location_subtitle')}
+                                badge="Step 2 of 4"
                             >
                                 <div className="space-y-6">
-                                    <div className="flex flex-wrap bg-[#f8f5ee] p-2 rounded-2xl border border-[#1a2340]/10 gap-2">
-                                        {[
-                                            { id: 'address', label: t('create_listing.loc_mode_address'), icon: <MapPin size={14} /> },
-                                            { id: 'map', label: t('create_listing.loc_mode_map'), icon: <Target size={14} /> }
-                                        ].map((method) => (
-                                            <button
-                                                key={method.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setLocationMethod(method.id);
-                                                    setFormData({ ...formData, locationMode: method.id });
-                                                }}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${locationMethod === method.id
-                                                        ? 'bg-[#1a2340] text-[#c9a84c] shadow-lg'
-                                                        : 'text-[#1a2340]/50 hover:text-[#1a2340] hover:bg-white'
-                                                    }`}
-                                            >
-                                                {method.icon} {method.label}
-                                            </button>
-                                        ))}
+
+                                    {/* Row 1: City & Locality */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={labelCls}>
+                                                City / District <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="city"
+                                                required
+                                                value={formData.city}
+                                                onChange={handleChange}
+                                                className={inputCls}
+                                                placeholder="e.g. Ahmedabad, Surat, Vadodara, Palanpur"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>
+                                                Locality / Area / Society <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="areaName"
+                                                required
+                                                value={formData.areaName}
+                                                onChange={handleChange}
+                                                className={inputCls}
+                                                placeholder="e.g. South Bopal, S.G. Highway, Vesu"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {locationMethod === 'address' && (
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div>
-                                                     <label className={labelCls}>Plot / Survey Number</label>
-                                                    <input
-                                                        type="text" name="plotNumber"
-                                                        value={formData.plotNumber}
-                                                        onChange={handleChange}
-                                                        className={inputCls}
-                                                        placeholder="e.g. 102/B or Survey No. 55"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className={labelCls}>Nearby Landmark / Area Name</label>
-                                                    <input
-                                                        type="text" name="areaName"
-                                                        value={formData.areaName}
-                                                        onChange={handleChange}
-                                                        className={inputCls}
-                                                        placeholder="e.g. Near Shiv Temple, Badarpura Road"
-                                                    />
-                                                </div>
-                                            </div>
+                                    {/* Row 2: Taluka, Plot No & Pincode */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className={labelCls}>Taluka / Sub-Region / Village</label>
+                                            <input
+                                                type="text"
+                                                name="locality"
+                                                value={formData.locality}
+                                                onChange={handleChange}
+                                                className={inputCls}
+                                                placeholder="e.g. Daskroi, Vadgam, Sanand"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Plot / Survey / Block No.</label>
+                                            <input
+                                                type="text"
+                                                name="plotNumber"
+                                                value={formData.plotNumber}
+                                                onChange={handleChange}
+                                                className={inputCls}
+                                                placeholder="e.g. Plot 42 / Survey No. 108"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Pincode / Landmark</label>
+                                            <input
+                                                type="text"
+                                                name="pincode"
+                                                value={formData.pincode || ''}
+                                                onChange={handleChange}
+                                                className={inputCls}
+                                                placeholder="e.g. Near Temple, 380058"
+                                            />
+                                        </div>
+                                    </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div>
-                                                    <label className={labelCls}>Village / City <span className="text-red-500 font-bold ml-1">*</span></label>
-                                                    <input
-                                                        type="text" name="city"
-                                                        required
-                                                        value={formData.city}
-                                                        onChange={handleChange}
-                                                        className={inputCls}
-                                                        placeholder="e.g. Palanpur, Vadgam, Deesa"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className={labelCls}>Taluka</label>
-                                                    <input
-                                                        type="text" name="locality"
-                                                        value={formData.locality}
-                                                        onChange={handleChange}
-                                                        className={inputCls}
-                                                        placeholder="e.g. Vadgam, Danta, Palanpur"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl mt-2">
-                                                <span className="text-blue-500 mt-0.5">ℹ️</span>
-                                                <p className="text-[11px] font-semibold text-blue-700 leading-snug">
-                                                    Map location will <strong>not</strong> be shown on this listing. To show a precise pin on the map for buyers, switch to <strong>Precise Pin</strong> mode above.
+                                    {/* Formatted Address Preview Box */}
+                                    {(formData.city || formData.areaName || formData.plotNumber) && (
+                                        <div className="p-3.5 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2.5">
+                                            <MapPin size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-widest block">Formatted Address Preview</span>
+                                                <p className="text-xs font-bold text-slate-800 mt-0.5">
+                                                    {[
+                                                        formData.plotNumber ? `Plot/Survey ${formData.plotNumber}` : '',
+                                                        formData.areaName,
+                                                        formData.locality ? `Taluka: ${formData.locality}` : '',
+                                                        formData.city,
+                                                        formData.pincode ? `PIN: ${formData.pincode}` : '',
+                                                        "Gujarat, India"
+                                                    ].filter(Boolean).join(', ')}
                                                 </p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {locationMethod === 'map' && (
-                                        <div className="space-y-4">
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                                <p className="text-xs text-[#1a2340]/40 font-bold uppercase tracking-widest">
-                                                    {t('create_listing.map_pin_instruction')}
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={detectMyLocation}
-                                                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#1a2340] text-[#c9a84c] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all"
-                                                >
-                                                    <Navigation size={12} /> {t('create_listing.use_gps_btn')}
-                                                </button>
+                                    {/* Satellite Map & GPS Marker */}
+                                    <div className="pt-4 border-t border-slate-100 space-y-3">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                <div>
+                                                    <span className="text-xs font-extrabold text-slate-900 block">Pin Exact Satellite GPS Location (Recommended)</span>
+                                                    <p className="text-[11px] text-slate-500 font-normal">Click anywhere on the map or use sync/detect buttons to set the exact marker for buyers.</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {geocodedAddressCoords && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
+                                                                toast.success(`Map pin centered to ${formData.areaName || formData.city || 'address'}!`);
+                                                            }}
+                                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border border-slate-300"
+                                                        >
+                                                            <Target size={12} /> Sync Pin to Address
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={detectMyLocation}
+                                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
+                                                    >
+                                                        <Navigation size={12} /> Detect GPS
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="w-full h-96 rounded-3xl overflow-hidden border-2 border-[#1a2340]/10 shadow-inner relative">
-                                                <MapContainer center={[formData.mapCoordinates.lat || 24.10, formData.mapCoordinates.lng || 72.38]} zoom={15} style={{ height: '100%', width: '100%' }}>
+
+                                            {/* Warning Alert if Map Marker is placed far away from Address City/Locality */}
+                                            {isLocationMisaligned && (
+                                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between gap-3 text-xs font-bold text-amber-900">
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-sm mt-0.5">⚠️</span>
+                                                        <div>
+                                                            <span className="block font-extrabold text-amber-900">Map Marker Misalignment Warning!</span>
+                                                            <span className="font-normal text-amber-800 text-[11px] block mt-0.5">
+                                                                Your map pin is placed <strong>~{Math.round(distanceKm)} km away</strong> from <strong>{formData.city || formData.areaName}</strong>. If this is accidental, click Sync Pin to fix it.
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (geocodedAddressCoords) {
+                                                                setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
+                                                                toast.success(`Map pin fixed to ${formData.city || formData.areaName}!`);
+                                                            }
+                                                        }}
+                                                        className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[10px] uppercase font-extrabold tracking-wider transition-all"
+                                                    >
+                                                        Fix & Sync Pin
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-300 relative z-0">
+                                                <MapContainer center={[formData.mapCoordinates.lat || 23.0225, formData.mapCoordinates.lng || 72.5714]} zoom={14} style={{ height: '100%', width: '100%' }}>
                                                     <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                                    <MapSearch onSelect={(pos, addr) => setFormData({ ...formData, mapCoordinates: pos, location: addr || formData.location })} />
                                                     <LocationMarker
                                                         position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
                                                         setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
@@ -705,143 +862,247 @@ const CreateListing = () => {
                                                     <MapRecenter position={formData.mapCoordinates} />
                                                 </MapContainer>
                                             </div>
+
+                                            {formData.mapCoordinates.lat && (
+                                                <div className="flex items-center justify-between text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CheckCircle2 size={14} />
+                                                        <span>GPS Location Mapped ({parseFloat(formData.mapCoordinates.lat).toFixed(4)}° N, {parseFloat(formData.mapCoordinates.lng).toFixed(4)}° E)</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, mapCoordinates: { lat: null, lng: null } }))}
+                                                        className="text-slate-400 hover:text-rose-600 text-[10px] font-bold uppercase tracking-wider underline"
+                                                    >
+                                                        Clear Map Marker
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+
                                 </div>
                             </SectionCard>
 
-                            <SectionCard icon={<UploadCloud />} title={t('create_listing.visual_portfolio_title')} subtitle={t('create_listing.visual_portfolio_subtitle')} accent>
-                                <div className="border-2 border-dashed border-[#c9a84c]/40 rounded-3xl p-12 text-center bg-[#c9a84c]/5 hover:bg-[#c9a84c]/10 transition-all cursor-pointer relative group">
-                                    <input type="file" multiple accept="image/*" onChange={(e) => setImages(e.target.files)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                    <UploadCloud className="mx-auto text-[#c9a84c] mb-4 group-hover:scale-110 transition-transform" size={48} />
-                                    <p className="text-[#1a2340] font-black text-lg mb-1">
-                                        {images?.length > 0 ? t('create_listing.images_selected_count').replace('{count}', images.length) : t('create_listing.drop_images_msg')}
-                                    </p>
-                                    <p className="text-[#1a2340]/40 font-bold text-xs uppercase tracking-widest">{t('create_listing.image_requirements')}</p>
-                                </div>
-                            </SectionCard>
-
-                            {systemSettings?.isInstantBookingEnabled !== false && (
-                                <SectionCard icon={<CreditCard />} title={t('create_listing.instant_booking_title')} subtitle={t('create_listing.instant_booking_subtitle')}>
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div>
-                                            <p className="font-black text-[#1a2340]">{t('create_listing.enable_reservation')}</p>
-                                            <p className="text-xs text-[#1a2340]/40 font-semibold mt-1">{t('create_listing.enable_reservation_sub')}</p>
+                            {/* Section 3: Property Media (Unified Photos & Video Dropzone) */}
+                            <SectionCard
+                                icon={<UploadCloud size={18} />}
+                                title={t('create_listing.visual_portfolio_title')}
+                                subtitle={t('create_listing.visual_portfolio_subtitle')}
+                                badge="Step 3 of 4"
+                            >
+                                <div className="space-y-5 font-['Nunito_Sans',sans-serif]">
+                                    
+                                    {/* Single Unified Drag & Drop Dropzone */}
+                                    <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-50/80 hover:bg-blue-50/40 transition-all cursor-pointer relative group">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,video/*"
+                                            onChange={handleMediaChange}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        />
+                                        <div className="w-12 h-12 mx-auto rounded-2xl bg-blue-100/80 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <UploadCloud size={24} />
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
-                                            className={`relative inline-flex h-8 items-center rounded-full transition-all w-14 ${formData.isBookingEnabled ? 'bg-[#c9a84c]' : 'bg-[#1a2340]/20'}`}
-                                        >
-                                            <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-all ${formData.isBookingEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-                                        </button>
+                                        <p className="text-slate-900 font-black text-sm sm:text-base mb-1">
+                                            {(imagePreviews.length > 0 || videoPreviews.length > 0)
+                                                ? `${imagePreviews.length} photo(s) & ${videoPreviews.length} video(s) selected`
+                                                : 'Click or Drag Property Photos & Videos Here'
+                                            }
+                                        </p>
+                                        <p className="text-slate-500 text-xs font-semibold">
+                                            Upload JPG, PNG, WEBP photos or MP4, WEBM, MOV videos together
+                                        </p>
                                     </div>
 
-                                    {formData.isBookingEnabled && (
-                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-6 pt-6 border-t border-[#f8f5ee]">
+                                    {/* Categorized Media Previews */}
+                                    {(imagePreviews.length > 0 || videoPreviews.length > 0) && (
+                                        <div className="space-y-4 pt-2">
+                                            
+                                            {/* Photo Previews Strip */}
+                                            {imagePreviews.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                                                        <ImageIcon size={14} className="text-blue-600" />
+                                                        <span>Property Photos ({imagePreviews.length})</span>
+                                                    </h5>
+                                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                                        {imagePreviews.map((preview, idx) => (
+                                                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group shadow-2xs">
+                                                                <img src={preview} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeImagePreview(idx)}
+                                                                    className="absolute top-1 right-1 bg-rose-600 text-white p-1 rounded-full opacity-90 hover:opacity-100 transition-opacity shadow-md cursor-pointer"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Video Previews Strip */}
+                                            {videoPreviews.length > 0 && (
+                                                <div className="space-y-2 pt-2 border-t border-slate-100">
+                                                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                                                        <Sparkles size={14} className="text-amber-500" />
+                                                        <span>Video Walkthrough ({videoPreviews.length})</span>
+                                                    </h5>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {videoPreviews.map((vPreview, idx) => (
+                                                            <div key={idx} className="relative rounded-xl overflow-hidden border border-amber-200 bg-slate-900 aspect-video group">
+                                                                <video src={vPreview} controls className="w-full h-full object-cover" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeVideoPreview(idx)}
+                                                                    className="absolute top-2 right-2 bg-rose-600 text-white p-1 rounded-full opacity-90 hover:opacity-100 transition-opacity shadow-md z-20 cursor-pointer"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                        </div>
+                                    )}
+
+                                </div>
+                            </SectionCard>
+
+
+
+                            {/* Section 4: Instant Token Reservation */}
+                            {systemSettings?.isInstantBookingEnabled !== false && (
+                                <SectionCard
+                                    icon={<CreditCard size={18} />}
+                                    title={t('create_listing.instant_booking_title')}
+                                    subtitle={t('create_listing.instant_booking_subtitle')}
+                                    badge="Step 4 of 4"
+                                >
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
                                             <div>
-                                                <label className={labelCls}>{t('create_listing.token_amt_lbl')}</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
+                                                <p className="font-extrabold text-slate-900 text-sm">Allow Instant Token Reservation</p>
+                                                <p className="text-xs text-slate-500 font-medium">Buyers can reserve your property online by paying a token fee</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all cursor-pointer ${formData.isBookingEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all ${formData.isBookingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        {formData.isBookingEnabled && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                                <div>
+                                                    <label className={labelCls}>Reservation Token Amount (₹)</label>
                                                     <input
-                                                        type="number" value={formData.tokenAmount}
-                                                        onChange={(e) => {
-                                                            const max = (formData.price || 0) * 0.02;
-                                                            setFormData({ ...formData, tokenAmount: Math.min(e.target.value, max) });
-                                                        }}
-                                                        className={inputCls + ' pl-12'}
-                                                        placeholder={t('create_listing.token_amt_ph')}
+                                                        type="number"
+                                                        value={formData.tokenAmount}
+                                                        onChange={(e) => setFormData({ ...formData, tokenAmount: e.target.value })}
+                                                        className={inputCls}
+                                                        placeholder="e.g. 25000"
                                                     />
                                                 </div>
+
+                                                {payoutAccounts.length > 0 && (
+                                                    <div>
+                                                        <label className={labelCls}>Payout Bank / UPI Account</label>
+                                                        <select
+                                                            value={formData.payoutAccountId}
+                                                            onChange={(e) => setFormData({ ...formData, payoutAccountId: e.target.value })}
+                                                            className={inputCls}
+                                                        >
+                                                            {payoutAccounts.map(acc => (
+                                                                <option key={acc._id} value={acc._id}>{acc.accountType} — {acc.bankName || acc.upiId}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div>
-                                                <label className={labelCls}>{t('create_listing.payout_acc_lbl')}</label>
-                                                <select
-                                                    value={formData.payoutAccountId}
-                                                    onChange={(e) => setFormData({ ...formData, payoutAccountId: e.target.value })}
-                                                    className={inputCls + ' cursor-pointer'}
-                                                >
-                                                    {payoutAccounts.map(acc => (
-                                                        <option key={acc._id} value={acc._id}>{acc.accountType} — {acc.bankName || acc.upiId}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </motion.div>
-                                    )}
+                                        )}
+                                    </div>
                                 </SectionCard>
                             )}
 
-                            <div className="bg-[#1a2340] rounded-[2.5rem] p-6 sm:p-8 flex flex-col lg:flex-row justify-between items-center gap-6 shadow-2xl">
-                                <div className="text-center lg:text-left">
-                                    <p className="text-white font-black text-lg">{t('create_listing.ready_to_launch')}</p>
-                                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">{t('create_listing.publication_hint')}</p>
+                            {/* Final Submit Banner */}
+                            <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg text-white">
+                                <div>
+                                    <h4 className="font-extrabold text-base sm:text-lg">{t('create_listing.title')}</h4>
+                                    <p className="text-slate-400 text-xs font-medium">{t('create_listing.subtitle')}</p>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => navigate(-1)} 
-                                        className="flex-1 lg:flex-none flex items-center justify-center px-6 sm:px-4 py-3.5 sm:py-4 font-black text-white/60 hover:text-white transition-all bg-white/5 rounded-2xl text-xs uppercase tracking-[0.2em]"
+
+                                <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(-1)}
+                                        className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
                                     >
-                                        {t('create_listing.cancel_btn')}
+                                        Cancel
                                     </button>
-                                    <button 
-                                        type="submit" 
-                                        disabled={loading} 
-                                        className="flex-1 lg:flex-none bg-[#c9a84c] hover:bg-[#d9b85c] text-[#1a2340] px-8 sm:px-5 py-3.5 sm:py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg shadow-[#c9a84c]/20 hover:shadow-xl hover:shadow-[#c9a84c]/30 flex items-center justify-center gap-3 active:scale-95"
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
                                     >
-                                        {loading ? <span className="w-4 h-4 border-2 border-[#1a2340]/30 border-t-[#1a2340] rounded-full animate-spin"></span> : <><Tag size={16} /> {t('create_listing.publish_btn')}</>}
+                                        {loading ? (
+                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        ) : (
+                                            <>
+                                                <Tag size={15} />
+                                                <span>{t('create_listing.submit_btn')}</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
-                        </form>
-                    </motion.div>
 
-                    {/* RIGHT COLUMN: My Portfolio Sidebar (30%) - PC Only */}
+                        </form>
+                    </div>
+
+                    {/* Right Portfolio Sidebar */}
                     <AnimatePresence>
                         {showSidebar && (
-                            <motion.div
-                                initial={{ opacity: 0, x: 50 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 50 }}
-                                className="hidden lg:block lg:w-[30%] sticky top-8 self-start space-y-8"
-                            >
-                                <div className="bg-white rounded-[2.5rem] border border-[#1a2340]/10 p-8 shadow-sm">
-                                    <div className="flex items-center justify-between mb-8">
+                            <div className="hidden lg:block lg:w-[32%] sticky top-24 self-start space-y-6">
+                                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+                                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                         <div>
-                                            <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-1">{t('create_listing.sidebar_growth')}</h4>
-                                            <h3 className="text-xl font-black text-[#1a2340]">{t('create_listing.sidebar_portfolio')}</h3>
+                                            <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest block">Portfolio</span>
+                                            <h3 className="text-base font-extrabold text-slate-900">My Listings</h3>
                                         </div>
-                                        <div className="w-10 h-10 bg-[#f8f5ee] rounded-xl flex items-center justify-center text-[#1a2340]">
-                                            <LayoutDashboard size={20} />
+                                        <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600">
+                                            <LayoutDashboard size={16} />
                                         </div>
                                     </div>
 
-                                    {/* Small Square Cards */}
-                                    <div className="space-y-4">
+                                    {/* Listings list */}
+                                    <div className="space-y-3">
                                         {!myListingsData || myListingsData.length === 0 ? (
-                                            <div className="py-12 text-center">
-                                                <div className="w-12 h-12 bg-[#f8f5ee] rounded-2xl flex items-center justify-center mx-auto mb-4 text-[#c9a84c]">
-                                                    <Sparkles size={24} />
-                                                </div>
-                                                <p className="text-[#1a2340]/40 font-bold text-[10px] uppercase tracking-widest leading-loose px-4">
-                                                    {t('create_listing.sidebar_empty')}
-                                                </p>
+                                            <div className="py-8 text-center text-slate-400 text-xs font-medium">
+                                                No listings published yet.
                                             </div>
                                         ) : (
-                                            myListingsData.slice(0, 5).map((item) => (
-                                                <div key={item._id} className="group flex items-center gap-4 p-3 bg-[#f8f5ee]/50 border border-transparent hover:border-[#c9a84c]/30 hover:bg-white rounded-2xl transition-all">
-                                                    <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#1a2340]/5">
+                                            myListingsData.slice(0, 4).map((item) => (
+                                                <div key={item._id} className="flex items-center gap-3 p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition-all group">
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-200">
                                                         {item.images?.length > 0 ? (
-                                                            <img src={getImageUrl(item.images[0])} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
+                                                            <img src={getImageUrl(item.images[0])} className="w-full h-full object-cover" alt="" />
                                                         ) : (
-                                                            <div className="w-full h-full bg-[#1a2340]/5 flex items-center justify-center text-[10px] font-black text-[#1a2340]/20">NO IMG</div>
+                                                            <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold">NO IMG</div>
                                                         )}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <h5 className="font-bold text-[#1a2340] text-xs truncate mb-0.5 group-hover:text-[#c9a84c] transition-colors">{item.title}</h5>
-                                                        <p className="text-[9px] font-black text-[#c9a84c] uppercase tracking-widest">₹{item.price?.toLocaleString('en-IN')}</p>
+                                                        <h5 className="font-bold text-slate-900 text-xs truncate group-hover:text-blue-600 transition-colors">{item.title}</h5>
+                                                        <p className="text-[10px] font-extrabold text-slate-500">₹{item.price?.toLocaleString('en-IN')}</p>
                                                     </div>
-                                                    <Link to={`/listings/${item._id}`} target="_blank" className="w-8 h-8 rounded-lg bg-white border border-[#1a2340]/5 flex items-center justify-center text-[#1a2340]/40 hover:text-[#1a2340] hover:shadow-sm transition-all">
+                                                    <Link to={`/listings/${item._id}`} target="_blank" className="p-1.5 text-slate-400 hover:text-blue-600">
                                                         <ExternalLink size={14} />
                                                     </Link>
                                                 </div>
@@ -849,36 +1110,25 @@ const CreateListing = () => {
                                         )}
                                     </div>
 
-                                    {myListingsData?.length > 5 && (
-                                        <button onClick={() => navigate('/dashboard')} className="w-full mt-6 py-4 rounded-2xl bg-[#1a2340]/5 text-[#1a2340] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[#1a2340] hover:text-white transition-all">
-                                            {t('create_listing.sidebar_view_full')}
-                                        </button>
-                                    )}
-
-                                    <div className="mt-8 pt-8 border-t border-[#f8f5ee] flex items-center gap-4">
-                                        <div className="flex -space-x-3">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-[#c9a84c]/20 flex items-center justify-center text-[10px] font-black text-[#c9a84c]">
-                                                    {i}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-[10px] font-bold text-[#1a2340]/40 leading-tight">
-                                            {t('create_listing.sidebar_active_listings').replace('{count}', myListingsData?.length || 0)}
-                                        </p>
-                                    </div>
+                                    <button
+                                        onClick={() => navigate('/dashboard')}
+                                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all uppercase tracking-wider text-center"
+                                    >
+                                        View All Listings in Dashboard
+                                    </button>
                                 </div>
 
-                                <div className="bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-3xl p-8 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
-                                        <Sparkles size={48} className="text-[#c9a84c]" />
+                                {/* Pro Tip Card */}
+                                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 space-y-2">
+                                    <div className="flex items-center gap-2 text-blue-700 font-extrabold text-xs uppercase tracking-wider">
+                                        <Sparkles size={16} />
+                                        <span>Pro Seller Tip</span>
                                     </div>
-                                    <h4 className="text-[10px] font-black text-[#c9a84c] uppercase tracking-[0.3em] mb-4">{t('create_listing.sidebar_pro_tip')}</h4>
-                                    <p className="text-[#1a2340] font-bold text-xs leading-relaxed">
-                                        {t('create_listing.sidebar_pro_tip_desc')}
+                                    <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                                        Listings with at least 3 high-resolution photos and precise satellite map locations receive **up to 4x more buyer enquiries**!
                                     </p>
                                 </div>
-                            </motion.div>
+                            </div>
                         )}
                     </AnimatePresence>
 

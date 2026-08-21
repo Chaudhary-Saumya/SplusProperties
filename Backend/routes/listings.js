@@ -30,14 +30,14 @@ const { protect, authorize, requireCompleteProfile } = require('../middlewares/a
 const router = express.Router();
 
 router.get('/my/tokened', protect, getMyTokenedListings);
-router.get('/mine', protect, authorize('Seller', 'Broker', 'Admin'), getMyListings);
+router.get('/mine', protect, authorize('User', 'Broker', 'Admin'), getMyListings);
 
 router.route('/')
     .get(getListings)
     .post([
         protect, 
         requireCompleteProfile,
-        authorize('Seller', 'Broker', 'Admin'),
+        authorize('User', 'Broker', 'Admin'),
         check('title', 'Title is required').not().isEmpty(),
         check('description', 'Description is required').not().isEmpty(),
         check('price', 'Price must be a number').isNumeric(),
@@ -52,8 +52,8 @@ router.get('/seller/:id', getSellerProfile);
 
 router.route('/:id')
     .get(getListing)
-    .put(protect, requireCompleteProfile, authorize('Seller', 'Broker', 'Admin'), updateListing)
-    .delete(protect, authorize('Seller', 'Broker', 'Admin'), deleteListing);
+    .put(protect, requireCompleteProfile, authorize('User', 'Broker', 'Admin'), updateListing)
+    .delete(protect, authorize('User', 'Broker', 'Admin'), deleteListing);
 
 router.route('/:id/view').post(recordView);
 router.route('/:id/whatsapp').post(recordWhatsappClick);
@@ -62,7 +62,7 @@ router.route('/:id/share').post(recordShare);
 router.route('/:id/dwell').post(recordDwellTime);
 
 router.route('/:id/request-verification')
-    .patch(protect, requireCompleteProfile, authorize('Seller', 'Broker', 'Admin'), requestVerification);
+    .patch(protect, requireCompleteProfile, authorize('User', 'Broker', 'Admin'), requestVerification);
 
 router.route('/:id/verify')
     .patch(protect, authorize('Admin'), verifyListing);

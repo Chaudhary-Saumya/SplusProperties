@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { Eye, EyeOff, ArrowLeft, Mail } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, AlertCircle } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
@@ -36,7 +36,8 @@ const Login = () => {
             if (data?.user?.role === 'Admin') navigate('/admin');
             else navigate(redirectPath);
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed. Please try again.');
+            const serverMsg = err.response?.data?.message || err.response?.data?.error || 'Login failed. Please try again.';
+            setError(serverMsg);
         } finally {
             setLoading(false);
         }
@@ -75,6 +76,7 @@ const Login = () => {
                     isOpen={showCompleteModal}
                     user={user}
                     onComplete={handleProfileComplete}
+                    onClose={() => setShowCompleteModal(false)}
                     error={error}
                 />
             )}
@@ -452,7 +454,12 @@ const Login = () => {
                                 <h1 className="login-title">{language === 'en' ? 'Login Manually' : 'જાતે લોગીન કરો'}</h1>
                                 <p className="login-subtitle">{language === 'en' ? 'Enter your registered email and password' : 'તમારો રજીસ્ટર્ડ ઇમેઇલ અને પાસવર્ડ દાખલ કરો'}</p>
 
-                                {error && <div className="login-error">⚠ {error}</div>}
+                                {error && (
+                                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-2xl text-xs font-bold mb-4 flex items-center gap-2.5 shadow-2xs">
+                                        <AlertCircle size={18} className="text-rose-600 shrink-0" />
+                                        <span>{error}</span>
+                                    </div>
+                                )}
 
                                 <form onSubmit={handleSubmit}>
                                     <div className="login-field">

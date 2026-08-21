@@ -10,7 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 const Favorites = () => {
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useContext(AuthContext);
+    const { user, updateFavorites } = useContext(AuthContext);
     const { t } = useLanguage();
     const navigate = useNavigate();
 
@@ -18,7 +18,12 @@ const Favorites = () => {
         const fetchFavorites = async () => {
             try {
                 const res = await axios.get('/api/auth/me');
-                setFavorites(res.data.data.favorites || []);
+                const rawFavs = res.data.data.favorites || [];
+                const cleanFavs = rawFavs.filter(f => f !== null && f !== undefined);
+                setFavorites(cleanFavs);
+                if (updateFavorites) {
+                    updateFavorites(cleanFavs);
+                }
             } catch (err) {
                 console.error('Error fetching favorites', err);
             } finally {

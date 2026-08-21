@@ -5,8 +5,9 @@ const asyncHandler = require('../middlewares/async');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const sendEmail = require('../utils/sendEmail');
+const { sendSMS, verifyTwilioOTP } = require('../utils/sendSMS');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const ALLOWED_ROLES = ['Buyer', 'Seller', 'Broker'];
+const ALLOWED_ROLES = ['User', 'Broker', 'Admin'];
 
 // Get token from model, create token and send response
 const sendTokenResponse = async (user, statusCode, res, req) => {
@@ -47,6 +48,7 @@ const sendTokenResponse = async (user, statusCode, res, req) => {
             email: user.email,
             role: user.role,
             phone: user.phone,
+            profileImage: user.profileImage || '',
             accountStatus: user.accountStatus,
             isVerified: user.isVerified
         }
@@ -81,43 +83,25 @@ exports.register = asyncHandler(async (req, res, next) => {
         }
     }
 
-    // Generate 6-digit OTP
+    // Standardize user roles: 'User' (Property Owner / Buyer / Seller) vs 'Broker' (Agent) vs 'Admin'
+    let userRole = (role === 'Broker' || role === 'Admin') ? role : 'User';
+
+    // Create user directly with isVerified: true (OTP system disabled for now)
+    const user = await User.create({
+        name, email, password, role: userRole, phone,
+        isVerified: true
+    });
+
+    /* OTP Generation and Email/SMS send commented out for now as requested
     const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOTP = await User.hashOTP(plainOTP);
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+    if (user.email) { sendEmail(...); }
+    if (user.phone) { sendSMS(...); }
+    */
 
-    const user = await User.create({
-        name, email, password, role, phone,
-        otp: hashedOTP,
-        otpExpire
-    });
-
-    // Send OTP via Email (send plain OTP to user, store hashed) - async background task to prevent slow register response
-    sendEmail({
-        email: user.email,
-        subject: 'Email Verification OTP - LandSell',
-        message: `Your OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                <h2 style="color: #2563eb; text-align: center;">Welcome to LandSell!</h2>
-                <p>Thank you for registering. Please use the following One-Time Password (OTP) to verify your email address:</p>
-                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
-                </div>
-                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
-            </div>
-        `
-    }).catch(err => {
-        console.error('Background Register Email Send Error:', err);
-    });
-
-    res.status(201).json({
-        success: true,
-        message: 'OTP sent to email. Please verify to complete registration.',
-        email: user.email
-    });
+    // Directly return auth token for instant registration & login
+    sendTokenResponse(user, 201, res, req);
 });
 
 // @desc    Verify OTP
@@ -127,11 +111,14 @@ exports.verifyOTP = asyncHandler(async (req, res, next) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-        return res.status(400).json({ success: false, error: 'Please provide email and OTP' });
+        return res.status(400).json({ success: false, error: 'Please provide email or phone and OTP' });
     }
 
     const user = await User.findOne({ 
-        email, 
+        $or: [
+            { email: email },
+            { phone: email }
+        ],
         otpExpire: { $gt: Date.now() }
     });
 
@@ -160,17 +147,22 @@ exports.resendOTP = asyncHandler(async (req, res, next) => {
     const { email } = req.body;
 
     if (!email) {
-        return res.status(400).json({ success: false, error: 'Please provide email' });
+        return res.status(400).json({ success: false, error: 'Please provide email or phone number' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ 
+        $or: [
+            { email: email },
+            { phone: email }
+        ]
+    });
 
     if (!user) {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     if (user.isVerified) {
-        return res.status(400).json({ success: false, error: 'User already verified' });
+        return res.status(400).json({ success: false, error: 'User is already verified' });
     }
 
     // Generate new OTP
@@ -182,28 +174,38 @@ exports.resendOTP = asyncHandler(async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    // Send OTP via Email asynchronously in the background
-    sendEmail({
-        email: user.email,
-        subject: 'New Email Verification OTP - LandSell',
-        message: `Your new OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                <h2 style="color: #2563eb; text-align: center;">New Verification OTP</h2>
-                <p>Please use the following new One-Time Password (OTP) to verify your email address:</p>
-                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
+    if (user.email) {
+        sendEmail({
+            email: user.email,
+            subject: 'New Email Verification OTP - LandSell',
+            message: `Your new OTP for account verification is: ${plainOTP}. It will expire in 10 minutes.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <h2 style="color: #2563eb; text-align: center;">New Verification OTP</h2>
+                    <p>Please use the following new One-Time Password (OTP) to verify your email address:</p>
+                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
+                    </div>
+                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes.</p>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
                 </div>
-                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes.</p>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
-            </div>
-        `
-    }).catch(err => {
-        console.error('Background Email Resend Error:', err);
-    });
+            `
+        }).catch(err => {
+            console.error('Background Email Resend Error:', err);
+        });
+    }
 
-    res.status(200).json({ success: true, message: 'OTP resent to email' });
+    if (user.phone) {
+        sendSMS({
+            phone: user.phone,
+            message: `[LandSell] Your new OTP code is ${plainOTP}. Valid for 10 mins.`
+        }).catch(err => {
+            console.error('Background Resend SMS Error:', err);
+        });
+    }
+
+    res.status(200).json({ success: true, message: 'New OTP sent successfully via SMS / Email' });
 });
 
 // @desc    Login user
@@ -226,7 +228,15 @@ exports.login = asyncHandler(async (req, res, next) => {
     }).select('+password');
 
     if (!user) {
-        return res.status(401).json({ success: false, error: 'Invalid credentials' });
+        return res.status(401).json({ success: false, error: 'Invalid credentials. Please check your email/phone or password.' });
+    }
+
+    // Check if account was created via Google Sign-In without a manual password
+    if (!user.password && user.googleId) {
+        return res.status(400).json({
+            success: false,
+            error: "This account was created via Google Sign-In. Please sign in with Google or click 'Forgot Password?' to set a password for manual login."
+        });
     }
 
     // Check if password matches
@@ -236,9 +246,11 @@ exports.login = asyncHandler(async (req, res, next) => {
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
+    /* Commented out OTP verification check for now
     if (!user.isVerified) {
         return res.status(403).json({ success: false, error: 'Please verify OTP before login' });
     }
+    */
 
     if (user.accountStatus && user.accountStatus !== 'Active') {
         return res.status(403).json({
@@ -262,16 +274,20 @@ exports.getMe = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/auth/updatedetails
 // @access  Private
 exports.updateDetails = asyncHandler(async (req, res, next) => {
-    const fieldsToUpdate = {
-        name: req.body.name,
-        email: req.body.email,
-        phone: req.body.phone
-    };
+    const fieldsToUpdate = {};
+    if (req.body.name !== undefined) fieldsToUpdate.name = req.body.name;
+    if (req.body.email !== undefined) fieldsToUpdate.email = req.body.email;
+    if (req.body.phone !== undefined) fieldsToUpdate.phone = req.body.phone;
+    if (req.body.profileImage !== undefined) fieldsToUpdate.profileImage = req.body.profileImage;
+    if (req.body.role !== undefined && ['User', 'Seller', 'Broker'].includes(req.body.role)) {
+        fieldsToUpdate.role = req.body.role;
+    }
+
 
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
         new: true,
         runValidators: true
-    });
+    }).populate('favorites');
 
     res.status(200).json({
         success: true,
@@ -369,7 +385,11 @@ exports.toggleFavorite = asyncHandler(async (req, res, next) => {
     }
 
     await user.save();
-    res.status(200).json({ success: true, data: user.favorites });
+
+    const updatedUser = await User.findById(req.user.id).populate('favorites');
+    const cleanFavorites = (updatedUser.favorites || []).filter(f => f !== null && f !== undefined);
+
+    res.status(200).json({ success: true, data: cleanFavorites });
 });
 
 // @desc    Google login
@@ -467,7 +487,117 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
     }
 });
 
-// @desc    Complete profile (role & phone)
+// @desc    Send Phone OTP for Profile Completion
+// @route   POST /api/auth/send-phone-otp
+// @access  Private
+exports.sendPhoneOTP = asyncHandler(async (req, res, next) => {
+    const { phone } = req.body;
+
+    if (!phone) {
+        return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit mobile number' });
+    }
+
+    const normalizedPhone = String(phone).replace(/\D/g, '');
+    if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+        return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit mobile number' });
+    }
+
+    // Check if phone number is already registered to another active user
+    const existingUser = await User.findOne({ phone: normalizedPhone, _id: { $ne: req.user.id } });
+    if (existingUser && existingUser.isVerified) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'This phone number is already registered to another account. Please use a different phone number.' 
+        });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Generate 6-digit OTP
+    const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await User.hashOTP(plainOTP);
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    user.otp = hashedOTP;
+    user.otpExpire = otpExpire;
+    await user.save();
+
+    // Send SMS via Twilio / Fast2SMS
+    await sendSMS({
+        phone: normalizedPhone,
+        message: `[LandSell] Your verification OTP for mobile number setup is ${plainOTP}. Valid for 10 mins.`
+    }).catch(err => {
+        console.error('Phone OTP Send Error:', err);
+    });
+
+    res.status(200).json({
+        success: true,
+        message: `Verification OTP sent to +91 ${normalizedPhone} via SMS`,
+        phone: normalizedPhone
+    });
+});
+
+// @desc    Verify Phone OTP & Complete Profile
+// @route   POST /api/auth/verify-phone-otp
+// @access  Private
+exports.verifyPhoneOTP = asyncHandler(async (req, res, next) => {
+    const { phone, otp, role } = req.body;
+
+    if (!phone || !otp) {
+        return res.status(400).json({ success: false, error: 'Please enter your phone number and 6-digit OTP' });
+    }
+
+    const normalizedPhone = String(phone).replace(/\D/g, '');
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Try Twilio Verify API Verification Check first
+    const twilioCheck = await verifyTwilioOTP({ phone: normalizedPhone, code: otp });
+
+    let isMatch = false;
+    if (twilioCheck.success && twilioCheck.valid) {
+        isMatch = true;
+    } else if (twilioCheck.fallbackToLocal) {
+        if (!user.otpExpire || user.otpExpire < Date.now()) {
+            return res.status(400).json({ success: false, error: 'OTP has expired. Please click resend to get a new SMS OTP.' });
+        }
+        isMatch = await user.matchOTP(otp);
+    }
+
+    if (!isMatch) {
+        return res.status(400).json({ success: false, error: 'Invalid OTP code. Please enter the correct 6-digit SMS OTP.' });
+    }
+
+    let cleanRole = (role === 'Broker' || role === 'Admin') ? role : 'User';
+    user.role = cleanRole;
+    user.phone = normalizedPhone;
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpire = undefined;
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Mobile number verified and profile completed successfully!',
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone,
+            isVerified: user.isVerified,
+            accountStatus: user.accountStatus
+        }
+    });
+});
+
+// @desc    Complete profile (legacy fallback)
 // @route   PUT /api/auth/complete-profile
 // @access  Private
 exports.completeProfile = asyncHandler(async (req, res, next) => {
@@ -479,12 +609,8 @@ exports.completeProfile = asyncHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    if (role) {
-        if (!ALLOWED_ROLES.includes(role)) {
-            return res.status(400).json({ success: false, error: 'Invalid role selected' });
-        }
-        user.role = role;
-    }
+    let cleanRole = (role === 'Broker' || role === 'Admin') ? role : 'User';
+    user.role = cleanRole;
 
     if (phone) {
         const normalizedPhone = String(phone).replace(/\D/g, '');
@@ -498,11 +624,37 @@ exports.completeProfile = asyncHandler(async (req, res, next) => {
         return res.status(400).json({ success: false, error: 'Phone number is required to complete profile' });
     }
 
+    user.isVerified = true;
     await user.save();
 
     res.status(200).json({
         success: true,
         data: user
+    });
+});
+
+// @desc    Toggle user role between User and Broker
+// @route   PUT /api/auth/toggle-broker
+// @access  Private
+exports.toggleBrokerRole = asyncHandler(async (req, res, next) => {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.role = user.role === 'Broker' ? 'User' : 'Broker';
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: user.role === 'Broker' ? 'Registered as a Real Estate Broker' : 'Broker status disabled',
+        data: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone
+        }
     });
 });
 // @desc    Add payment account
@@ -580,13 +732,18 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     const { email } = req.body;
 
     if (!email) {
-        return res.status(400).json({ success: false, error: 'Please provide an email' });
+        return res.status(400).json({ success: false, error: 'Please provide an email address or phone number' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        $or: [
+            { email: email },
+            { phone: email }
+        ]
+    });
 
     if (!user) {
-        return res.status(404).json({ success: false, error: 'No account found with that email' });
+        return res.status(404).json({ success: false, error: 'No registered account found with that email or phone number' });
     }
 
     // Generate OTP
@@ -599,27 +756,38 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     await user.save();
 
     // Send password reset OTP via Email asynchronously in the background
-    sendEmail({
-        email: user.email,
-        subject: 'Password Reset OTP - LandSell',
-        message: `Your OTP for password reset is: ${plainOTP}. It will expire in 10 minutes.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-                <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
-                <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
-                <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                    <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
+    if (user.email) {
+        sendEmail({
+            email: user.email,
+            subject: 'Password Reset OTP - LandSell',
+            message: `Your OTP for password reset is: ${plainOTP}. It will expire in 10 minutes.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <h2 style="color: #2563eb; text-align: center;">Password Reset</h2>
+                    <p>You requested a password reset. Please use the following One-Time Password (OTP) to proceed:</p>
+                    <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                        <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${plainOTP}</h1>
+                    </div>
+                    <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
                 </div>
-                <p style="color: #64748b; font-size: 14px;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; 2026 LandSell Platform. All rights reserved.</p>
-            </div>
-        `
-    }).catch(err => {
-        console.error('Background Forgot Password Email Error:', err);
-    });
+            `
+        }).catch(err => {
+            console.error('Background Forgot Password Email Error:', err);
+        });
+    }
 
-    res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
+    if (user.phone) {
+        sendSMS({
+            phone: user.phone,
+            message: `[LandSell] Your password reset OTP code is ${plainOTP}. Valid for 10 mins.`
+        }).catch(err => {
+            console.error('Background Forgot Password SMS Error:', err);
+        });
+    }
+
+    res.status(200).json({ success: true, message: 'Password reset OTP sent successfully via SMS / Email', email: user.email || user.phone });
 });
 
 // @desc    Reset Password
@@ -629,11 +797,14 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
     const { email, otp, newPassword } = req.body;
 
     if (!email || !otp || !newPassword) {
-        return res.status(400).json({ success: false, error: 'Please provide email, OTP and new password' });
+        return res.status(400).json({ success: false, error: 'Please provide email or phone, OTP and new password' });
     }
 
     const user = await User.findOne({ 
-        email,
+        $or: [
+            { email: email },
+            { phone: email }
+        ],
         otpExpire: { $gt: Date.now() }
     });
 

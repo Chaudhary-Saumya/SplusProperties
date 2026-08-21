@@ -75,10 +75,15 @@ exports.optionalProtect = async (req, res, next) => {
     }
 };
 
-// Grant access to specific roles
+// Grant access to specific roles (User, Broker, Admin)
 exports.authorize = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        const userRole = req.user?.role || 'User';
+        // Normalize legacy Buyer / Seller values to standard 'User' role
+        const normalizedRole = (userRole === 'Buyer' || userRole === 'Seller') ? 'User' : userRole;
+        const allowedRoles = roles.flatMap(r => (r === 'User' ? ['User', 'Buyer', 'Seller'] : [r]));
+
+        if (!allowedRoles.includes(userRole) && !roles.includes(normalizedRole)) {
             return res.status(403).json({ 
                 success: false, 
                 error: `User role ${req.user.role} is not authorized to access this route`

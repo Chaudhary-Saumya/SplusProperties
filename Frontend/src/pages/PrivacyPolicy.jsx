@@ -2,15 +2,17 @@ import React from 'react';
 import { Shield, ArrowLeft, Lock, Database, Eye, Trash2, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../context/LanguageContext';
 import SEO from '../components/SEO';
 
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-[#f8f5ee] font-['Nunito_Sans',sans-serif] text-[#1a2340]">
       <SEO 
-        title="Privacy Policy &bull; Kharsan Properties" 
+        title={`${t('privacy_policy.title')} • Kharsan Properties`}
         description="Learn how Kharsan Properties collects, protects, and handles your personal information, listing data, and token payment details in compliance with app store requirements." 
       />
 
@@ -29,7 +31,7 @@ const PrivacyPolicy = () => {
             className="inline-flex items-center gap-2 text-[#c9a84c] text-[10px] font-black uppercase tracking-[0.2em] mb-6 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl transition-all border border-white/10"
           >
             <ArrowLeft size={12} />
-            <span>Go Back</span>
+            <span>{t('privacy_policy.back_home')}</span>
           </button>
 
           <div className="flex justify-center mb-6">

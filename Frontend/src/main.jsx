@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <HelmetProvider>
       <GoogleOAuthProvider
         clientId={
-          import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id'
+          import.meta.env.VITE_GOOGLE_CLIENT_ID || '792864567125-qhfbo8i8vibnba1uq1p1tadti5ivvaib.apps.googleusercontent.com'
         }
       >
         <AuthProvider>
