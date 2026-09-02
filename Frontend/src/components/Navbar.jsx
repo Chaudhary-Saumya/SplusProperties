@@ -161,21 +161,19 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
                 <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-inner">
                   <button
                     onClick={() => setLanguage('en')}
-                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
-                      language === 'en'
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${language === 'en'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     English
                   </button>
                   <button
                     onClick={() => setLanguage('gu')}
-                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
-                      language === 'gu'
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${language === 'gu'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     ગુજરાતી
                   </button>
@@ -383,7 +381,7 @@ const Navbar = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
   const [navSearch, setNavSearch] = useState('');
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const isSearchPage = location.pathname === '/search';
@@ -434,7 +432,7 @@ const Navbar = () => {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm font-['Nunito_Sans',sans-serif]">
         {/* Main Navbar Container */}
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-          
+
           {/* Brand Logo Image (K4.png) */}
           <Link to="/" className="flex items-center text-decoration-none group shrink-0 mr-1 sm:mr-4">
             <img
@@ -456,7 +454,7 @@ const Navbar = () => {
                   onChange={handleNavInputChange}
                   className="w-full bg-transparent text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none"
                 />
-                
+
                 {/* Clear 'X' Icon Button when typing */}
                 {navSearch ? (
                   <button
@@ -579,7 +577,7 @@ const Navbar = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            
+
             {/* Post Property FREE Button */}
             <Link
               to={isAuthenticated ? '/create-listing' : '/login'}

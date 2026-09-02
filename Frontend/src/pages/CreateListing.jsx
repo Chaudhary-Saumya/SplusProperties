@@ -141,7 +141,7 @@ const CreateListing = () => {
         location: '',
         plotNumber: '',
         areaName: '',
-        listingType: 'Verified',
+        listingType: 'Basic',
         isBookingEnabled: false,
         tokenAmount: '',
         payoutAccountId: '',
@@ -231,7 +231,7 @@ const CreateListing = () => {
 
     const handleMediaChange = (e) => {
         const files = Array.from(e.target.files || []);
-        
+
         const imgFiles = [];
         const vidFiles = [];
         const imgPrevs = [...imagePreviews];
@@ -796,89 +796,89 @@ const CreateListing = () => {
 
                                     {/* Satellite Map & GPS Marker */}
                                     <div className="pt-4 border-t border-slate-100 space-y-3">
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                                <div>
-                                                    <span className="text-xs font-extrabold text-slate-900 block">Pin Exact Satellite GPS Location (Recommended)</span>
-                                                    <p className="text-[11px] text-slate-500 font-normal">Click anywhere on the map or use sync/detect buttons to set the exact marker for buyers.</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    {geocodedAddressCoords && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
-                                                                toast.success(`Map pin centered to ${formData.areaName || formData.city || 'address'}!`);
-                                                            }}
-                                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border border-slate-300"
-                                                        >
-                                                            <Target size={12} /> Sync Pin to Address
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={detectMyLocation}
-                                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
-                                                    >
-                                                        <Navigation size={12} /> Detect GPS
-                                                    </button>
-                                                </div>
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                            <div>
+                                                <span className="text-xs font-extrabold text-slate-900 block">Pin Exact Satellite GPS Location (Recommended)</span>
+                                                <p className="text-[11px] text-slate-500 font-normal">Click anywhere on the map or use sync/detect buttons to set the exact marker for buyers.</p>
                                             </div>
-
-                                            {/* Warning Alert if Map Marker is placed far away from Address City/Locality */}
-                                            {isLocationMisaligned && (
-                                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between gap-3 text-xs font-bold text-amber-900">
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-sm mt-0.5">⚠️</span>
-                                                        <div>
-                                                            <span className="block font-extrabold text-amber-900">Map Marker Misalignment Warning!</span>
-                                                            <span className="font-normal text-amber-800 text-[11px] block mt-0.5">
-                                                                Your map pin is placed <strong>~{Math.round(distanceKm)} km away</strong> from <strong>{formData.city || formData.areaName}</strong>. If this is accidental, click Sync Pin to fix it.
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {geocodedAddressCoords && (
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            if (geocodedAddressCoords) {
-                                                                setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
-                                                                toast.success(`Map pin fixed to ${formData.city || formData.areaName}!`);
-                                                            }
+                                                            setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
+                                                            toast.success(`Map pin centered to ${formData.areaName || formData.city || 'address'}!`);
                                                         }}
-                                                        className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[10px] uppercase font-extrabold tracking-wider transition-all"
+                                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border border-slate-300"
                                                     >
-                                                        Fix & Sync Pin
+                                                        <Target size={12} /> Sync Pin to Address
                                                     </button>
-                                                </div>
-                                            )}
-
-                                            <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-300 relative z-0">
-                                                <MapContainer center={[formData.mapCoordinates.lat || 23.0225, formData.mapCoordinates.lng || 72.5714]} zoom={14} style={{ height: '100%', width: '100%' }}>
-                                                    <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
-                                                    <LocationMarker
-                                                        position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
-                                                        setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
-                                                        setLocation={(addr) => setFormData(prev => ({ ...prev, location: addr }))}
-                                                    />
-                                                    <MapRecenter position={formData.mapCoordinates} />
-                                                </MapContainer>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={detectMyLocation}
+                                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
+                                                >
+                                                    <Navigation size={12} /> Detect GPS
+                                                </button>
                                             </div>
-
-                                            {formData.mapCoordinates.lat && (
-                                                <div className="flex items-center justify-between text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <CheckCircle2 size={14} />
-                                                        <span>GPS Location Mapped ({parseFloat(formData.mapCoordinates.lat).toFixed(4)}° N, {parseFloat(formData.mapCoordinates.lng).toFixed(4)}° E)</span>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData(prev => ({ ...prev, mapCoordinates: { lat: null, lng: null } }))}
-                                                        className="text-slate-400 hover:text-rose-600 text-[10px] font-bold uppercase tracking-wider underline"
-                                                    >
-                                                        Clear Map Marker
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
+
+                                        {/* Warning Alert if Map Marker is placed far away from Address City/Locality */}
+                                        {isLocationMisaligned && (
+                                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between gap-3 text-xs font-bold text-amber-900">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-sm mt-0.5">⚠️</span>
+                                                    <div>
+                                                        <span className="block font-extrabold text-amber-900">Map Marker Misalignment Warning!</span>
+                                                        <span className="font-normal text-amber-800 text-[11px] block mt-0.5">
+                                                            Your map pin is placed <strong>~{Math.round(distanceKm)} km away</strong> from <strong>{formData.city || formData.areaName}</strong>. If this is accidental, click Sync Pin to fix it.
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (geocodedAddressCoords) {
+                                                            setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
+                                                            toast.success(`Map pin fixed to ${formData.city || formData.areaName}!`);
+                                                        }
+                                                    }}
+                                                    className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[10px] uppercase font-extrabold tracking-wider transition-all"
+                                                >
+                                                    Fix & Sync Pin
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-300 relative z-0">
+                                            <MapContainer center={[formData.mapCoordinates.lat || 23.0225, formData.mapCoordinates.lng || 72.5714]} zoom={14} style={{ height: '100%', width: '100%' }}>
+                                                <TileLayer url="https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" maxZoom={20} />
+                                                <LocationMarker
+                                                    position={formData.mapCoordinates.lat ? formData.mapCoordinates : null}
+                                                    setPosition={(pos) => setFormData({ ...formData, mapCoordinates: pos })}
+                                                    setLocation={(addr) => setFormData(prev => ({ ...prev, location: addr }))}
+                                                />
+                                                <MapRecenter position={formData.mapCoordinates} />
+                                            </MapContainer>
+                                        </div>
+
+                                        {formData.mapCoordinates.lat && (
+                                            <div className="flex items-center justify-between text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                <div className="flex items-center gap-1.5">
+                                                    <CheckCircle2 size={14} />
+                                                    <span>GPS Location Mapped ({parseFloat(formData.mapCoordinates.lat).toFixed(4)}° N, {parseFloat(formData.mapCoordinates.lng).toFixed(4)}° E)</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, mapCoordinates: { lat: null, lng: null } }))}
+                                                    className="text-slate-400 hover:text-rose-600 text-[10px] font-bold uppercase tracking-wider underline"
+                                                >
+                                                    Clear Map Marker
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
 
                                 </div>
                             </SectionCard>
@@ -891,7 +891,7 @@ const CreateListing = () => {
                                 badge="Step 3 of 4"
                             >
                                 <div className="space-y-5 font-['Nunito_Sans',sans-serif]">
-                                    
+
                                     {/* Single Unified Drag & Drop Dropzone */}
                                     <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-50/80 hover:bg-blue-50/40 transition-all cursor-pointer relative group">
                                         <input
@@ -918,7 +918,7 @@ const CreateListing = () => {
                                     {/* Categorized Media Previews */}
                                     {(imagePreviews.length > 0 || videoPreviews.length > 0) && (
                                         <div className="space-y-4 pt-2">
-                                            
+
                                             {/* Photo Previews Strip */}
                                             {imagePreviews.length > 0 && (
                                                 <div className="space-y-2">

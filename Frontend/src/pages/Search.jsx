@@ -428,11 +428,10 @@ const Search = () => {
                             key={type}
                             type="button"
                             onClick={() => setFilters(prev => ({ ...prev, landType: prev.landType === type ? 'None' : type }))}
-                            className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                                filters.landType === type
-                                    ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                            }`}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${filters.landType === type
+                                ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                                }`}
                         >
                             {type}
                         </button>
@@ -518,11 +517,11 @@ const Search = () => {
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-2">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                  <SlidersHorizontal size={14} className="text-[#0078d4]" />
-                  <span>Applied Filters</span>
+                    <SlidersHorizontal size={14} className="text-[#0078d4]" />
+                    <span>Applied Filters</span>
                 </h3>
                 <button onClick={resetFilters} className="text-xs font-bold text-[#0078d4] hover:underline cursor-pointer">
-                  Clear All
+                    Clear All
                 </button>
             </div>
             {renderFilterSections()}
@@ -538,7 +537,7 @@ const Search = () => {
 
             {/* Main Layout Container */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                
+
                 {/* 99acres Header Bar */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div>
@@ -568,44 +567,40 @@ const Search = () => {
                 <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
                     <button
                         onClick={() => setIsVerifiedOnly(!isVerifiedOnly)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
-                            isVerifiedOnly
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${isVerifiedOnly
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                            }`}
                     >
                         ✓ Verified
                     </button>
 
                     <button
                         onClick={() => setFilters(prev => ({ ...prev, ownerType: prev.ownerType === 'Owner' ? '' : 'Owner' }))}
-                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
-                            filters.ownerType === 'Owner'
-                                ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${filters.ownerType === 'Owner'
+                            ? 'bg-[#1a2340] text-[#c9a84c] border-[#1a2340] shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                            }`}
                     >
                         Owner
                     </button>
 
                     <button
                         onClick={() => setFilters(prev => ({ ...prev, roadTouch: !prev.roadTouch }))}
-                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
-                            filters.roadTouch
-                                ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${filters.roadTouch
+                            ? 'bg-[#0078d4] text-white border-[#0078d4] shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                            }`}
                     >
                         Road Touch
                     </button>
 
                     <button
                         onClick={() => setFilters(prev => ({ ...prev, cornerPlot: !prev.cornerPlot }))}
-                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${
-                            filters.cornerPlot
-                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border whitespace-nowrap cursor-pointer shrink-0 ${filters.cornerPlot
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                            }`}
                     >
                         Corner Plot
                     </button>
@@ -703,14 +698,6 @@ const Search = () => {
                                                         </h3>
                                                         <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
                                                             <span>{listing.landType || listing.propertyType || 'Plot'}{listing.location ? ` in ${listing.location}` : ''}</span>
-                                                            {listing.listingType === 'Verified' && (
-                                                                <>
-                                                                    <span className="text-slate-300">·</span>
-                                                                    <span className="text-emerald-600 font-bold flex items-center gap-0.5">
-                                                                        <CheckCircle2 size={12} /> Verified
-                                                                    </span>
-                                                                </>
-                                                            )}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -719,7 +706,7 @@ const Search = () => {
                                                 <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2 mt-3.5 pb-3 border-b border-slate-100">
                                                     <div>
                                                         <div className="text-xl sm:text-2xl font-black text-slate-900">
-                                                            ₹{listing.price >= 10000000 
+                                                            ₹{listing.price >= 10000000
                                                                 ? `${(listing.price / 10000000).toFixed(2)} Cr`
                                                                 : (listing.price >= 100000 ? `${(listing.price / 100000).toFixed(1)} Lakh` : listing.price?.toLocaleString('en-IN'))}
                                                         </div>

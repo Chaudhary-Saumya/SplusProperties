@@ -43,17 +43,17 @@ const CompleteProfileModal = ({ isOpen, user, onComplete, onClose, error: extern
     };
 
     const roles = [
-        { 
-            id: 'User',   
-            label: 'Individual Property Owner / Buyer',   
-            desc: 'Buy land & plots, or post your own properties freely', 
+        {
+            id: 'User',
+            label: 'Individual Property Owner / Buyer',
+            desc: 'Buy land & plots, or post your own properties freely',
             icon: Home,
             colorClass: 'bg-blue-50 text-blue-600 border-blue-100'
         },
-        { 
-            id: 'Broker', 
-            label: 'Real Estate Broker / Agent', 
-            desc: 'Manage client listings with Verified Agent Stamp', 
+        {
+            id: 'Broker',
+            label: 'Real Estate Broker / Agent',
+            desc: 'Manage client listings with Verified Agent Stamp',
             icon: Briefcase,
             colorClass: 'bg-indigo-50 text-indigo-600 border-indigo-100'
         },
@@ -94,7 +94,7 @@ const CompleteProfileModal = ({ isOpen, user, onComplete, onClose, error: extern
     const displayError = localError || externalError;
 
     return (
-        <div 
+        <div
             onClick={(e) => {
                 if (e.target === e.currentTarget) handleClose();
             }}
@@ -155,11 +155,10 @@ const CompleteProfileModal = ({ isOpen, user, onComplete, onClose, error: extern
                                         key={r.id}
                                         type="button"
                                         onClick={() => setFormData({ ...formData, role: r.id })}
-                                        className={`w-full flex items-start gap-3.5 p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
-                                            isSelected
+                                        className={`w-full flex items-start gap-3.5 p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${isSelected
                                                 ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/20"
                                                 : "border-slate-200 bg-slate-50 hover:bg-slate-100/80"
-                                        }`}
+                                            }`}
                                     >
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${r.colorClass}`}>
                                             <Icon size={20} />

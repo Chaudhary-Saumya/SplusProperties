@@ -2,6 +2,10 @@
 @import "tailwindcss";
 
 @layer base {
+  html, body {
+    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+  }
   body {
     background-image: radial-gradient(circle at top right, #e0e7ff 0%, transparent 40%),
                       radial-gradient(circle at bottom left, #dcfce3 0%, transparent 40%);

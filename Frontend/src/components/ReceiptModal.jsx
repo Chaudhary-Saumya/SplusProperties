@@ -9,21 +9,21 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
     if (!isOpen || !receiptData) return null;
 
     const fallbackReceipt = receiptData._id?.slice(-8) || receiptData.gatewayOrderId?.slice(-8) || 'UNAVAILABLE';
-    const receiptNumber    = (receiptData.receiptNumber || fallbackReceipt).toUpperCase();
-    const transactionId    = receiptData.razorpayPaymentId || receiptData.gatewayPaymentId || receiptData.paymentDetails?.razorpay_payment_id || 'TXN_VERIFIED_770';
-    const orderId          = receiptData.razorpayOrderId   || receiptData.gatewayOrderId   || receiptData.paymentDetails?.razorpay_order_id   || 'N/A';
-    const propertyTitle    = receiptData.listingTitle  || receiptData.listingId?.title    || 'Verified Property Reservation';
-    const propertyLocation = receiptData.listingId?.location || receiptData.location      || 'LandSelling Verified Listing';
-    const sellerName       = receiptData.sellerName    || receiptData.sellerId?.name      || 'Authorized Seller';
-    const buyerName        = receiptData.buyerName     || receiptData.buyerId?.name       || 'Authorized Buyer';
-    const sellerPhone      = receiptData.sellerPhone   || receiptData.sellerId?.phone     || '-';
-    const buyerPhone       = receiptData.buyerPhone    || receiptData.buyerId?.phone      || '-';
-    const sellerEmail      = receiptData.sellerEmail   || receiptData.sellerId?.email     || '-';
-    const buyerEmail       = receiptData.buyerEmail    || receiptData.buyerId?.email      || '-';
-    const createdAtText    = receiptData.date || (receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' }) : '-');
-    const amountText       = `₹${Number(receiptData.amount || 0).toLocaleString('en-IN')}`;
-    const agreementDate    = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleDateString('en-IN') : '-';
-    const agreementTime    = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-';
+    const receiptNumber = (receiptData.receiptNumber || fallbackReceipt).toUpperCase();
+    const transactionId = receiptData.razorpayPaymentId || receiptData.gatewayPaymentId || receiptData.paymentDetails?.razorpay_payment_id || 'TXN_VERIFIED_770';
+    const orderId = receiptData.razorpayOrderId || receiptData.gatewayOrderId || receiptData.paymentDetails?.razorpay_order_id || 'N/A';
+    const propertyTitle = receiptData.listingTitle || receiptData.listingId?.title || 'Verified Property Reservation';
+    const propertyLocation = receiptData.listingId?.location || receiptData.location || 'LandSelling Verified Listing';
+    const sellerName = receiptData.sellerName || receiptData.sellerId?.name || 'Authorized Seller';
+    const buyerName = receiptData.buyerName || receiptData.buyerId?.name || 'Authorized Buyer';
+    const sellerPhone = receiptData.sellerPhone || receiptData.sellerId?.phone || '-';
+    const buyerPhone = receiptData.buyerPhone || receiptData.buyerId?.phone || '-';
+    const sellerEmail = receiptData.sellerEmail || receiptData.sellerId?.email || '-';
+    const buyerEmail = receiptData.buyerEmail || receiptData.buyerId?.email || '-';
+    const createdAtText = receiptData.date || (receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' }) : '-');
+    const amountText = `₹${Number(receiptData.amount || 0).toLocaleString('en-IN')}`;
+    const agreementDate = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleDateString('en-IN') : '-';
+    const agreementTime = receiptData.createdAt ? new Date(receiptData.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-';
 
     const escapeHtml = (v) => String(v ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -416,7 +416,7 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             {[
                                 { label: 'Seller', name: sellerName, phone: sellerPhone, email: sellerEmail },
-                                { label: 'Buyer',  name: buyerName,  phone: buyerPhone,  email: buyerEmail },
+                                { label: 'Buyer', name: buyerName, phone: buyerPhone, email: buyerEmail },
                             ].map(({ label, name, phone, email }) => (
                                 <div key={label} className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-xl p-3">
                                     <div className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1">{label}</div>

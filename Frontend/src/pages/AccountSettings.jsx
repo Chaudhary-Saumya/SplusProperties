@@ -31,7 +31,9 @@ import {
   Mail,
   User,
   ArrowRight,
-  Building2
+  Building2,
+  BadgeCheck,
+  LandPlot
 } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext";
@@ -585,7 +587,7 @@ const AccountSettings = () => {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-black">🏡 Individual Property Owner</span>
+                          <span className="text-xs font-black inline-flex items-center gap-1.5"><LandPlot size={14} className="text-amber-500" /> Individual Property Owner</span>
                           {user.role !== 'Broker' && <CheckCircle2 size={16} className="text-emerald-600" />}
                         </div>
                         <p className="text-[10px] font-semibold opacity-80 leading-relaxed">
@@ -604,7 +606,7 @@ const AccountSettings = () => {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-black">🏷️ Registered Real Estate Broker</span>
+                          <span className="text-xs font-black inline-flex items-center gap-1.5"><BadgeCheck size={14} className="text-blue-600" /> Registered Real Estate Broker</span>
                           {user.role === 'Broker' && <CheckCircle2 size={16} className="text-slate-950" />}
                         </div>
                         <p className="text-[10px] font-semibold opacity-90 leading-relaxed">

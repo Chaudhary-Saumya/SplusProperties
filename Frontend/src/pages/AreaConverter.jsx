@@ -531,11 +531,10 @@ const AreaConverter = () => {
           {/* Reorder Toggle */}
           <button
             onClick={() => setReorderEnabled(prev => !prev)}
-            className={`inline-flex items-center gap-2.5 px-4 py-2.5 font-extrabold rounded-xl transition-all shadow-xs text-xs sm:text-sm border cursor-pointer ${
-              reorderEnabled
+            className={`inline-flex items-center gap-2.5 px-4 py-2.5 font-extrabold rounded-xl transition-all shadow-xs text-xs sm:text-sm border cursor-pointer ${reorderEnabled
                 ? 'bg-amber-500 border-amber-500 text-slate-950 font-black shadow-md'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-            }`}
+              }`}
             title={reorderEnabled ? 'Click to lock unit order' : 'Click to enable drag reordering'}
           >
             <GripVertical size={15} />

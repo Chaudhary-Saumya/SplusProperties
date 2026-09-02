@@ -12,23 +12,23 @@ const About = () => {
   const { language, t } = useLanguage();
 
   const brands = [
-    { 
-      name: 'Kharsan.com', 
+    {
+      name: 'Kharsan.com',
       tag: language === 'en' ? 'Flagship' : 'ફ્લેગશિપ',
-      desc: language === 'en' 
-        ? 'Our central digital identity offering premium IT solutions and educational courses.' 
+      desc: language === 'en'
+        ? 'Our central digital identity offering premium IT solutions and educational courses.'
         : 'પ્રીમિયમ આઇટી સોલ્યુશન્સ અને શૈક્ષણિક અભ્યાસક્રમો પ્રદાન કરતી અમારી મુખ્ય ડિજિટલ ઓળખ.',
       url: 'https://kharsan.com',
       status: 'active',
       buttonType: 'visit',
       icon: Globe
     },
-    { 
-      name: 'properties.kharsan.com', 
+    {
+      name: 'properties.kharsan.com',
       tag: language === 'en' ? 'Real Estate' : 'રિયલ એસ્ટેટ',
       desc: language === 'en'
         ? 'The premium platform for verified land and property investments.'
-        : 'વેરિફાઇડ જમીન અને મિલકત રોકાણ માટેનું પ્રીમિયમ પ્લેટફોર્મ.', 
+        : 'વેરિફાઇડ જમીન અને મિલકત રોકાણ માટેનું પ્રીમિયમ પ્લેટફોર્મ.',
       url: 'https://properties.kharsan.com',
       status: 'active',
       buttonType: 'here',
@@ -51,7 +51,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f5ee] font-['Nunito_Sans',sans-serif]">
-      <SEO 
+      <SEO
         title={language === 'en' ? 'About Us | The Kharsan Ecosystem' : 'અમારા વિશે | ખારસણ ઇકોસિસ્ટમ'}
         description="Discover the vision behind Kharsan Properties and the Kharsan IT Solution ecosystem. Built on trust, innovation, and a legacy of excellence."
       />
@@ -60,7 +60,7 @@ const About = () => {
       <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-[#1a2340]">
         <div className="absolute top-0 right-0 w-1/2 h-full bg-[#c9a84c]/5 skew-x-12 transform translate-x-1/4" />
         <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
@@ -102,7 +102,7 @@ const About = () => {
             <div className="hidden md:block h-0.5 flex-1 bg-[#e2d9c5] mx-12 mb-6 opacity-50" />
           </div>
 
-          <motion.div 
+          <motion.div
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
@@ -110,7 +110,7 @@ const About = () => {
             className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto"
           >
             {brands.map((brand, idx) => (
-              <motion.div 
+              <motion.div
                 key={idx}
                 variants={itemVariants}
                 className={`group relative bg-white rounded-[2.5rem] p-10 border border-[#e2d9c5] transition-all duration-500 hover:shadow-2xl hover:border-[#c9a84c] flex flex-col h-full ${brand.status === 'coming-soon' ? 'opacity-90' : ''}`}
@@ -135,9 +135,9 @@ const About = () => {
                       {language === 'en' ? 'You Are Here' : 'તમે અહીં છો'}
                     </div>
                   ) : (
-                    <a 
-                      href={brand.url} 
-                      target="_blank" 
+                    <a
+                      href={brand.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between w-full py-4 px-6 bg-[#1a2340] text-white rounded-2xl font-bold hover:bg-[#c9a84c] hover:text-[#1a2340] transition-all duration-300 group/btn"
                     >
@@ -160,7 +160,7 @@ const About = () => {
       <section className="bg-white py-24 px-6 overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -40 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -218,16 +218,16 @@ const About = () => {
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               className="relative"
             >
               <div className="absolute -inset-10 bg-[#c9a84c]/5 rounded-[4rem] transform rotate-3" />
-              <img 
-                src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200" 
-                alt="Modern Corporate Building" 
+              <img
+                src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200"
+                alt="Modern Corporate Building"
                 loading="lazy"
                 className="relative z-10 w-full aspect-[4/5] object-cover rounded-[3rem] shadow-2xl"
               />
@@ -254,20 +254,20 @@ const About = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
-              { 
-                icon: Shield, 
-                title: language === 'en' ? "Verified" : "વેરિફાઇડ", 
-                text: language === 'en' ? "100% physically and legally verified land parcels." : "૧૦૦% શારીરિક અને કાયદાકીય રીતે વેરિફાઇડ જમીન પ્લોટ્સ." 
+              {
+                icon: Shield,
+                title: language === 'en' ? "Verified" : "વેરિફાઇડ",
+                text: language === 'en' ? "100% physically and legally verified land parcels." : "૧૦૦% શારીરિક અને કાયદાકીય રીતે વેરિફાઇડ જમીન પ્લોટ્સ."
               },
-              { 
-                icon: Target, 
-                title: language === 'en' ? "Precision" : "ચોકસાઈ", 
-                text: language === 'en' ? "Smart boundary mapping with sub-meter accuracy." : "સબ-મીટર ચોકસાઈ સાથે સ્માર્ટ સીમા નકશો." 
+              {
+                icon: Target,
+                title: language === 'en' ? "Precision" : "ચોકસાઈ",
+                text: language === 'en' ? "Smart boundary mapping with sub-meter accuracy." : "સબ-મીટર ચોકસાઈ સાથે સ્માર્ટ સીમા નકશો."
               },
-              { 
-                icon: Award, 
-                title: language === 'en' ? "Premium" : "પ્રીમિયમ", 
-                text: language === 'en' ? "The highest standard of luxury agricultural land." : "લક્ઝરી ખેતીની જમીનનું ઉચ્ચતમ ધોરણ." 
+              {
+                icon: Award,
+                title: language === 'en' ? "Premium" : "પ્રીમિયમ",
+                text: language === 'en' ? "The highest standard of luxury agricultural land." : "લક્ઝરી ખેતીની જમીનનું ઉચ્ચતમ ધોરણ."
               }
             ].map((item, i) => (
               <div key={i} className="text-center group">

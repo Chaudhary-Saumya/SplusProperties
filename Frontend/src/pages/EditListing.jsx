@@ -196,7 +196,7 @@ const EditListing = () => {
         location: '',
         plotNumber: '',
         areaName: '',
-        listingType: 'Verified',
+        listingType: 'Basic',
         tokenAmount: '',
         payoutAccountId: '',
         locationMode: 'address',
@@ -809,87 +809,87 @@ const EditListing = () => {
 
                     {/* Token Booking — only shown if admin has enabled it */}
                     {systemSettings?.isInstantBookingEnabled !== false && (
-                    <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable or update online reservations for this property">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-bold text-[#1a2340]">Accept Token Bookings</p>
-                                <p className="text-xs text-[#1a2340]/40 font-medium mt-0.5">Allow buyers to reserve this listing with a token amount</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
-                                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${formData.isBookingEnabled ? 'bg-[#c9a84c]' : 'bg-[#1a2340]/20'}`}
-                            >
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${formData.isBookingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-
-                        {formData.isBookingEnabled && (
-                            <div className="mt-6 pt-6 border-t border-[#f8f5ee] space-y-5">
+                        <SectionCard icon={<CreditCard />} title="Token Booking System" subtitle="Enable or update online reservations for this property">
+                            <div className="flex items-center justify-between">
                                 <div>
-                                    <label className={labelCls}>
-                                        Token Amount — Capped at 2%
-                                        {formData.price && (
-                                            <span className="ml-1 normal-case font-semibold text-[#c9a84c]">
-                                                (max ₹{((formData.price || 0) * 0.02).toLocaleString('en-IN')})
-                                            </span>
-                                        )}
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
-                                        <input
-                                            type="number"
-                                            value={formData.tokenAmount}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                const max = (formData.price || 0) * 0.02;
-                                                setFormData({ ...formData, tokenAmount: val <= max ? val : max });
-                                            }}
-                                            className={inputCls + ' pl-12'}
-                                            placeholder="Enter token amount..."
-                                        />
-                                        {formData.tokenAmount > 0 && formData.price > 0 && (
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-[#1a2340] bg-[#c9a84c]/20 px-3 py-1 rounded-lg">
-                                                {((formData.tokenAmount / formData.price) * 100).toFixed(1)}% of price
+                                    <p className="text-sm font-bold text-[#1a2340]">Accept Token Bookings</p>
+                                    <p className="text-xs text-[#1a2340]/40 font-medium mt-0.5">Allow buyers to reserve this listing with a token amount</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, isBookingEnabled: !formData.isBookingEnabled })}
+                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${formData.isBookingEnabled ? 'bg-[#c9a84c]' : 'bg-[#1a2340]/20'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${formData.isBookingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+
+                            {formData.isBookingEnabled && (
+                                <div className="mt-6 pt-6 border-t border-[#f8f5ee] space-y-5">
+                                    <div>
+                                        <label className={labelCls}>
+                                            Token Amount — Capped at 2%
+                                            {formData.price && (
+                                                <span className="ml-1 normal-case font-semibold text-[#c9a84c]">
+                                                    (max ₹{((formData.price || 0) * 0.02).toLocaleString('en-IN')})
+                                                </span>
+                                            )}
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-[#c9a84c] text-xl">₹</span>
+                                            <input
+                                                type="number"
+                                                value={formData.tokenAmount}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const max = (formData.price || 0) * 0.02;
+                                                    setFormData({ ...formData, tokenAmount: val <= max ? val : max });
+                                                }}
+                                                className={inputCls + ' pl-12'}
+                                                placeholder="Enter token amount..."
+                                            />
+                                            {formData.tokenAmount > 0 && formData.price > 0 && (
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-[#1a2340] bg-[#c9a84c]/20 px-3 py-1 rounded-lg">
+                                                    {((formData.tokenAmount / formData.price) * 100).toFixed(1)}% of price
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={labelCls}>Select Payout Account</label>
+                                        {payoutAccounts.length > 0 ? (
+                                            <select
+                                                name="payoutAccountId"
+                                                value={formData.payoutAccountId}
+                                                onChange={handleChange}
+                                                className={inputCls + ' cursor-pointer'}
+                                                required
+                                            >
+                                                {payoutAccounts.map(acc => (
+                                                    <option key={acc._id} value={acc._id}>
+                                                        {acc.accountType?.toUpperCase()} — {acc.holderName || acc.bankName || acc.upiId}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700 text-sm font-medium">
+                                                No payout accounts found. Please add one in your{' '}
+                                                <button type="button" onClick={() => navigate('/dashboard')} className="underline font-black">Dashboard</button> first.
                                             </div>
                                         )}
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className={labelCls}>Select Payout Account</label>
-                                    {payoutAccounts.length > 0 ? (
-                                        <select
-                                            name="payoutAccountId"
-                                            value={formData.payoutAccountId}
-                                            onChange={handleChange}
-                                            className={inputCls + ' cursor-pointer'}
-                                            required
-                                        >
-                                            {payoutAccounts.map(acc => (
-                                                <option key={acc._id} value={acc._id}>
-                                                    {acc.accountType?.toUpperCase()} — {acc.holderName || acc.bankName || acc.upiId}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700 text-sm font-medium">
-                                            No payout accounts found. Please add one in your{' '}
-                                            <button type="button" onClick={() => navigate('/dashboard')} className="underline font-black">Dashboard</button> first.
-                                        </div>
-                                    )}
+                                    <div className="p-4 bg-[#1a2340]/5 rounded-xl border border-[#1a2340]/10 flex gap-3 items-start">
+                                        <span className="text-base mt-0.5">💡</span>
+                                        <p className="text-xs text-[#1a2340]/60 leading-relaxed font-medium">
+                                            <span className="font-black text-[#1a2340]">Facilitated Transfers:</span>{' '}
+                                            Token money from buyers will be sent directly to your chosen account. We don't hold any funds.
+                                        </p>
+                                    </div>
                                 </div>
-
-                                <div className="p-4 bg-[#1a2340]/5 rounded-xl border border-[#1a2340]/10 flex gap-3 items-start">
-                                    <span className="text-base mt-0.5">💡</span>
-                                    <p className="text-xs text-[#1a2340]/60 leading-relaxed font-medium">
-                                        <span className="font-black text-[#1a2340]">Facilitated Transfers:</span>{' '}
-                                        Token money from buyers will be sent directly to your chosen account. We don't hold any funds.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </SectionCard>
+                            )}
+                        </SectionCard>
                     )} {/* end systemSettings.isInstantBookingEnabled */}
 
                     {/* ── Submit bar ── */}

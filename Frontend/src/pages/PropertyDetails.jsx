@@ -1291,10 +1291,9 @@ const PropertyDetails = () => {
                                             {/* Bottom Gradient Overlay */}
                                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
 
-                                            {/* Top Left Badge: Property Type / Verified */}
+                                            {/* Top Left Badge: Property Type */}
                                             <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-900 shadow-md">
-                                                <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
-                                                <span>{item.listingType === 'Verified' ? 'VERIFIED' : (item.landType || item.propertyType || 'PLOT')}</span>
+                                                <span>{(item.landType || item.propertyType || 'PLOT').toUpperCase()}</span>
                                             </div>
 
                                             {/* Top Right Heart Icon */}

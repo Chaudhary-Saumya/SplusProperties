@@ -42,7 +42,7 @@ const Calculator = () => {
   const calculate = useCallback(() => {
     try {
       const fullFormula = formula + display;
-      // eslint-disable-next-line no-new-func
+
       const result = new Function('return ' + fullFormula.replace('×', '*').replace('÷', '/'))();
       const formattedResult = Number.isInteger(result) ? result.toString() : result.toFixed(4).replace(/\.?0+$/, '');
 

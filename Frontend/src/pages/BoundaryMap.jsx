@@ -84,6 +84,7 @@ const BoundaryMap = () => {
 
   const mapRef = useRef();
   const sheetRef = useRef();
+  const dragHandleRef = useRef(null);
   const dragStart = useRef(null);
 
   useEffect(() => {
@@ -91,6 +92,53 @@ const BoundaryMap = () => {
     if (!hasSeen) {
       setShowTutorial(true);
     }
+  }, []);
+
+  // ── Auto Restore Map Draft from localStorage ────────────────────────
+  useEffect(() => {
+    if (editId) return;
+    try {
+      const savedDraft = localStorage.getItem('boundary_map_draft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed?.polygons?.length > 0 && parsed.polygons.some(p => p.points?.length > 0)) {
+          setPolygons(parsed.polygons);
+          if (parsed.unit) setUnit(parsed.unit);
+          if (parsed.tileMode) setTileMode(parsed.tileMode);
+          if (parsed.center) setCenter(parsed.center);
+          toast.info('Restored your mapped properties draft', { autoClose: 3000 });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to restore map draft:', e);
+    }
+  }, [editId]);
+
+  // ── Auto Save Map Draft to localStorage ────────────────────────────
+  useEffect(() => {
+    if (editId || loading) return;
+    const hasPoints = polygons.some(p => p.points?.length > 0);
+    if (hasPoints) {
+      const draft = { polygons, unit, tileMode, center };
+      localStorage.setItem('boundary_map_draft', JSON.stringify(draft));
+    }
+  }, [polygons, unit, tileMode, center, editId, loading]);
+
+  // ── Prevent Browser Pull-To-Refresh on Sheet Drag Handle ──────────
+  useEffect(() => {
+    const handleEl = dragHandleRef.current;
+    if (!handleEl) return;
+
+    const preventPullToRefresh = (e) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+    return () => {
+      handleEl.removeEventListener('touchmove', preventPullToRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -101,7 +149,7 @@ const BoundaryMap = () => {
         setCenter(loc);
         if (mapRef.current) mapRef.current.flyTo(loc, 18, { duration: 1.5 });
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: true }
     );
   }, [editId]);
@@ -301,6 +349,7 @@ const BoundaryMap = () => {
       setPolygons([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
       setActiveIndex(0);
       setIsDrawing(false);
+      localStorage.removeItem('boundary_map_draft');
     }
   };
 
@@ -366,7 +415,7 @@ const BoundaryMap = () => {
       try {
         const canvas = await html2canvas(document.querySelector('.leaflet-container'), { useCORS: true, scale: 0.5, logging: false });
         thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-      } catch {}
+      } catch { }
 
       const mapState = {
         title: 'Land Plot Boundary Map',
@@ -402,7 +451,7 @@ const BoundaryMap = () => {
     const toastId = toast.loading('Generating Report...');
 
     const originalGetComputedStyle = window.getComputedStyle;
-    window.getComputedStyle = function(el, pseudoEl) {
+    window.getComputedStyle = function (el, pseudoEl) {
       const style = originalGetComputedStyle(el, pseudoEl);
       return new Proxy(style, {
         get(target, prop) {
@@ -594,7 +643,7 @@ const BoundaryMap = () => {
   const totalArea = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0);
 
   return (
-    <div className="h-[100dvh] w-screen overflow-hidden relative bg-slate-900 font-['Nunito_Sans',sans-serif] antialiased select-none">
+    <div className="h-[100dvh] w-screen overflow-hidden relative bg-slate-900 font-['Nunito_Sans',sans-serif] antialiased select-none overscroll-none touch-pan-x touch-pan-y">
       <SEO title={t('boundary_map.title')} description={t('boundary_map.description')} />
       <style>{`
         .custom-tooltip { background: rgba(255,255,255,0.96) !important; border: 1.5px solid #2563eb !important; border-radius: 10px !important; color: #0f172a !important; font-weight: 800 !important; font-size: 11px !important; padding: 4px 10px !important; box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important; white-space: nowrap !important; }
@@ -673,22 +722,22 @@ const BoundaryMap = () => {
 
               {showEdgeLabels && renderEdgeLabels(poly)}
 
-            {activeIndex === pIdx && poly.points.map((pt, ptIdx) => (
-              <Marker
-                key={`${pIdx}-${ptIdx}`}
-                position={pt}
-                draggable
-                eventHandlers={{ dragend: (e) => updatePoint(pIdx, ptIdx, e.target.getLatLng()) }}
-                icon={L.divIcon({
-                  className: 'drawing-handle',
-                  html: `<div style="background:${poly.color};width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.3);"></div>`,
-                  iconSize: [14, 14], iconAnchor: [7, 7]
-                })}
-              />
-            ))}
-          </React.Fragment>
-        );
-      })}
+              {activeIndex === pIdx && poly.points.map((pt, ptIdx) => (
+                <Marker
+                  key={`${pIdx}-${ptIdx}`}
+                  position={pt}
+                  draggable
+                  eventHandlers={{ dragend: (e) => updatePoint(pIdx, ptIdx, e.target.getLatLng()) }}
+                  icon={L.divIcon({
+                    className: 'drawing-handle',
+                    html: `<div style="background:${poly.color};width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [14, 14], iconAnchor: [7, 7]
+                  })}
+                />
+              ))}
+            </React.Fragment>
+          );
+        })}
       </MapContainer>
 
       {/* Target Crosshair HUD Overlay (Clean + Sign Only) */}
@@ -800,9 +849,8 @@ const BoundaryMap = () => {
         <button
           onClick={getLocation}
           title={t('boundary_map.navigate_my_location')}
-          className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg border transition-all active:scale-90 cursor-pointer ${
-            loading ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/95 border-slate-200 text-slate-800 backdrop-blur-xl hover:text-blue-600 hover:bg-white'
-          }`}
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg border transition-all active:scale-90 cursor-pointer ${loading ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/95 border-slate-200 text-slate-800 backdrop-blur-xl hover:text-blue-600 hover:bg-white'
+            }`}
         >
           {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Navigation size={18} />}
         </button>
@@ -870,7 +918,7 @@ const BoundaryMap = () => {
       {/* Bottom Sheet / Desktop Control Panel */}
       <div
         ref={sheetRef}
-        className="map-control-panel absolute bottom-0 left-0 right-0 z-[1002] bg-white/95 text-slate-900 backdrop-blur-2xl"
+        className="map-control-panel absolute bottom-0 left-0 right-0 z-[1002] bg-white/95 text-slate-900 backdrop-blur-2xl overscroll-contain"
         style={{
           height: isDrawing && !isDesktop ? '0px' : (isDesktop ? 'calc(100vh - 100px)' : sheetHeights[sheetState]),
           transition: 'all 0.35s cubic-bezier(0.32,0.72,0,1)',
@@ -879,10 +927,9 @@ const BoundaryMap = () => {
           flexDirection: 'column',
           overflow: 'hidden',
           borderTop: isDrawing && !isDesktop ? 'none' : '1px solid rgba(226,232,240,0.9)',
-          boxShadow: isDrawing && !isDesktop ? 'none' : '0 -15px 40px rgba(15,23,42,0.12)'
+          boxShadow: isDrawing && !isDesktop ? 'none' : '0 -15px 40px rgba(15,23,42,0.12)',
+          overscrollBehaviorY: 'contain'
         }}
-        onTouchStart={isDesktop ? undefined : onSheetTouchStart}
-        onTouchEnd={isDesktop ? undefined : onSheetTouchEnd}
       >
         {/* Desktop Sidebar Header */}
         {isDesktop && (
@@ -900,8 +947,12 @@ const BoundaryMap = () => {
         {/* Mobile Swipe Handle */}
         {!isDesktop && (
           <div
+            ref={dragHandleRef}
+            onTouchStart={isDesktop ? undefined : onSheetTouchStart}
+            onTouchEnd={isDesktop ? undefined : onSheetTouchEnd}
             onClick={() => { if (sheetState === 'peek') setSheetState('half'); }}
-            className="flex flex-col items-center pt-2.5 pb-1.5 shrink-0 cursor-pointer select-none"
+            className="flex flex-col items-center pt-2.5 pb-1.5 shrink-0 cursor-pointer select-none touch-none"
+            style={{ touchAction: 'none' }}
           >
             <div className="w-10 h-1 bg-slate-300 rounded-full mb-2 shrink-0" />
 
@@ -940,17 +991,15 @@ const BoundaryMap = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                  activeTab === tab.id
+                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${activeTab === tab.id
                     ? 'bg-[#1a2340] text-white shadow-md'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                  }`}
               >
                 {tab.icon} {tab.label}
                 {tab.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                    activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-                  }`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
                     {tab.count}
                   </span>
                 )}
@@ -961,7 +1010,10 @@ const BoundaryMap = () => {
 
         {/* Tab Content Container */}
         {(sheetState !== 'peek' || isDesktop) && (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div
+            className="flex-1 overflow-y-auto px-4 py-3 space-y-3 overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          >
 
             {/* TAB 1: PLOTS */}
             {activeTab === 'plots' && (
@@ -982,11 +1034,10 @@ const BoundaryMap = () => {
                   <div
                     key={idx}
                     onClick={() => setActiveIndex(idx)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                      activeIndex === idx
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${activeIndex === idx
                         ? 'bg-slate-50 border-blue-500 shadow-md'
                         : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-1.5 h-10 rounded-full shrink-0" style={{ background: poly.color }} />
@@ -1032,9 +1083,8 @@ const BoundaryMap = () => {
                           <button
                             key={c.value}
                             onClick={e => { e.stopPropagation(); updatePlotField(idx, 'color', c.value); }}
-                            className={`w-5 h-5 rounded-full border-2 transition-transform active:scale-90 cursor-pointer ${
-                              poly.color === c.value ? 'border-slate-900 scale-110' : 'border-transparent hover:scale-110'
-                            }`}
+                            className={`w-5 h-5 rounded-full border-2 transition-transform active:scale-90 cursor-pointer ${poly.color === c.value ? 'border-slate-900 scale-110' : 'border-transparent hover:scale-110'
+                              }`}
                             style={{ background: c.value }}
                           />
                         ))}
@@ -1151,11 +1201,10 @@ const BoundaryMap = () => {
                       <button
                         key={key}
                         onClick={() => setTileMode(key)}
-                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
-                          tileMode === key
+                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${tileMode === key
                             ? 'bg-[#1a2340] text-white font-black shadow-md'
                             : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                        }`}
+                          }`}
                       >
                         {key === 'satellite' ? <Satellite size={18} /> : key === 'hybrid' ? <Layers size={18} /> : <Map size={18} />}
                         <span>{val.label}</span>
@@ -1175,11 +1224,10 @@ const BoundaryMap = () => {
                       <button
                         key={u.value}
                         onClick={() => setUnit(u.value)}
-                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
-                          unit === u.value
+                        className={`py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center gap-1.5 cursor-pointer ${unit === u.value
                             ? 'bg-[#1a2340] text-white font-black shadow-md'
                             : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                        }`}
+                          }`}
                       >
                         {u.icon}
                         <span>{u.label}</span>
@@ -1267,9 +1315,8 @@ const BoundaryMap = () => {
                 </div>
                 <button
                   onClick={copyLink}
-                  className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                    copied ? 'bg-emerald-600 text-white' : 'bg-[#1a2340] text-white'
-                  }`}
+                  className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${copied ? 'bg-emerald-600 text-white' : 'bg-[#1a2340] text-white'
+                    }`}
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                 </button>

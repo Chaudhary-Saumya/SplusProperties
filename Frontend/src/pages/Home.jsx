@@ -828,11 +828,6 @@ const Home = () => {
                           </div>
                         )}
 
-                        {/* Verified Badge */}
-                        <div className="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-                          <CheckCircle2 size={11} />
-                          <span>Verified</span>
-                        </div>
 
                         {/* Wishlist Heart Button */}
                         <button

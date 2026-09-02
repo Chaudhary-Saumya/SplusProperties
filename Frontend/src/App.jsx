@@ -4,7 +4,7 @@ import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
-// eslint-disable-next-line no-unused-vars
+ 
 import { AnimatePresence, motion } from 'framer-motion';
 import ScrollToTopOnRouteChange from './components/ScrollToTopOnRouteChange';
 

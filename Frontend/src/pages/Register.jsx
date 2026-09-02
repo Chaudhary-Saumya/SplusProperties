@@ -2,7 +2,7 @@ import React, { useState, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { Eye, EyeOff, ArrowLeft, Mail, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, User, Phone, LandPlot, Ruler, BadgeCheck, UserCheck, Briefcase } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
@@ -89,13 +89,13 @@ const Register = () => {
             value: 'User',  
             label: language === 'en' ? 'Individual User / Owner' : 'વ્યક્તિગત વપરાશકર્તા / માલિક', 
             desc: language === 'en' ? 'Explore, buy, or post your own land/plots' : 'જમીન ખરીદો, જુઓ અથવા લિસ્ટ કરો',  
-            icon: '🏡' 
+            icon: <UserCheck size={22} className="mx-auto mb-1 text-amber-500" />
         },
         { 
             value: 'Broker', 
             label: language === 'en' ? 'Real Estate Agent / Broker' : 'રિયલ એસ્ટેટ એજન્ટ / બ્રોકર',     
             desc: language === 'en' ? 'Manage client listings with Verified Broker Stamp' : 'વરિફાઇડ બ્રોકર સ્ટેમ્પ સાથે મિલકત મેનેજ કરો',     
-            icon: '🏷️' 
+            icon: <BadgeCheck size={22} className="mx-auto mb-1 text-blue-600" />
         },
     ];
 
@@ -112,19 +112,58 @@ const Register = () => {
             )}
 
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
 
                 .reg-page {
                     min-height: calc(100vh - 68px);
                     display: flex;
+                    flex-direction: column;
                     font-family: 'Nunito Sans', sans-serif;
                     background: #f8f5ee;
                 }
+                @media (min-width: 900px) {
+                    .reg-page {
+                        flex-direction: row;
+                    }
+                }
 
-                /* ── Left Panel ── */
+                /* ── Mobile Hero Header (< 900px) ── */
+                .reg-mobile-hero {
+                    position: relative;
+                    background: #1a2340;
+                    padding: 32px 20px 48px;
+                    overflow: hidden;
+                    color: #fff;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                }
+                @media (min-width: 900px) {
+                    .reg-mobile-hero { display: none; }
+                }
+
+                .reg-mobile-hero-img {
+                    position: absolute; inset: 0;
+                    width: 100%; height: 100%;
+                    object-fit: cover;
+                    opacity: 0.38;
+                }
+
+                .reg-mobile-hero-overlay {
+                    position: absolute; inset: 0;
+                    background: linear-gradient(180deg, rgba(26,35,64,0.75) 0%, rgba(26,35,64,0.95) 100%);
+                }
+
+                .reg-mobile-hero-content {
+                    position: relative;
+                    z-index: 2;
+                    max-width: 400px;
+                }
+
+                /* ── Left Panel (Desktop >= 900px) ── */
                 .reg-left {
                     display: none;
-                    flex: 1;
+                    flex: 1.1;
                     position: relative;
                     overflow: hidden;
                     background: #1a2340;
@@ -133,7 +172,7 @@ const Register = () => {
                 }
                 @media (min-width: 900px) { .reg-left { display: flex; } }
 
-                .reg-left::before {
+                .reg-left::before, .reg-mobile-hero::before {
                     content: '';
                     position: absolute; top: 0; left: 0; right: 0;
                     height: 4px;
@@ -143,7 +182,7 @@ const Register = () => {
                 .reg-left-img {
                     position: absolute; inset: 0;
                     width: 100%; height: 100%;
-                    object-fit: cover; opacity: 0.3;
+                    object-fit: cover; opacity: 0.38;
                 }
                 .reg-left-overlay {
                     position: relative; z-index: 2;
@@ -151,8 +190,8 @@ const Register = () => {
                 }
                 .reg-left-tag {
                     display: inline-block;
-                    background: rgba(201,168,76,0.2);
-                    border: 1px solid rgba(201,168,76,0.5);
+                    background: rgba(201,168,76,0.22);
+                    border: 1px solid rgba(201,168,76,0.55);
                     color: #f0d080;
                     font-size: 11px; font-weight: 800;
                     letter-spacing: 2px; text-transform: uppercase;
@@ -160,15 +199,15 @@ const Register = () => {
                     margin-bottom: 16px;
                 }
                 .reg-left-heading {
-                   
                     font-size: clamp(1.8rem, 2.8vw, 2.6rem);
-                    color: #fff; font-weight: 700; line-height: 1.25;
+                    color: #fff; font-weight: 800; line-height: 1.25;
                     margin: 0 0 16px;
+                    letter-spacing: -0.5px;
                 }
                 .reg-left-sub {
-                    color: rgba(255,255,255,0.62);
+                    color: rgba(255,255,255,0.75);
                     font-size: 14px; font-weight: 500; line-height: 1.7;
-                    max-width: 340px; margin-bottom: 36px;
+                    max-width: 360px; margin-bottom: 32px;
                 }
                 .reg-steps { display: flex; flex-direction: column; gap: 16px; }
                 .reg-step {
@@ -177,57 +216,67 @@ const Register = () => {
                 .reg-step-num {
                     width: 30px; height: 30px; border-radius: 50%;
                     background: rgba(201,168,76,0.25);
-                    border: 1.5px solid rgba(201,168,76,0.5);
+                    border: 1.5px solid rgba(201,168,76,0.6);
                     color: #f0d080; font-size: 12px; font-weight: 800;
                     display: flex; align-items: center; justify-content: center;
                     flex-shrink: 0; margin-top: 1px;
                 }
-                .reg-step-text { font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 600; line-height: 1.5; }
+                .reg-step-text { font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 600; line-height: 1.5; }
                 .reg-step-text strong { color: #fff; display: block; margin-bottom: 2px; }
 
-                /* ── Right Panel ── */
+                /* ── Right Form Panel ── */
                 .reg-right {
                     width: 100%;
-                    max-width: 500px;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
-                    padding: 48px 40px;
+                    padding: 32px 20px 48px;
                     background: #fff;
-                    box-shadow: -8px 0 40px rgba(26,35,64,0.08);
+                    box-sizing: border-box;
                     overflow-y: auto;
                 }
-                @media (max-width: 600px) { .reg-right { padding: 36px 24px; max-width: 100%; } }
-
-                .reg-logo {
-                    
-                    font-size: 20px; font-weight: 700;
-                    color: #1a2340; text-decoration: none;
-                    display: inline-block; margin-bottom: 32px;
+                @media (max-width: 899px) {
+                    .reg-right {
+                        margin-top: -24px;
+                        border-radius: 28px 28px 0 0;
+                        position: relative;
+                        z-index: 10;
+                        box-shadow: 0 -12px 32px rgba(15,23,42,0.15);
+                        padding: 32px 24px 48px;
+                        max-width: 520px;
+                        margin-left: auto;
+                        margin-right: auto;
+                    }
                 }
-                .reg-logo span { color: #c9a84c; }
+                @media (min-width: 900px) {
+                    .reg-right {
+                        max-width: 500px;
+                        padding: 48px 40px;
+                        box-shadow: -8px 0 40px rgba(26,35,64,0.08);
+                    }
+                }
 
                 .reg-title {
-                    
-                    font-size: 26px; font-weight: 700;
+                    font-size: 26px; font-weight: 800;
                     color: #1a2340; margin: 0 0 6px;
+                    letter-spacing: -0.3px;
                 }
                 .reg-subtitle {
                     font-size: 14px; color: #6b7280; font-weight: 500;
-                    margin-bottom: 28px;
+                    margin-bottom: 28px; line-height: 1.5;
                 }
 
                 /* Error */
                 .reg-error {
-                    background: #fff0f0; border: 1px solid #fcc; color: #c0392b;
-                    padding: 12px 16px; border-radius: 8px;
+                    background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+                    padding: 12px 16px; border-radius: 12px;
                     font-size: 13px; font-weight: 600;
                     margin-bottom: 20px;
                 }
 
                 /* Fields */
-                .reg-row { display: flex; gap: 14px; }
-                .reg-row .reg-field { flex: 1; }
+                .reg-row { display: flex; gap: 14px; flex-wrap: wrap; }
+                .reg-row .reg-field { flex: 1; min-width: 140px; }
 
                 .reg-field { margin-bottom: 18px; }
                 .reg-label {
@@ -237,17 +286,17 @@ const Register = () => {
                 }
                 .reg-input {
                     width: 100%; box-sizing: border-box;
-                    padding: 12px 15px; border-radius: 8px;
+                    padding: 12px 15px; border-radius: 12px;
                     border: 1.5px solid #e2d9c5; background: #fdfaf5;
                     font-size: 14px; font-weight: 600; color: #1a2340;
                     font-family: 'Nunito Sans', sans-serif;
-                    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+                    outline: none; transition: all 0.2s;
                     appearance: none;
                 }
                 .reg-input::placeholder { color: #b0a898; font-weight: 500; }
                 .reg-input:focus {
                     border-color: #c9a84c;
-                    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+                    box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
                     background: #fff;
                 }
 
@@ -257,30 +306,30 @@ const Register = () => {
                     flex-wrap: wrap;
                 }
                 .reg-role-card {
-                    flex: 1; min-width: 120px;
+                    flex: 1; min-width: 130px;
                     border: 1.5px solid #e2d9c5;
-                    border-radius: 10px; padding: 12px 10px;
+                    border-radius: 14px; padding: 14px 12px;
                     cursor: pointer; text-align: center;
                     background: #fdfaf5;
-                    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+                    transition: all 0.2s;
                     user-select: none;
                 }
                 .reg-role-card.selected {
                     border-color: #c9a84c;
                     background: #fffbf0;
-                    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+                    box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
                 }
                 .reg-role-card:hover:not(.selected) {
                     border-color: #1a2340; background: #f8f5ee;
                 }
-                .reg-role-icon { font-size: 20px; margin-bottom: 5px; }
+                .reg-role-icon { font-size: 22px; margin-bottom: 6px; }
                 .reg-role-name {
                     font-size: 12px; font-weight: 800; color: #1a2340;
                     text-transform: uppercase; letter-spacing: 0.5px;
                 }
                 .reg-role-desc {
                     font-size: 10px; color: #9ca3af; font-weight: 500;
-                    margin-top: 3px; line-height: 1.4;
+                    margin-top: 4px; line-height: 1.4;
                 }
                 .reg-role-card.selected .reg-role-name { color: #b8933a; }
 
@@ -288,14 +337,25 @@ const Register = () => {
                 .reg-btn {
                     width: 100%; padding: 14px;
                     background: #1a2340; color: #fff;
-                    border: none; border-radius: 8px; cursor: pointer;
+                    border: none; border-radius: 12px; cursor: pointer;
                     font-size: 14px; font-weight: 800; letter-spacing: 1px;
                     text-transform: uppercase; font-family: 'Nunito Sans', sans-serif;
-                    transition: background 0.2s, transform 0.15s;
+                    transition: all 0.2s;
                     margin-top: 4px;
+                    box-shadow: 0 4px 14px rgba(26,35,64,0.18);
                 }
-                .reg-btn:hover:not(:disabled) { background: #c9a84c; color: #1a1200; transform: translateY(-1px); }
+                .reg-btn:hover:not(:disabled) { background: #c9a84c; color: #1a1200; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,0.3); }
                 .reg-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+                .reg-native-google-btn {
+                    background: #fff !important;
+                    color: #1a2340 !important;
+                    border: 1.5px solid #e2d9c5 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    gap: 10px !important;
+                    text-transform: none !important;
+                }
 
                 /* Divider */
                 .reg-divider {
@@ -304,7 +364,7 @@ const Register = () => {
                 }
                 .reg-divider-line { flex: 1; height: 1px; background: #e2d9c5; }
                 .reg-divider-text {
-                    font-size: 11px; font-weight: 800; color: #b0a898;
+                    font-size: 11px; font-weight: 800; color: #9ca3af;
                     text-transform: uppercase; letter-spacing: 1px;
                 }
 
@@ -312,31 +372,20 @@ const Register = () => {
 
                 .reg-footer {
                     text-align: center; margin-top: 24px;
-                    font-size: 13px; color: #6b7280; font-weight: 500;
+                    font-size: 13px; color: #6b7280; font-weight: 600;
                 }
                 .reg-footer a {
-                    color: #c9a84c; font-weight: 800; text-decoration: none; margin-left: 4px;
+                    color: #c9a84c; font-weight: 800; text-decoration: none; margin-left: 5px;
                 }
                 .reg-footer a:hover { text-decoration: underline; }
 
-                .reg-brand-strip {
-                    margin-top: 28px; padding-top: 18px;
-                    border-top: 1px solid #f0ebe0;
-                    display: flex; gap: 12px; flex-wrap: wrap;
-                }
-                .reg-brand-badge {
-                    font-size: 11px; font-weight: 700; color: #1a2340;
-                    background: #f8f5ee; border: 1px solid #e2d9c5;
-                    padding: 4px 12px; border-radius: 100px;
-                    display: flex; align-items: center; gap: 4px;
-                }
                 .reg-btn-outline {
                     width: 100%;
                     padding: 14px;
                     background: #fff;
                     color: #1a2340;
                     border: 1.5px solid #e2d9c5;
-                    border-radius: 8px;
+                    border-radius: 12px;
                     cursor: pointer;
                     font-size: 14px;
                     font-weight: 800;
@@ -349,10 +398,12 @@ const Register = () => {
                     justify-content: center;
                     gap: 10px;
                     box-sizing: border-box;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
                 }
                 .reg-btn-outline:hover {
                     background: #fdfaf5;
                     border-color: #1a2340;
+                    transform: translateY(-1px);
                 }
                 .reg-back-link {
                     display: inline-flex;
@@ -374,10 +425,10 @@ const Register = () => {
                     color: #1a2340;
                 }
                 .reg-google-container {
-                    background: #fdfaf5;
+                    background: linear-gradient(135deg, #fdfaf5 0%, #fffbf0 100%);
                     border: 1.5px dashed #e2d9c5;
-                    border-radius: 12px;
-                    padding: 24px;
+                    border-radius: 16px;
+                    padding: 24px 16px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -387,15 +438,40 @@ const Register = () => {
 
             <div className="reg-page">
 
-                {/* ── Left Panel ── */}
+                {/* ── Mobile Hero Header (< 900px) ── */}
+                <div className="reg-mobile-hero">
+                    <img
+                        className="reg-mobile-hero-img"
+                        src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80"
+                        alt="Land & Plots"
+                    />
+                    <div className="reg-mobile-hero-overlay" />
+                    <div className="reg-mobile-hero-content">
+                        <div className="reg-left-tag">
+                            {language === 'en' ? 'Verified Land & Plots Platform' : 'વેરિફાઇડ લેન્ડ એન્ડ પ્લોટ પ્લેટફોર્મ'}
+                        </div>
+                        <h2 className="text-xl font-extrabold text-white mb-2 leading-snug">
+                            {language === 'en' ? 'Start Your Land Journey Today' : 'આજે જ તમારી જમીનની સફર શરૂ કરો'}
+                        </h2>
+                        <div className="flex items-center justify-center gap-3 text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1.5"><UserCheck size={13} className="text-amber-400" /> {language === 'en' ? 'Free Registration' : 'મફત રજીસ્ટ્રેશન'}</span>
+                            <span>·</span>
+                            <span className="inline-flex items-center gap-1.5"><Ruler size={13} className="text-amber-400" /> {language === 'en' ? 'Smart Map Tools' : 'સ્માર્ટ નકશા સાધનો'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Left Panel (Desktop >= 900px) ── */}
                 <div className="reg-left">
                     <img
                         className="reg-left-img"
-                        src="https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?w=1200&q=80"
-                        alt="Property"
+                        src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80"
+                        alt="Land Plots"
                     />
                     <div className="reg-left-overlay">
-                        {/* <div className="reg-left-tag">Join 12,000+ Happy Buyers</div> */}
+                        <div className="reg-left-tag">
+                            {language === 'en' ? 'Trusted Land & Plot Platform' : 'ભરોસાપાત્ર લેન્ડ એન્ડ પ્લોટ પ્લેટફોર્મ'}
+                        </div>
                         <h2 className="reg-left-heading">
                             {language === 'en' ? (
                                 <>Start Your Property<br />Journey Today</>
@@ -405,7 +481,7 @@ const Register = () => {
                         </h2>
                         <p className="reg-left-sub">
                             {language === 'en'
-                                ? "Create a free account and get access to thousands of verified plots, smart boundary tools and direct seller contacts."
+                                ? "Create a free account and get access to thousands of verified land plots, smart boundary tools and direct seller contacts."
                                 : "મફત એકાઉન્ટ બનાવો અને હજારો વેરિફાઇડ પ્લોટ્સ, સ્માર્ટ સીમા નકશા સાધનો અને સીધા વેચનારના સંપર્ક મેળવો."}
                         </p>
                         <div className="reg-steps">
@@ -415,12 +491,12 @@ const Register = () => {
                                     desc: language === 'en' ? 'Sign up free in under 2 minutes' : '૨ મિનિટથી ઓછા સમયમાં મફત સાઇન અપ કરો' 
                                 },
                                 { 
-                                    title: language === 'en' ? 'Browse Verified Listings' : 'વેરિફાઇડ પ્રોપર્ટીઝ જુઓ', 
-                                    desc: language === 'en' ? 'Explore plots, land & commercial sites' : 'પ્લોટ્સ, જમીન અને કોમર્શિયલ સાઇટ્સ શોધો' 
+                                    title: language === 'en' ? 'Browse Verified Land Plots' : 'વેરિફાઇડ જમીન પ્લોટ્સ જુઓ', 
+                                    desc: language === 'en' ? 'Explore farmland, plots & commercial sites' : 'ખેતીની જમીન, પ્લોટ્સ અને કોમર્શિયલ સાઇટ્સ શોધો' 
                                 },
                                 { 
                                     title: language === 'en' ? 'Connect Directly' : 'સીધો સંપર્ક કરો', 
-                                    desc: language === 'en' ? 'Contact sellers with zero brokerage' : 'કોઈપણ દલાલી વિના વેચનારનો સંપર્ક કરો' 
+                                    desc: language === 'en' ? 'Contact land owners with zero brokerage' : 'કોઈપણ દલાલી વિના જમીન માલિકોનો સંપર્ક કરો' 
                                 },
                             ].map(({ title, desc }, i) => (
                                 <div className="reg-step" key={i}>
@@ -435,17 +511,17 @@ const Register = () => {
                     </div>
                 </div>
 
-                {/* ── Right Panel ── */}
+                {/* ── Right Panel Form Card ── */}
                 <div className="reg-right">
                     <AnimatePresence mode="wait">
                         {!showManualForm ? (
                             <motion.div
                                 key="choice"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
                                 transition={{ duration: 0.2 }}
-                                style={{ display: 'flex', flexDirection: 'column', height: '100%', justifycontent: 'center' }}
+                                style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}
                             >
                                 <h1 className="reg-title">{t('auth.register_title')}</h1>
                                 <p className="reg-subtitle">{t('auth.register_subtitle')}</p>
@@ -457,12 +533,11 @@ const Register = () => {
                                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#1a2340', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>
                                         {language === 'en' ? 'Quick Sign-Up' : 'ઝડપી સાઇન-અપ'}
                                     </span>
-                                    <div className="reg-google-wrap" style={{ width: '100%', display: 'flex', justifycontent: 'center' }}>
+                                    <div className="reg-google-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                                         {Capacitor.isNativePlatform() ? (
                                             <button
                                                 type="button"
-                                                className="reg-btn"
-                                                style={{ background: '#fff', color: '#1a2340', border: '1.5px solid #e2d9c5', display: 'flex', alignItems: 'center', justifycontent: 'center', gap: '10px', textTransform: 'none' }}
+                                                className="reg-btn reg-native-google-btn"
                                                 onClick={async () => {
                                                     try {
                                                         await GoogleSignIn.initialize({
@@ -516,9 +591,9 @@ const Register = () => {
                         ) : (
                             <motion.div
                                 key="manual"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
                                 transition={{ duration: 0.2 }}
                             >
                                 <button
