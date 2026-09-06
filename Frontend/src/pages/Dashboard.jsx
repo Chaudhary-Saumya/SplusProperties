@@ -56,6 +56,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ListingSkeleton from "../components/ListingSkeleton";
 import EmptyState from "../components/EmptyState";
 import { getImageUrl } from "../utils/imageUrl";
+import ConfirmModal from "../components/ConfirmModal";
 
 const inputCls = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all font-semibold text-slate-800 text-xs sm:text-sm placeholder:text-slate-400";
 const labelCls = "block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider";
@@ -261,16 +262,25 @@ const Dashboard = ({ tab }) => {
     }
   };
 
-  const handleRevokeSession = async (sessionId) => {
-    if (window.confirm("Log out from this device session?")) {
-      try {
-        await axios.delete(`/api/auth/sessions/${sessionId}`);
-        setSessions(sessions.filter((s) => s._id !== sessionId));
-        toast.success("Session revoked successfully");
-      } catch {
-        toast.error("Failed to revoke session");
-      }
-    }
+  const handleRevokeSession = (sessionId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Terminate Device Session",
+      message: "Are you sure you want to log out this device session?",
+      confirmText: "Log Out Session",
+      type: "warning",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await axios.delete(`/api/auth/sessions/${sessionId}`);
+          setSessions(sessions.filter((s) => s._id !== sessionId));
+          toast.success("Session revoked successfully");
+        } catch {
+          toast.error("Failed to revoke session");
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   const handleAddAccount = async (e) => {
@@ -315,15 +325,25 @@ const Dashboard = ({ tab }) => {
     setShowAddAccountModal(true);
   };
 
-  const handleDeleteAccount = async (accountId) => {
-    if (window.confirm("Remove this payment account?")) {
-      try {
-        await axios.delete(`/api/auth/payment-accounts/${accountId}`);
-        toast.success("Account removed");
-      } catch {
-        toast.error("Failed to delete account");
-      }
-    }
+  const handleDeleteAccount = (accountId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove Payment Account",
+      message: "Are you sure you want to remove this Bank / UPI payment account?",
+      confirmText: "Remove Account",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await axios.delete(`/api/auth/payment-accounts/${accountId}`);
+          toast.success("Account removed");
+          queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
+        } catch {
+          toast.error("Failed to delete account");
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   const toggleStatus = async (id, newStatus) => {
@@ -346,26 +366,30 @@ const Dashboard = ({ tab }) => {
   };
 
   const handleDelete = (id, title) => {
-    setConfirmModal({ id, title });
-  };
-
-  const confirmDelete = async () => {
-    if (!confirmModal) return;
-    const { id } = confirmModal;
-    setDeletingId(id);
-    setConfirmModal(null);
-    queryClient.setQueryData(["dashboardListings", user?.id || user?._id], (old) =>
-      old ? old.filter(l => l._id !== id) : old
-    );
-    try {
-      await axios.delete(`/api/listings/${id}`);
-      toast.success("Property deleted");
-    } catch {
-      toast.error("Failed to delete property");
-      queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
-    } finally {
-      setDeletingId(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Property Listing",
+      message: `Are you sure you want to permanently delete "${title}"? This action cannot be undone.`,
+      confirmText: "Delete Listing",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setDeletingId(id);
+        queryClient.setQueryData(["dashboardListings", user?.id || user?._id], (old) =>
+          old ? old.filter(l => l._id !== id) : old
+        );
+        try {
+          await axios.delete(`/api/listings/${id}`);
+          toast.success("Property deleted");
+        } catch {
+          toast.error("Failed to delete property");
+          queryClient.invalidateQueries({ queryKey: ["dashboardListings"] });
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   const handleUpdateProfile = async (e) => {
@@ -518,8 +542,8 @@ const Dashboard = ({ tab }) => {
                 </span>
               </div>
               <p className="text-slate-400 text-xs font-medium mt-0.5 flex items-center gap-2 flex-wrap">
-                <span>📧 {user.email}</span>
-                {user.phone && <span>• 📞 +91 {user.phone}</span>}
+                <span className="flex items-center gap-1"><Mail size={12} className="text-slate-400" /> {user.email}</span>
+                {user.phone && <span className="flex items-center gap-1">• <Phone size={12} className="text-slate-400" /> +91 {user.phone}</span>}
               </p>
             </div>
           </div>
@@ -842,7 +866,7 @@ const Dashboard = ({ tab }) => {
                           </div>
                           <div>
                             <h4 className="font-extrabold text-slate-900 text-sm">{inq.userId?.name}</h4>
-                            <p className="text-xs text-slate-500 font-medium">📞 +91 {inq.userId?.phone || 'N/A'}</p>
+                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5"><Phone size={12} className="text-slate-400" /> +91 {inq.userId?.phone || 'N/A'}</p>
                             <p className="text-[11px] font-bold text-blue-600 mt-0.5">Property: {inq.listingId?.title}</p>
                           </div>
                         </div>
@@ -1113,20 +1137,6 @@ const Dashboard = ({ tab }) => {
 
       </div>
 
-      {/* Delete Property Confirmation Modal */}
-      {confirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-base font-extrabold text-slate-900">Delete Listing?</h3>
-            <p className="text-xs text-slate-500">Are you sure you want to delete <strong>{confirmModal.title}</strong>? This action cannot be undone.</p>
-            <div className="flex gap-2 justify-end pt-2">
-              <button onClick={() => setConfirmModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold">Cancel</button>
-              <button onClick={confirmDelete} className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold">Delete Property</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -1230,6 +1240,9 @@ const Dashboard = ({ tab }) => {
       {selectedTransaction && (
         <ReceiptModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
       )}
+
+      {/* REUSABLE CONFIRMATION MODAL */}
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   );
 };

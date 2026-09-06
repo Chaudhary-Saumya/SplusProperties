@@ -1,15 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { ArrowLeft, Copy, CopyCheck, History, Zap, ArrowLeftRight, RotateCcw, Download, GripVertical, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import { toast } from 'react-toastify';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { AuthContext } from '../context/AuthContext';
 import { savePdfCrossPlatform } from '../utils/pdfDownloader';
 
 const AreaConverter = () => {
+  const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const { user, updateUserCoins } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (user) {
+      axios.post('/api/rewards/claim-task', { taskId: 'AREA_CONVERTER_USED' })
+        .then(res => {
+          if (res.data?.success) {
+            toast.success('+20 Coins (₹1.00) added to your Rewards Wallet for using Area Converter!');
+            if (updateUserCoins && res.data.newBalance !== undefined) {
+              updateUserCoins(res.data.newBalance);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
   const [values, setValues] = useState({});
   const [history, setHistory] = useState([]);
   const [topInputs, setTopInputs] = useState({ hectare: '', aare: '', sqm: '' });
@@ -173,9 +192,33 @@ const AreaConverter = () => {
     setLastEditedUnit('guntha');
   };
 
+  const priceUnitShortLabels = {
+    en: {
+      guntha: 'Guntha',
+      hectare: 'Hectare',
+      aare: 'Aare',
+      vigha_bada: 'Bigha (Big - 23.78)',
+      vigha_chhota: 'Bigha (Small - 16.19)',
+      acre: 'Acre',
+      sqm: 'Sq.Meter',
+      sqft: 'Sq.Feet',
+      gaj: 'Gaj / Yard',
+    },
+    gu: {
+      guntha: 'ગુન્ટા',
+      hectare: 'હેક્ટર',
+      aare: 'આરે',
+      vigha_bada: 'મોટું વીઘું (૨૩.૭૮)',
+      vigha_chhota: 'નાનું વીઘું (૧૬.૧૯)',
+      acre: 'એકર',
+      sqm: 'ચોરસ મીટર',
+      sqft: 'ચોરસ ફૂટ',
+      gaj: 'ગજ / વાર',
+    }
+  };
+
   const getShortLabel = (unitVal) => {
-    const label = unitLabels[language]?.[unitVal] || unitVal;
-    return label.replace(/\([^)]*\)/g, '').split('/')[0].trim();
+    return priceUnitShortLabels[language]?.[unitVal] || priceUnitShortLabels.en[unitVal] || unitVal;
   };
 
   const updatePriceCalculations = (changedField, val, activeUnit = priceUnit, gunthaVal = values.guntha) => {
@@ -460,101 +503,72 @@ const AreaConverter = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-16 antialiased">
+    <div className="min-h-screen bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-24 antialiased">
       <SEO
         title={language === 'en' ? "Smart Land Area Converter & Calculator" : "સ્માર્ટ જમીન ક્ષેત્રફળ કન્વર્ટર અને કેલ્ક્યુલેટર"}
         description="Convert land measurements instantly between Sq. Ft, Sq. Yards, Gaj, Acres, Hectares, and Sq. Meters."
       />
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Nunito_Sans:wght@400;500;600;700;800;900&display=swap');`}</style>
 
       {/* Top Gold Accent Bar */}
       <div className="h-1.5 w-full bg-gradient-to-r from-[#c9a84c] via-[#f0d080] to-[#c9a84c]" />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-10">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3.5 sm:py-7 space-y-3.5 sm:space-y-5">
 
-        {/* Back Link */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-slate-700 font-extrabold text-xs uppercase tracking-wider mb-4 sm:mb-8 hover:text-[#c9a84c] transition-colors bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-xs"
-        >
-          <ArrowLeft size={16} /> {language === 'en' ? 'Back to Home' : 'હોમ પેજ પર પાછા'}
-        </Link>
+        {/* ── Sleek Top Action Navigation Row ── */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <button
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
+            className="inline-flex items-center gap-1.5 text-slate-700 font-extrabold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs shrink-0 cursor-pointer active:scale-95"
+          >
+            <ArrowLeft size={15} /> <span>{language === 'en' ? 'Back' : 'પાછા જાઓ'}</span>
+          </button>
 
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-10">
-          <div className="relative inline-block mb-2 sm:mb-3">
+          {/* Quick Actions (Reset, Reorder, PDF) */}
+          <div className="flex items-center gap-1.5 ml-auto">
             <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="bg-[#c9a84c]/15 border border-[#c9a84c]/40 text-[#b8933a] text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full cursor-pointer hover:bg-[#c9a84c]/20 transition-colors"
+              onClick={handleReset}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-extrabold rounded-xl hover:bg-slate-50 transition-all shadow-2xs text-xs cursor-pointer active:scale-95"
+              title="Reset all fields"
             >
-              {language === 'en' ? 'Presented by www.kharsan.com' : 'ખારસણ ડોટ કોમ દ્વારા પ્રસ્તુત'}
+              <RotateCcw size={13} />
+              <span>{language === 'en' ? 'Reset' : 'રીસેટ'}</span>
             </button>
 
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowMenu(false)}
-                />
+            <button
+              onClick={() => setReorderEnabled(prev => !prev)}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 font-extrabold rounded-xl transition-all shadow-2xs text-xs border cursor-pointer active:scale-95 ${
+                reorderEnabled
+                  ? 'bg-amber-500 border-amber-500 text-slate-950 font-black'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+              title="Drag & reorder unit positions"
+            >
+              <GripVertical size={13} />
+              <span className="hidden sm:inline">{language === 'en' ? 'Reorder' : 'ક્રમ'}</span>
+            </button>
 
-                <div className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 min-w-[200px] overflow-hidden">
-                  <a
-                    href="https://www.kharsan.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-center px-4 py-3 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors"
-                  >
-                    {language === 'en' ? '🌐 Visit Website' : '🌐 વેબસાઇટની મુલાકાત લો'}
-                  </a>
-                </div>
-              </>
-            )}
+            <button
+              onClick={handleExportPDF}
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 hover:bg-blue-600 text-white font-black rounded-xl transition-all shadow-2xs text-xs cursor-pointer active:scale-95"
+            >
+              <Download size={13} />
+              <span>PDF</span>
+            </button>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight mb-1 sm:mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        </div>
+
+        {/* ── Main Title Banner ── */}
+        <div className="text-center sm:text-left">
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {t('tools_page.converter_title')}
           </h1>
-          <p className="text-slate-500 text-xs sm:text-base font-semibold max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-500 text-xs sm:text-sm font-bold mt-0.5">
             {t('tools_page.converter_desc')}
           </p>
         </div>
 
-        {/* Action Buttons Row */}
-        <div className="flex flex-wrap gap-2.5 sm:gap-3 justify-center mb-6 sm:mb-8">
-          <button
-            onClick={handleReset}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 font-extrabold rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-xs text-xs sm:text-sm cursor-pointer"
-          >
-            <RotateCcw size={14} />
-            {language === 'en' ? 'Reset All' : 'બધું ફરીથી સેટ કરો'}
-          </button>
-
-          {/* Reorder Toggle */}
-          <button
-            onClick={() => setReorderEnabled(prev => !prev)}
-            className={`inline-flex items-center gap-2.5 px-4 py-2.5 font-extrabold rounded-xl transition-all shadow-xs text-xs sm:text-sm border cursor-pointer ${reorderEnabled
-                ? 'bg-amber-500 border-amber-500 text-slate-950 font-black shadow-md'
-                : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-            title={reorderEnabled ? 'Click to lock unit order' : 'Click to enable drag reordering'}
-          >
-            <GripVertical size={15} />
-            <span>{language === 'en' ? 'Reorder Units' : 'એકમોનો ક્રમ બદલો'}</span>
-            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-300 ${reorderEnabled ? 'bg-slate-900/30' : 'bg-slate-200'}`}>
-              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${reorderEnabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
-            </span>
-          </button>
-
-          <button
-            onClick={handleExportPDF}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-slate-900 to-[#1a2340] hover:from-blue-600 hover:to-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md text-xs sm:text-sm cursor-pointer"
-          >
-            <Download size={15} />
-            {language === 'en' ? 'Export as PDF' : 'PDF તરીકે ડાઉનલોડ કરો'}
-          </button>
-        </div>
-
         {/* Main Live Converter Card */}
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-lg p-4 sm:p-7 mb-8 space-y-5">
+        <div className="bg-white border border-slate-200/90 rounded-3xl shadow-sm p-3.5 sm:p-6 space-y-4">
 
           {/* Quick Reference Top Bar — Compound Editable Inputs */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
@@ -618,6 +632,17 @@ const AreaConverter = () => {
                   {language === 'en' ? 'Price Rate per Unit (₹)' : '૧ નો ભાવ (₹)'}
                 </label>
                 <div className="flex gap-2">
+                  <select
+                    value={priceUnit}
+                    onChange={(e) => handlePriceUnitChange(e.target.value)}
+                    className="w-1/2 sm:w-2/5 px-2.5 sm:px-3 h-11 border border-blue-200 focus:border-blue-600 rounded-xl text-xs sm:text-sm font-extrabold focus:outline-none bg-white text-blue-900 shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    {orderedUnits.map(unit => (
+                      <option key={unit.value} value={unit.value}>
+                        {language === 'en' ? `per ${getShortLabel(unit.value)}` : `પ્રતિ ${getShortLabel(unit.value)}`}
+                      </option>
+                    ))}
+                  </select>
                   <div className="relative flex items-center flex-1">
                     <span className="absolute left-3.5 text-slate-400 font-black text-sm sm:text-base">₹</span>
                     <input
@@ -629,17 +654,6 @@ const AreaConverter = () => {
                       placeholder={language === 'en' ? 'Enter rate' : 'ભાવ દાખલ કરો'}
                     />
                   </div>
-                  <select
-                    value={priceUnit}
-                    onChange={(e) => handlePriceUnitChange(e.target.value)}
-                    className="px-3 h-11 border border-slate-200 focus:border-blue-600 rounded-xl text-xs font-extrabold focus:outline-none bg-white text-slate-800 shrink-0 cursor-pointer shadow-2xs"
-                  >
-                    {orderedUnits.map(unit => (
-                      <option key={unit.value} value={unit.value}>
-                        {language === 'en' ? `per ${getShortLabel(unit.value)}` : `પ્રતિ ${getShortLabel(unit.value)}`}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 

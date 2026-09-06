@@ -359,7 +359,7 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                             </div>
                             <div>
                                 <h3 className="text-sm font-bold text-white uppercase tracking-widest">Transaction Receipt</h3>
-                                <p className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider">Payment Verified ✓</p>
+                                <p className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={11} /> Payment Verified</p>
                             </div>
                         </div>
                         <button
@@ -406,8 +406,8 @@ const ReceiptModal = ({ isOpen, onClose, receiptData }) => {
                                     </div>
                                     <div className="text-xs text-[#6b7280] font-600">{propertyLocation}</div>
                                 </div>
-                                <span className="text-[9px] font-bold bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap flex-shrink-0">
-                                    Active ✓
+                                <span className="text-[9px] font-bold bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] px-2.5 py-1 rounded-full uppercase tracking-wider whitespace-nowrap flex-shrink-0 flex items-center gap-1">
+                                    <CheckCircle2 size={10} /> Active
                                 </span>
                             </div>
                         </div>

@@ -112,11 +112,14 @@ export const AuthProvider = ({ children }) => {
         return res.data;
     };
 
-    const googleLogin = async (credential) => {
-        const res = await axios.post('/api/auth/google', { idToken: credential });
+    const googleLogin = async (credential, referralCodeParam = null) => {
+        const referralCode = referralCodeParam || localStorage.getItem('pending_referral_code') || '';
+        const res = await axios.post('/api/auth/google', { idToken: credential, referralCode });
 
         if (res.data.success) {
             const { token: newToken, user: newUser } = res.data;
+            // Clear pending referral code once consumed
+            localStorage.removeItem('pending_referral_code');
             // Set token and headers immediately to authorize subsequent calls
             axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
             setToken(newToken);
@@ -200,6 +203,7 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{
             user,
+            token,
             loading,
             login,
             googleLogin,
@@ -213,6 +217,8 @@ export const AuthProvider = ({ children }) => {
             updateFavorites,
             updateProfileDetails,
             setUser,
+            loadUser,
+            updateUserCoins: (coins) => setUser(prev => prev ? { ...prev, coinsBalance: coins } : prev),
             logout,
             isAuthenticated: !!user
         }}>

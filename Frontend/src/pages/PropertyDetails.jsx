@@ -12,13 +12,17 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
+import PhotoLightbox from '../components/PhotoLightbox';
 import { useQuery } from '@tanstack/react-query';
 import ErrorBox from '../components/ErrorBox';
 import DetailSkeleton from '../components/DetailSkeleton';
 import { getImageUrl } from '../utils/imageUrl';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { useSettings } from '../context/SettingsContext';
 import { getWebsiteBaseUrl } from '../utils/url';
+import { openWhatsAppInquiry } from '../utils/whatsapp';
+import { triggerHaptic } from '../utils/haptics';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -89,6 +93,9 @@ const PropertyDetails = () => {
         gaj: 9 / 1089,
     };
 
+    const { settings: systemSettings } = useSettings();
+    const isTokenBookingEnabled = systemSettings?.enableTokenBooking === true;
+
     const { data: listing, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['listing', cleanId],
         queryFn: async () => {
@@ -125,13 +132,6 @@ const PropertyDetails = () => {
         return labels[u] || u;
     };
 
-    const { data: systemSettings } = useQuery({
-        queryKey: ['systemSettings'],
-        queryFn: async () => {
-            const res = await axios.get('/api/settings');
-            return res.data.data;
-        }
-    });
 
     const { data: reviewsData, isLoading: reviewsLoading, refetch: refetchReviews } = useQuery({
         queryKey: ['reviews', cleanId],
@@ -313,6 +313,7 @@ const PropertyDetails = () => {
                 message: `${inquiryMsg} (User Type: ${userRoleType}, Contact: ${inquiryPhone || user?.phone || 'N/A'})`
             });
             toast.success(t('property_details.site_visit_success') || 'Enquiry submitted! The seller will reach out soon.');
+        // eslint-disable-next-line no-unused-vars
         } catch (err) {
             toast.error(t('property_details.failed_site_visit'));
         } finally {
@@ -370,10 +371,17 @@ const PropertyDetails = () => {
     };
 
     const handleWhatsApp = () => {
+        triggerHaptic('medium');
         axios.post('/api/inquiries/track-lead', { listingId: cleanId, leadType: 'WhatsApp' }).catch(() => {});
-        const phone = listing?.createdBy?.phone || '';
-        const message = encodeURIComponent(`Hi, I am interested in your property: ${listing?.title} (${getWebsiteBaseUrl()}/listings/${cleanId}). Can we discuss further?`);
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        openWhatsAppInquiry({
+            phone: listing?.createdBy?.phone,
+            title: listing?.title,
+            listingId: cleanId,
+            price: listing?.price,
+            area: listing?.area,
+            location: listing?.location,
+            propertyType: listing?.propertyType
+        });
     };
 
     const handleCall = () => {
@@ -383,7 +391,6 @@ const PropertyDetails = () => {
             window.location.href = `tel:${phone}`;
         }
     };
-
 
     const handleShareOptions = async (e) => {
         if (e) e.stopPropagation();
@@ -525,61 +532,86 @@ const PropertyDetails = () => {
                 })}
             </script>
 
-            {/* ── 99acres Top Breadcrumb Bar ── */}
-            <div className="bg-white border-b border-slate-200 text-xs py-2.5 px-4 sm:px-6 lg:px-8">
+            {/* ── Top Navigation Bar (Mobile & Desktop) ── */}
+            <div className="bg-white border-b border-slate-200 text-xs py-2 px-3 sm:px-6 lg:px-8 sticky top-[var(--navbar-height)] z-20 shadow-2xs">
                 <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5 text-slate-500 font-medium overflow-hidden text-[11px] sm:text-xs">
-                        <button onClick={() => navigate('/')} className="hover:text-blue-600 transition-colors">Home</button>
-                        <ChevronRight size={12} className="text-slate-400 shrink-0" />
-                        <button onClick={() => navigate('/search')} className="hover:text-blue-600 transition-colors">Properties in {listing.location?.split(',')[0] || 'Gujarat'}</button>
-                        <ChevronRight size={12} className="text-slate-400 shrink-0" />
-                        <span className="text-slate-800 font-semibold truncate max-w-[200px] sm:max-w-xs">{listing.title}</span>
+                    <div className="flex items-center gap-2.5 text-slate-500 font-medium overflow-hidden text-xs">
+                        <button
+                            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/search')}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shrink-0 active:scale-95"
+                            title="Go Back"
+                        >
+                            <ArrowLeft size={14} />
+                            <span>Back</span>
+                        </button>
+                        <button onClick={() => navigate('/')} className="hover:text-blue-600 transition-colors hidden sm:inline">Home</button>
+                        <ChevronRight size={12} className="text-slate-400 shrink-0 hidden sm:inline" />
+                        <button onClick={() => navigate('/search')} className="hover:text-blue-600 transition-colors truncate hidden sm:inline">
+                            Properties in {listing.location?.split(',')[0] || 'Gujarat'}
+                        </button>
+                        <ChevronRight size={12} className="text-slate-400 shrink-0 hidden sm:inline" />
+                        <span className="text-slate-800 font-semibold truncate max-w-[160px] sm:max-w-xs">{listing.title}</span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
-                        <span>Posted: <strong className="text-slate-700">{new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="hidden sm:inline bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">ID: #{cleanId.substring(0, 8)}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg font-bold">ID: #{cleanId.substring(0, 8)}</span>
                     </div>
                 </div>
             </div>
 
-            {/* ── 99acres Main Header Banner Box ── */}
-            <div className="bg-white border-b border-slate-200 py-5 sm:py-6 shadow-2xs">
+            {/* ── Main Property Info Header ── */}
+            <div className="bg-white border-b border-slate-200 py-4 sm:py-6 shadow-2xs">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
 
                         {/* Price & Title Left Column */}
-                        <div className="space-y-2 flex-1">
+                        <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
                             {/* Badges row */}
-                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${listing.status === 'Available' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
-                                    }`}>
-                                    {listing.status === 'Available' || listing.status === 'Active' ? 'AVAILABLE' : listing.status}
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${
+                                    listing.status === 'Sold'
+                                        ? 'bg-amber-500 text-slate-950 font-black'
+                                        : listing.status === 'Available' || listing.status === 'Active'
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-slate-700 text-white'
+                                }`}>
+                                    {listing.status === 'Sold' ? (
+                                        <>
+                                            <CheckCircle2 size={12} className="text-slate-950" />
+                                            <span>SOLD</span>
+                                        </>
+                                    ) : listing.status === 'Available' || listing.status === 'Active' ? 'AVAILABLE' : listing.status}
                                 </span>
 
                                 {listing.listingType === 'Verified' && (
-                                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded uppercase">
                                         <ShieldCheck size={12} className="text-blue-600" /> VERIFIED PROPERTY
                                     </span>
                                 )}
 
-                                {listing.isBookingEnabled && (
-                                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                {isTokenBookingEnabled && listing.isBookingEnabled && listing.status !== 'Sold' && (
+                                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2.5 py-0.5 rounded uppercase">
                                         <Zap size={11} className="fill-amber-500 text-amber-500" /> TOKEN BOOKING READY
                                     </span>
                                 )}
                             </div>
 
+                            {listing.status === 'Sold' && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs font-bold text-amber-900">
+                                    <CheckCircle2 size={16} className="text-amber-700 shrink-0" />
+                                    <span>This property has been marked as <strong>SOLD</strong>. Inquiries and bookings are closed.</span>
+                                </div>
+                            )}
+
                             {/* Main Title */}
-                            <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-tight tracking-tight">
+                            <h1 className="text-xl sm:text-3xl font-black text-slate-900 leading-tight tracking-tight">
                                 {listing.title}
                             </h1>
 
                             {/* Address & Locality */}
                             <div className="flex items-center gap-1.5 text-slate-600 text-xs sm:text-sm font-medium">
-                                <MapPin size={16} className="text-blue-600 shrink-0" />
-                                <span>
+                                <MapPin size={15} className="text-blue-600 shrink-0" />
+                                <span className="truncate">
                                     {listing.plotNumber ? `Plot ${listing.plotNumber}, ` : ''}
                                     {listing.areaName ? `${listing.areaName}, ` : ''}
                                     <strong className="text-slate-800">{listing.location}</strong>
@@ -587,34 +619,34 @@ const PropertyDetails = () => {
                             </div>
                         </div>
 
-                        {/* Price & Primary Header Actions */}
-                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 lg:gap-6 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
+                        {/* Price & Action Buttons */}
+                        <div className="flex items-center justify-between sm:justify-start gap-4 lg:gap-6 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-6">
                             {/* Price Block */}
                             <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Asking Price</span>
+                                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Asking Price</span>
                                 <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-1">
                                     {formatIndianPrice(listing.price)}
                                 </div>
                                 {ratePerSqft && (
-                                    <span className="text-xs font-semibold text-slate-500 mt-0.5">
+                                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500 mt-0.5">
                                         @ ₹{ratePerSqft.toLocaleString('en-IN')} per {getUnitLabel(originalUnit)}
                                     </span>
                                 )}
                             </div>
 
                             {/* Header Buttons */}
-                            <div className="flex items-center gap-2.5 ml-auto sm:ml-0">
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => scrollToSection('dealer-section')}
-                                    className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-5 py-2.5 sm:py-3 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2 uppercase tracking-wide"
+                                    className="hidden sm:flex bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm items-center gap-2 uppercase tracking-wide cursor-pointer"
                                 >
-                                    <PhoneCall size={15} />
+                                    <PhoneCall size={14} />
                                     <span>Contact Dealer</span>
                                 </button>
 
                                 <button
                                     onClick={handleFavorite}
-                                    className={`p-2.5 sm:p-3 rounded-lg border transition-all text-xs font-bold flex items-center gap-1.5 ${isFavorite
+                                    className={`p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs ${isFavorite
                                         ? 'bg-rose-50 border-rose-200 text-rose-600'
                                         : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                                         }`}
@@ -626,8 +658,8 @@ const PropertyDetails = () => {
 
                                 <button
                                     onClick={handleShareOptions}
-                                    className="p-2.5 sm:p-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg transition-all"
-                                    title="Share"
+                                    className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                    title="Share Property"
                                 >
                                     <Share2 size={16} />
                                 </button>
@@ -638,52 +670,52 @@ const PropertyDetails = () => {
                 </div>
             </div>
 
-            {/* ── 99acres Sticky Navigation Tab Bar ── */}
-            <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-2xs">
+            {/* ── Sticky Navigation Tab Bar (Clean Scrolling Pills) ── */}
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scrollbar-none py-1 text-xs font-bold text-slate-600">
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden py-1.5 text-xs font-bold text-slate-600">
                         <button
                             onClick={() => scrollToSection('overview')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'overview'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'overview'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
                             Overview
                         </button>
                         <button
                             onClick={() => scrollToSection('highlights')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'highlights'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'highlights'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
-                            Key Highlights
+                            Highlights
                         </button>
                         <button
                             onClick={() => scrollToSection('specs')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'specs'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'specs'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
                             Specifications
                         </button>
                         <button
                             onClick={() => scrollToSection('about')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'about'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'about'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
-                            About Property
+                            About
                         </button>
                         {listing.amenities?.length > 0 && (
                             <button
                                 onClick={() => scrollToSection('amenities')}
-                                className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'amenities'
-                                    ? 'border-blue-600 text-blue-600 font-extrabold'
-                                    : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                                className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'amenities'
+                                    ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                     }`}
                             >
                                 Amenities
@@ -691,27 +723,27 @@ const PropertyDetails = () => {
                         )}
                         <button
                             onClick={() => scrollToSection('map-section')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'map-section'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'map-section'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
-                            Locality & Map
+                            Map Location
                         </button>
                         <button
                             onClick={() => scrollToSection('dealer-section')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'dealer-section'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'dealer-section'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
-                            Dealer & Enquiry
+                            Dealer & Inquiry
                         </button>
                         <button
                             onClick={() => scrollToSection('reviews-section')}
-                            className={`px-4 py-2.5 whitespace-nowrap border-b-2 transition-all ${activeTab === 'reviews-section'
-                                ? 'border-blue-600 text-blue-600 font-extrabold'
-                                : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+                            className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer ${activeTab === 'reviews-section'
+                                ? 'bg-blue-600 text-white font-extrabold shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                 }`}
                         >
                             Reviews ({reviewsData?.count || 0})
@@ -888,7 +920,7 @@ const PropertyDetails = () => {
                             </div>
 
                             {/* Token Reservation Callout Card */}
-                            {listing.isBookingEnabled && listing.tokenAmount > 0 && !listing.isTokened && (
+                            {isTokenBookingEnabled && listing.isBookingEnabled && listing.tokenAmount > 0 && !listing.isTokened && (
                                 <div className="p-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-xl text-white space-y-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
@@ -1116,7 +1148,7 @@ const PropertyDetails = () => {
                                 <div className="space-y-2 pt-2">
                                     {showPhoneNumber ? (
                                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-900 font-extrabold text-sm flex items-center justify-between">
-                                            <span>📞 {listing.createdBy?.phone || '+91 9409553232'}</span>
+                                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-slate-500" /> {listing.createdBy?.phone || '+91 9409553232'}</span>
                                             <a href={`tel:${listing.createdBy?.phone}`} className="text-xs text-blue-600 hover:underline">Call Now</a>
                                         </div>
                                     ) : (
@@ -1138,81 +1170,93 @@ const PropertyDetails = () => {
                             </div>
 
                             {/* Send Enquiry Form - Right 7 Cols */}
-                            <div className="lg:col-span-7 space-y-4">
-                                <h3 className="text-base font-extrabold text-slate-900">Send enquiry to Dealer</h3>
+                            {listing.status === 'Sold' ? (
+                                <div className="lg:col-span-7 bg-amber-50/70 border border-amber-200 rounded-2xl p-8 text-center space-y-3 flex flex-col items-center justify-center">
+                                    <span className="w-12 h-12 rounded-full bg-amber-500 text-slate-950 font-black text-xl flex items-center justify-center shadow-xs">
+                                        <CheckCircle2 size={24} className="text-slate-950" />
+                                    </span>
+                                    <h4 className="font-extrabold text-slate-900 text-base uppercase tracking-wide">Inquiries are Closed</h4>
+                                    <p className="text-xs text-slate-600 font-medium max-w-md">
+                                        This land parcel has already been sold. New inquiries, phone calls, and site visit requests are no longer being accepted.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="lg:col-span-7 space-y-4">
+                                    <h3 className="text-base font-extrabold text-slate-900">Send enquiry to Dealer</h3>
 
-                                <form onSubmit={handleSiteVisitRequest} className="space-y-4">
-                                    {/* User Role Radio Selector */}
-                                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
-                                        <span>You are:</span>
-                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="roleType"
-                                                checked={userRoleType === 'Individual'}
-                                                onChange={() => setUserRoleType('Individual')}
-                                                className="text-blue-600 focus:ring-blue-500"
-                                            />
-                                            Individual
-                                        </label>
-                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="roleType"
-                                                checked={userRoleType === 'Dealer'}
-                                                onChange={() => setUserRoleType('Dealer')}
-                                                className="text-blue-600 focus:ring-blue-500"
-                                            />
-                                            Dealer / Agent
-                                        </label>
-                                    </div>
+                                    <form onSubmit={handleSiteVisitRequest} className="space-y-4">
+                                        {/* User Role Radio Selector */}
+                                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
+                                            <span>You are:</span>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="roleType"
+                                                    checked={userRoleType === 'Individual'}
+                                                    onChange={() => setUserRoleType('Individual')}
+                                                    className="text-blue-600 focus:ring-blue-500"
+                                                />
+                                                Individual
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="roleType"
+                                                    checked={userRoleType === 'Dealer'}
+                                                    onChange={() => setUserRoleType('Dealer')}
+                                                    className="text-blue-600 focus:ring-blue-500"
+                                                />
+                                                Dealer / Agent
+                                            </label>
+                                        </div>
 
-                                    {/* Name & Phone Inputs */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* Name & Phone Inputs */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="Your Full Name *"
+                                                    value={inquiryName}
+                                                    onChange={e => setInquiryName(e.target.value)}
+                                                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <input
+                                                    type="tel"
+                                                    required
+                                                    placeholder="Your Phone Number *"
+                                                    value={inquiryPhone}
+                                                    onChange={e => setInquiryPhone(e.target.value)}
+                                                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Message box */}
                                         <div>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="Your Full Name *"
-                                                value={inquiryName}
-                                                onChange={e => setInquiryName(e.target.value)}
+                                            <textarea
+                                                rows="3"
+                                                value={inquiryMsg}
+                                                onChange={e => setInquiryMsg(e.target.value)}
+                                                placeholder="Write message to dealer..."
                                                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
                                             />
                                         </div>
 
-                                        <div>
-                                            <input
-                                                type="tel"
-                                                required
-                                                placeholder="Your Phone Number *"
-                                                value={inquiryPhone}
-                                                onChange={e => setInquiryPhone(e.target.value)}
-                                                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Message box */}
-                                    <div>
-                                        <textarea
-                                            rows="3"
-                                            value={inquiryMsg}
-                                            onChange={e => setInquiryMsg(e.target.value)}
-                                            placeholder="Write message to dealer..."
-                                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={requestingVisit}
-                                        className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold text-xs rounded-lg transition-all uppercase tracking-wider shadow-sm flex items-center justify-center gap-2"
-                                    >
-                                        <Send size={14} />
-                                        <span>{requestingVisit ? 'Sending Enquiry...' : 'Send Enquiry'}</span>
-                                    </button>
-                                </form>
-                            </div>
+                                        <button
+                                            type="submit"
+                                            disabled={requestingVisit}
+                                            className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold text-xs rounded-lg transition-all uppercase tracking-wider shadow-sm flex items-center justify-center gap-2"
+                                        >
+                                            <Send size={14} />
+                                            <span>{requestingVisit ? 'Sending Enquiry...' : 'Send Enquiry'}</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
 
                         </div>
                     </div>
@@ -1302,8 +1346,8 @@ const PropertyDetails = () => {
                                             </div>
 
                                             {/* Bottom Image Floating Text */}
-                                            <div className="absolute bottom-2.5 left-3 text-white text-[11px] font-bold tracking-wide">
-                                                {item.roadTouch ? '✓ Road Touch' : (item.status === 'Active' ? 'Available' : item.status)}
+                                            <div className="absolute bottom-2.5 left-3 text-white text-[11px] font-bold tracking-wide flex items-center gap-1">
+                                                {item.roadTouch ? <><Check size={12} /> Road Touch</> : (item.status === 'Active' ? 'Available' : item.status)}
                                             </div>
                                         </div>
 
@@ -1408,50 +1452,52 @@ const PropertyDetails = () => {
 
             </div>
 
-            {/* ── Mobile Sticky Bottom Action Bar ── */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-4 py-3 shadow-lg lg:hidden flex items-center justify-between gap-3">
-                <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Price</span>
-                    <span className="text-base font-extrabold text-slate-900">{formatIndianPrice(listing.price)}</span>
+            {/* ── Mobile Sticky Bottom Action Bar (Clears Bottom Nav Bar) ── */}
+            <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 py-2.5 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] lg:hidden flex items-center justify-between gap-3">
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Price</span>
+                    <span className="text-base font-black text-slate-900 leading-tight">{formatIndianPrice(listing.price)}</span>
+                    {ratePerSqft && (
+                        <span className="text-[10px] font-bold text-slate-500">
+                            @ ₹{ratePerSqft.toLocaleString('en-IN')}/{getUnitLabel(originalUnit)}
+                        </span>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleWhatsApp}
-                        className="p-2.5 bg-[#25d366] text-white rounded-lg transition-all shadow-xs"
-                        title="WhatsApp"
-                    >
-                        <MessageCircle size={18} className="fill-current" />
-                    </button>
+                {listing.status === 'Sold' ? (
+                    <div className="px-4 py-2 bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center gap-1.5">
+                        <CheckCircle2 size={14} /> SOLD
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleWhatsApp}
+                            className="h-10 px-3 bg-[#25d366] hover:bg-emerald-600 text-white rounded-xl transition-all shadow-xs flex items-center gap-1 text-xs font-black uppercase tracking-wider active:scale-95 cursor-pointer"
+                            title="Chat on WhatsApp"
+                        >
+                            <MessageCircle size={16} className="fill-current" />
+                            <span>WhatsApp</span>
+                        </button>
 
-                    <button
-                        onClick={() => scrollToSection('dealer-section')}
-                        className="px-4 py-2.5 bg-blue-600 text-white text-xs font-extrabold rounded-lg uppercase tracking-wider shadow-sm flex items-center gap-1.5"
-                    >
-                        <PhoneCall size={14} /> Contact Dealer
-                    </button>
-                </div>
+                        <button
+                            onClick={() => scrollToSection('dealer-section')}
+                            className="h-10 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                        >
+                            <PhoneCall size={14} />
+                            <span>Call</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Lightbox Modal */}
-            {isLightboxOpen && listing.images?.length > 0 && (
-                <div
-                    className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
-                    onClick={() => setIsLightboxOpen(false)}
-                >
-                    <button
-                        onClick={() => setIsLightboxOpen(false)}
-                        className="absolute top-4 right-4 text-white hover:text-slate-300 p-2 bg-slate-800/80 rounded-full"
-                    >
-                        <X size={20} />
-                    </button>
-                    <img
-                        src={getImageUrl(listing.images[mainImageIndex])}
-                        alt="Enlarged Property View"
-                        className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-                    />
-                </div>
-            )}
+            {/* Full-Screen Immersive Photo Gallery Lightbox */}
+            <PhotoLightbox
+                images={listing.images || []}
+                initialIndex={mainImageIndex}
+                isOpen={isLightboxOpen}
+                onClose={() => setIsLightboxOpen(false)}
+                title={listing.title}
+            />
 
             {/* Share Modal */}
             {showShareModal && (

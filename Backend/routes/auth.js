@@ -116,4 +116,10 @@ router.delete('/payment-accounts/:id', protect, deletePaymentAccount);
 // Account Deletion (user deletes own account)
 router.delete('/delete-account', protect, deleteMyAccount);
 
+// Push Notifications & Device Token Management
+const { registerFcmToken, removeFcmToken, updateNotificationPreferences } = require('../controllers/authController');
+router.post('/fcm-token', protect, registerFcmToken);
+router.delete('/fcm-token', protect, removeFcmToken);
+router.put('/notification-preferences', protect, updateNotificationPreferences);
+
 module.exports = router;

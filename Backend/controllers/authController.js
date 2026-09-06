@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const RewardTransaction = require('../models/RewardTransaction');
 const { deleteUserAndRelatedData } = require('../utils/userCleanup');
 const Session = require('../models/Session');
 const asyncHandler = require('../middlewares/async');
@@ -50,7 +51,9 @@ const sendTokenResponse = async (user, statusCode, res, req) => {
             phone: user.phone,
             profileImage: user.profileImage || '',
             accountStatus: user.accountStatus,
-            isVerified: user.isVerified
+            isVerified: user.isVerified,
+            coinsBalance: user.coinsBalance || 0,
+            referralCode: user.referralCode
         }
     });
 };
@@ -59,7 +62,7 @@ const sendTokenResponse = async (user, statusCode, res, req) => {
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res, next) => {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, role, phone, referralCode } = req.body;
 
     // Check if user already exists
     if (email || phone) {
@@ -83,22 +86,52 @@ exports.register = asyncHandler(async (req, res, next) => {
         }
     }
 
-    // Standardize user roles: 'User' (Property Owner / Buyer / Seller) vs 'Broker' (Agent) vs 'Admin'
-    let userRole = (role === 'Broker' || role === 'Admin') ? role : 'User';
+    // Standardize user roles: 'User' (Property Owner / Buyer / Seller) vs 'Broker' (Agent). Admin is never assignable publicly.
+    let userRole = role === 'Broker' ? 'Broker' : 'User';
 
-    // Create user directly with isVerified: true (OTP system disabled for now)
+    // Check referral code
+    let referrerUser = null;
+    if (referralCode && typeof referralCode === 'string') {
+        referrerUser = await User.findOne({ referralCode: referralCode.trim().toUpperCase() });
+    }
+
+    // Create user directly with isVerified: true and 100 Welcome Coins (₹5)
     const user = await User.create({
-        name, email, password, role: userRole, phone,
-        isVerified: true
+        name,
+        email,
+        password,
+        role: userRole,
+        phone,
+        isVerified: true,
+        coinsBalance: 100,
+        totalCoinsEarned: 100,
+        referredBy: referrerUser ? referrerUser._id : undefined
     });
 
-    /* OTP Generation and Email/SMS send commented out for now as requested
-    const plainOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOTP = await User.hashOTP(plainOTP);
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
-    if (user.email) { sendEmail(...); }
-    if (user.phone) { sendSMS(...); }
-    */
+    // Record Welcome Login Bonus for new user
+    await RewardTransaction.create({
+        userId: user._id,
+        type: 'WELCOME_LOGIN',
+        coins: 100,
+        amountINR: 5,
+        description: 'Welcome Account Registration & Login Bonus (₹5.00)'
+    });
+
+    // Award Referrer 200 Coins (₹10.00) if referral code was used
+    if (referrerUser) {
+        referrerUser.coinsBalance = (referrerUser.coinsBalance || 0) + 200;
+        referrerUser.totalCoinsEarned = (referrerUser.totalCoinsEarned || 0) + 200;
+        await referrerUser.save();
+
+        await RewardTransaction.create({
+            userId: referrerUser._id,
+            type: 'REFERRAL_BONUS',
+            coins: 200,
+            amountINR: 10,
+            description: `Referral Bonus for inviting ${user.name} (₹10.00)`,
+            metadata: { referredUserId: user._id }
+        });
+    }
 
     // Directly return auth token for instant registration & login
     sendTokenResponse(user, 201, res, req);
@@ -275,14 +308,29 @@ exports.getMe = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.updateDetails = asyncHandler(async (req, res, next) => {
     const fieldsToUpdate = {};
-    if (req.body.name !== undefined) fieldsToUpdate.name = req.body.name;
-    if (req.body.email !== undefined) fieldsToUpdate.email = req.body.email;
-    if (req.body.phone !== undefined) fieldsToUpdate.phone = req.body.phone;
+    if (req.body.name !== undefined) fieldsToUpdate.name = req.body.name.trim();
     if (req.body.profileImage !== undefined) fieldsToUpdate.profileImage = req.body.profileImage;
     if (req.body.role !== undefined && ['User', 'Seller', 'Broker'].includes(req.body.role)) {
         fieldsToUpdate.role = req.body.role;
     }
 
+    if (req.body.email) {
+        const newEmail = req.body.email.trim().toLowerCase();
+        const existingEmail = await User.findOne({ email: newEmail, _id: { $ne: req.user.id } });
+        if (existingEmail) {
+            return res.status(400).json({ success: false, error: 'This email address is already in use by another account.' });
+        }
+        fieldsToUpdate.email = newEmail;
+    }
+
+    if (req.body.phone) {
+        const newPhone = req.body.phone.trim();
+        const existingPhone = await User.findOne({ phone: newPhone, _id: { $ne: req.user.id } });
+        if (existingPhone) {
+            return res.status(400).json({ success: false, error: 'This phone number is already registered to another account.' });
+        }
+        fieldsToUpdate.phone = newPhone;
+    }
 
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
         new: true,
@@ -396,7 +444,7 @@ exports.toggleFavorite = asyncHandler(async (req, res, next) => {
 // @route   POST /api/auth/google
 // @access  Public
 exports.googleLogin = asyncHandler(async (req, res, next) => {
-    const { idToken } = req.body;
+    const { idToken, referralCode } = req.body;
 
     if (!idToken) {
         return res.status(400).json({ success: false, error: 'Please provide a Google ID token' });
@@ -422,14 +470,51 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
                 user.googleId = googleId;
                 await user.save();
             } else {
-                // 3. Register new user
+                // Find referrer if referralCode provided
+                let referrer = null;
+                if (referralCode) {
+                    referrer = await User.findOne({ referralCode: String(referralCode).trim().toUpperCase() });
+                }
+
+                const randStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                // 3. Register new user with welcome bonus
                 user = await User.create({
                     name,
                     email,
                     googleId,
                     role: 'Buyer', // Default role
-                    isVerified: true // Google users are pre-verified
+                    isVerified: true, // Google users are pre-verified
+                    referralCode: `KP${randStr}`,
+                    coinsBalance: 100,
+                    totalCoinsEarned: 100,
+                    referredBy: referrer ? referrer._id : undefined
                 });
+
+                const RewardTransaction = require('../models/RewardTransaction');
+                await RewardTransaction.create({
+                    userId: user._id,
+                    type: 'WELCOME_LOGIN',
+                    coins: 100,
+                    amountINR: 5,
+                    description: 'Welcome Account Registration & Login Bonus (₹5.00)'
+                });
+
+                // If referred by another user, award referrer 200 coins (₹10.00)
+                if (referrer) {
+                    referrer.coinsBalance = (referrer.coinsBalance || 0) + 200;
+                    referrer.totalCoinsEarned = (referrer.totalCoinsEarned || 0) + 200;
+                    await referrer.save();
+
+                    await RewardTransaction.create({
+                        userId: referrer._id,
+                        type: 'REFERRAL_BONUS',
+                        coins: 200,
+                        amountINR: 10,
+                        description: `Referral Reward: ${user.name || user.email} joined with your code (₹10.00)`,
+                        metadata: { referredUserId: user._id }
+                    });
+                }
             }
         } else if (!user.isVerified) {
             // If user exists but is linking Google account, mark as verified
@@ -601,7 +686,7 @@ exports.verifyPhoneOTP = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/auth/complete-profile
 // @access  Private
 exports.completeProfile = asyncHandler(async (req, res, next) => {
-    const { role, phone } = req.body;
+    const { role, phone, referralCode } = req.body;
 
     const user = await User.findById(req.user.id);
 
@@ -609,7 +694,7 @@ exports.completeProfile = asyncHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    let cleanRole = (role === 'Broker' || role === 'Admin') ? role : 'User';
+    let cleanRole = role === 'Broker' ? 'Broker' : 'User';
     user.role = cleanRole;
 
     if (phone) {
@@ -622,6 +707,27 @@ exports.completeProfile = asyncHandler(async (req, res, next) => {
 
     if (!user.phone) {
         return res.status(400).json({ success: false, error: 'Phone number is required to complete profile' });
+    }
+
+    // Process referral code if provided and not yet referred
+    if (referralCode && !user.referredBy) {
+        const RewardTransaction = require('../models/RewardTransaction');
+        const referrer = await User.findOne({ referralCode: String(referralCode).trim().toUpperCase() });
+        if (referrer && referrer._id.toString() !== user._id.toString()) {
+            user.referredBy = referrer._id;
+            referrer.coinsBalance = (referrer.coinsBalance || 0) + 200;
+            referrer.totalCoinsEarned = (referrer.totalCoinsEarned || 0) + 200;
+            await referrer.save();
+
+            await RewardTransaction.create({
+                userId: referrer._id,
+                type: 'REFERRAL_BONUS',
+                coins: 200,
+                amountINR: 10,
+                description: `Referral Reward: ${user.name || user.phone} signed up with your code (₹10.00)`,
+                metadata: { referredUserId: user._id }
+            });
+        }
     }
 
     user.isVerified = true;
@@ -885,5 +991,94 @@ exports.deleteMyAccount = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: 'Your account and all associated data have been permanently deleted.'
+    });
+});
+
+// @desc    Register or update device FCM push token
+// @route   POST /api/auth/fcm-token
+// @access  Private
+exports.registerFcmToken = asyncHandler(async (req, res) => {
+    const { token, platform = 'android', deviceModel = '' } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'FCM token is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.fcmTokens) user.fcmTokens = [];
+
+    // Remove existing entry for this token if present to prevent duplicates
+    user.fcmTokens = user.fcmTokens.filter(t => t.token !== token);
+
+    // Keep max 5 active devices per user
+    if (user.fcmTokens.length >= 5) {
+        user.fcmTokens.shift();
+    }
+
+    user.fcmTokens.push({
+        token,
+        platform,
+        deviceModel,
+        lastActive: new Date()
+    });
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        success: true,
+        message: 'Device token registered successfully',
+        deviceCount: user.fcmTokens.length
+    });
+});
+
+// @desc    Remove device FCM push token (e.g. on logout)
+// @route   DELETE /api/auth/fcm-token
+// @access  Private
+exports.removeFcmToken = asyncHandler(async (req, res) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'FCM token is required' });
+    }
+
+    await User.findByIdAndUpdate(req.user.id, {
+        $pull: { fcmTokens: { token } }
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Device token removed successfully'
+    });
+});
+
+// @desc    Update user notification preferences
+// @route   PUT /api/auth/notification-preferences
+// @access  Private
+exports.updateNotificationPreferences = asyncHandler(async (req, res) => {
+    const { newListingAlerts, priceDropAlerts, inactivityReminders, marketingPromos } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.notificationPreferences) {
+        user.notificationPreferences = {};
+    }
+
+    if (newListingAlerts !== undefined) user.notificationPreferences.newListingAlerts = Boolean(newListingAlerts);
+    if (priceDropAlerts !== undefined) user.notificationPreferences.priceDropAlerts = Boolean(priceDropAlerts);
+    if (inactivityReminders !== undefined) user.notificationPreferences.inactivityReminders = Boolean(inactivityReminders);
+    if (marketingPromos !== undefined) user.notificationPreferences.marketingPromos = Boolean(marketingPromos);
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        success: true,
+        data: user.notificationPreferences
     });
 });

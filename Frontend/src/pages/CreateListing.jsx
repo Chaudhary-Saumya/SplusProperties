@@ -8,7 +8,8 @@ import {
     IndianRupee, Layers, FileText, CreditCard, ChevronRight, ZapOff,
     LayoutDashboard, Eye, Edit3, PanelRightClose, PanelRightOpen, ExternalLink,
     PlusCircle, Sparkles, Search as SearchIcon, CheckCircle2, Zap, Check,
-    Trash2, Image as ImageIcon, Info, ShieldCheck, Compass, LandPlot, Sparkle
+    Trash2, Image as ImageIcon, Info, ShieldCheck, Compass, LandPlot, Sparkle,
+    AlertCircle, AlertTriangle, ArrowLeft, Lightbulb, Coins
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { useQuery } from '@tanstack/react-query';
@@ -126,6 +127,70 @@ const unitLabels = {
     }
 };
 
+const shortUnitLabels = {
+    en: {
+        guntha: 'Guntha',
+        hectare: 'Hectare',
+        aare: 'Aare',
+        vigha_bada: 'Bigha (Big)',
+        vigha_chhota: 'Bigha (Small)',
+        acre: 'Acre',
+        sqm: 'Sq.Mt',
+        sqft: 'Sq.Ft',
+        gaj: 'Gaj/Yard',
+    },
+    gu: {
+        guntha: 'ગુન્ટા',
+        hectare: 'હેક્ટર',
+        aare: 'આરે',
+        vigha_bada: 'મોટું વીઘું',
+        vigha_chhota: 'નાનું વીઘું',
+        acre: 'એકર',
+        sqm: 'ચોરસ મીટર',
+        sqft: 'ચોરસ ફૂટ',
+        gaj: 'ગજ/વાર',
+    }
+};
+
+const TO_GUNTHA = {
+    guntha: 1,
+    hectare: 98.84,
+    aare: 0.9884,
+    vigha_bada: 23.78,
+    vigha_chhota: 16.19,
+    acre: 40,
+    sqm: 0.009884,
+    sqft: 1 / 1089,
+    gaj: 9 / 1089,
+};
+
+const getSqFtFromArea = (val, unit) => {
+    const num = parseFloat(val);
+    if (!num || isNaN(num) || num <= 0) return 0;
+    const factor = TO_GUNTHA[unit] || 1;
+    return num * factor * 1089;
+};
+
+const getAreaEquivalents = (val, unit, lang = 'en') => {
+    const num = parseFloat(val);
+    if (!num || isNaN(num) || num <= 0) return null;
+    const totalSqft = getSqFtFromArea(num, unit);
+    const totalGuntha = num * (TO_GUNTHA[unit] || 1);
+    const totalAcre = totalGuntha / 40;
+
+    const parts = [];
+    if (unit !== 'sqft') {
+        parts.push(`≈ ${Math.round(totalSqft).toLocaleString('en-IN')} ${lang === 'gu' ? 'ચો.ફૂટ' : 'Sq.Ft'}`);
+    }
+    if (unit !== 'guntha' && totalGuntha >= 0.1) {
+        parts.push(`≈ ${totalGuntha.toFixed(2).replace(/\.00$/, '')} ${lang === 'gu' ? 'ગુન્ટા' : 'Guntha'}`);
+    }
+    if (unit !== 'acre' && totalAcre >= 0.05) {
+        parts.push(`≈ ${totalAcre.toFixed(2).replace(/\.00$/, '')} ${lang === 'gu' ? 'એકર' : 'Acre'}`);
+    }
+    return parts.length > 0 ? parts.join(' • ') : null;
+};
+
 const CreateListing = () => {
     const { user } = useContext(AuthContext);
     const { language, t } = useLanguage();
@@ -162,11 +227,123 @@ const CreateListing = () => {
     const [locationMethod, setLocationMethod] = useState('address');
     const [areaValue, setAreaValue] = useState('');
     const [areaUnit, setAreaUnit] = useState('sqft');
+    const [priceMode, setPriceMode] = useState('total'); // 'total' | 'rate'
+    const [unitRateInput, setUnitRateInput] = useState('');
     const [images, setImages] = useState(null);
     const [imagePreviews, setImagePreviews] = useState([]);
     const [videos, setVideos] = useState(null);
     const [videoPreviews, setVideoPreviews] = useState([]);
     const [geocodedAddressCoords, setGeocodedAddressCoords] = useState(null);
+
+    const handleAreaValueChange = (newVal) => {
+        setAreaValue(newVal);
+        const numArea = parseFloat(newVal);
+        if (!numArea || isNaN(numArea) || numArea <= 0) {
+            if (priceMode === 'rate') {
+                setFormData(prev => ({ ...prev, price: '' }));
+            }
+            return;
+        }
+
+        if (priceMode === 'rate') {
+            const rate = parseFloat(unitRateInput);
+            if (rate && !isNaN(rate) && rate > 0) {
+                const calculatedTotal = Math.round(rate * numArea);
+                setFormData(prev => ({ ...prev, price: String(calculatedTotal) }));
+            }
+        } else {
+            const p = parseFloat(formData.price);
+            if (p && !isNaN(p) && p > 0) {
+                setUnitRateInput(String(Math.round(p / numArea)));
+            }
+        }
+    };
+
+    const handleAreaUnitChange = (newUnit) => {
+        setAreaUnit(newUnit);
+        const numArea = parseFloat(areaValue);
+        if (!numArea || isNaN(numArea) || numArea <= 0) return;
+
+        if (priceMode === 'rate') {
+            const rate = parseFloat(unitRateInput);
+            if (rate && !isNaN(rate) && rate > 0) {
+                const calculatedTotal = Math.round(rate * numArea);
+                setFormData(prev => ({ ...prev, price: String(calculatedTotal) }));
+            }
+        } else {
+            const p = parseFloat(formData.price);
+            if (p && !isNaN(p) && p > 0) {
+                setUnitRateInput(String(Math.round(p / numArea)));
+            }
+        }
+    };
+
+    const handleTotalPriceChange = (e) => {
+        const val = e.target.value;
+        setFormData(prev => ({ ...prev, price: val }));
+        const numPrice = parseFloat(val);
+        const numArea = parseFloat(areaValue);
+        if (numPrice && !isNaN(numPrice) && numArea && !isNaN(numArea) && numArea > 0) {
+            setUnitRateInput(String(Math.round(numPrice / numArea)));
+        } else {
+            setUnitRateInput('');
+        }
+    };
+
+    const handleUnitRateChange = (e) => {
+        const val = e.target.value;
+        setUnitRateInput(val);
+        const numRate = parseFloat(val);
+        const numArea = parseFloat(areaValue);
+        if (numRate && !isNaN(numRate) && numArea && !isNaN(numArea) && numArea > 0) {
+            const calculatedTotal = Math.round(numRate * numArea);
+            setFormData(prev => ({ ...prev, price: String(calculatedTotal) }));
+        } else {
+            setFormData(prev => ({ ...prev, price: '' }));
+        }
+    };
+
+    const handlePriceModeSwitch = (mode) => {
+        setPriceMode(mode);
+        const numArea = parseFloat(areaValue);
+        if (mode === 'rate') {
+            const numPrice = parseFloat(formData.price);
+            if (numPrice && !isNaN(numPrice) && numArea && !isNaN(numArea) && numArea > 0) {
+                setUnitRateInput(String(Math.round(numPrice / numArea)));
+            }
+        } else {
+            const numRate = parseFloat(unitRateInput);
+            if (numRate && !isNaN(numRate) && numArea && !isNaN(numArea) && numArea > 0) {
+                const calculatedTotal = Math.round(numRate * numArea);
+                setFormData(prev => ({ ...prev, price: String(calculatedTotal) }));
+            }
+        }
+    };
+
+    const getPricingAnalytics = () => {
+        const p = parseFloat(formData.price);
+        const a = parseFloat(areaValue);
+        const r = parseFloat(unitRateInput);
+        const unitShort = shortUnitLabels[language === 'gu' ? 'gu' : 'en'][areaUnit] || areaUnit;
+        const unitFull = unitLabels[language === 'gu' ? 'gu' : 'en'][areaUnit] || areaUnit;
+
+        const hasValidPriceAndArea = p && !isNaN(p) && p > 0 && a && !isNaN(a) && a > 0;
+        const totalSqft = a > 0 ? getSqFtFromArea(a, areaUnit) : 0;
+        const ratePerSqft = (hasValidPriceAndArea && totalSqft > 0) ? (p / totalSqft) : null;
+        const ratePerSelectedUnit = hasValidPriceAndArea ? Math.round(p / a) : (r && !isNaN(r) ? r : null);
+
+        return {
+            hasValidPriceAndArea,
+            totalPrice: p,
+            areaValue: a,
+            unitShort,
+            unitFull,
+            totalSqft: Math.round(totalSqft),
+            ratePerSelectedUnit,
+            ratePerSqft: ratePerSqft ? (ratePerSqft >= 10 ? Math.round(ratePerSqft) : ratePerSqft.toFixed(1)) : null,
+            isSqft: areaUnit === 'sqft'
+        };
+    };
 
 
     // Auto-recenter map when City or Locality changes
@@ -211,6 +388,9 @@ const CreateListing = () => {
             return res.data.data;
         }
     });
+
+    const isTokenBookingEnabled = systemSettings?.enableTokenBooking === true;
+    const totalSteps = isTokenBookingEnabled ? 4 : 3;
 
     const { data: myListingsData } = useQuery({
         queryKey: ['myListings', user?._id],
@@ -347,8 +527,19 @@ const CreateListing = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setError(null);
+
+        // Mandatory at least 1 photo validation
+        if (!images || images.length === 0) {
+            const msg = 'At least 1 property photo is mandatory to publish a listing.';
+            setError(msg);
+            toast.error(msg);
+            const el = document.getElementById('media-upload-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        setLoading(true);
         try {
             let uploadedImagePaths = [];
             if (images && images.length > 0) {
@@ -443,19 +634,28 @@ const CreateListing = () => {
         <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen pb-20 text-slate-800 antialiased">
 
             {/* ── Top Header Banner ── */}
-            <div className="bg-slate-900 text-white border-b border-slate-800 py-8 px-4 sm:px-6 lg:px-8">
+            <div className="bg-slate-900 text-white border-b border-slate-800 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 text-blue-400 text-[10px] font-extrabold uppercase tracking-widest mb-2">
-                            <Building2 size={13} />
-                            <span>Seller Portal</span>
-                            <ChevronRight size={10} />
-                            <span>Create New Property Listing</span>
+                    <div className="flex items-start gap-3.5">
+                        <button
+                            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')}
+                            className="mt-1 w-10 h-10 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer shrink-0"
+                            title="Go Back"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div>
+                            <div className="flex items-center gap-2 text-blue-400 text-[10px] font-extrabold uppercase tracking-widest mb-1.5">
+                                <Building2 size={13} />
+                                <span>Seller Portal</span>
+                                <ChevronRight size={10} />
+                                <span>Create New Property Listing</span>
+                            </div>
+                            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                                {t('create_listing.title')}
+                            </h1>
+                            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">{t('create_listing.subtitle')}</p>
                         </div>
-                        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                            {t('create_listing.title')}
-                        </h1>
-                        <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">{t('create_listing.subtitle')}</p>
                     </div>
 
                     <div className="hidden lg:flex items-center gap-3">
@@ -471,14 +671,14 @@ const CreateListing = () => {
             </div>
 
             {/* ── Main Container ── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 sm:pb-16">
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
 
                     {/* Left Form Column */}
                     <div className={`transition-all duration-300 w-full ${showSidebar ? 'lg:w-[68%]' : 'lg:w-full'}`}>
                         {error && (
                             <div className="mb-6 bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-xl text-xs font-bold flex items-center justify-between">
-                                <span>❌ {error}</span>
+                                <span className="flex items-center gap-1.5"><AlertCircle size={15} /> {error}</span>
                                 <button onClick={() => setError(null)}><X size={16} /></button>
                             </div>
                         )}
@@ -490,7 +690,7 @@ const CreateListing = () => {
                                 icon={<Building2 size={18} />}
                                 title={t('create_listing.prop_details_title')}
                                 subtitle={t('create_listing.prop_details_subtitle')}
-                                badge="Step 1 of 4"
+                                badge={`Step 1 of ${totalSteps}`}
                             >
                                 <div className="space-y-6">
 
@@ -579,65 +779,166 @@ const CreateListing = () => {
                                         )}
                                     </div>
 
-                                    {/* Price & Area Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className={labelCls}>
-                                                Total Asking Price (₹) <span className="text-rose-500">*</span>
+                                    {/* 1. Area & Unit Selection (FIRST) */}
+                                    <div className="p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                                <span>1. Plot / Land Area & Unit</span>
+                                                <span className="text-rose-500">*</span>
                                             </label>
-                                            <div className="relative">
-                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
-                                                <input
-                                                    type="number"
-                                                    name="price"
-                                                    required
-                                                    min="1000"
-                                                    value={formData.price}
-                                                    onChange={handleChange}
-                                                    className={inputCls + ' pl-9'}
-                                                    placeholder="e.g. 2500000"
-                                                />
-                                            </div>
-                                            {formatIndianPricePreview(formData.price) && (
-                                                <span className="inline-block mt-1 text-[11px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                    {formatIndianPricePreview(formData.price)}
-                                                </span>
-                                            )}
+                                            <span className="text-[11px] font-bold text-slate-500">
+                                                {language === 'gu' ? 'જમીનનું ક્ષેત્રફળ' : 'Enter Land Size'}
+                                            </span>
                                         </div>
 
-                                        <div>
-                                            <label className={labelCls}>
-                                                Area & Unit <span className="text-rose-500">*</span>
-                                            </label>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="number"
-                                                    required
-                                                    min="0.001"
-                                                    step="any"
-                                                    value={areaValue}
-                                                    onChange={(e) => setAreaValue(e.target.value)}
-                                                    className={inputCls + ' w-2/3'}
-                                                    placeholder="e.g. 4500"
-                                                />
-                                                <select
-                                                    value={areaUnit}
-                                                    onChange={(e) => setAreaUnit(e.target.value)}
-                                                    className={inputCls + ' w-1/3 text-xs'}
-                                                >
-                                                    {Object.keys(unitLabels[language === 'gu' ? 'gu' : 'en']).map((key) => (
-                                                        <option key={key} value={key}>
-                                                            {unitLabels[language === 'gu' ? 'gu' : 'en'][key]}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {calculatedRatePerSqft() && (
-                                                <span className="inline-block mt-1 text-[11px] font-semibold text-slate-500">
-                                                    @ ₹{calculatedRatePerSqft()?.toLocaleString('en-IN')} / sqft
-                                                </span>
-                                            )}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                required
+                                                min="0.001"
+                                                step="any"
+                                                value={areaValue}
+                                                onChange={(e) => handleAreaValueChange(e.target.value)}
+                                                className={inputCls + ' w-1/2 sm:w-3/5 bg-white font-black text-slate-900'}
+                                                placeholder={language === 'gu' ? 'દા.ત. 5' : 'e.g. 5 or 4500'}
+                                            />
+                                            <select
+                                                value={areaUnit}
+                                                onChange={(e) => handleAreaUnitChange(e.target.value)}
+                                                className={inputCls + ' w-1/2 sm:w-2/5 text-xs sm:text-sm bg-white font-extrabold text-blue-900 border-blue-200'}
+                                            >
+                                                {Object.keys(unitLabels[language === 'gu' ? 'gu' : 'en']).map((key) => (
+                                                    <option key={key} value={key}>
+                                                        {unitLabels[language === 'gu' ? 'gu' : 'en'][key]}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
+                                    </div>
+
+                                    {/* 2. Property Pricing & Valuation (SECOND) */}
+                                    <div className="p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div>
+                                                <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <span>2. Pricing & Valuation</span>
+                                                    <span className="text-rose-500">*</span>
+                                                </label>
+                                                <p className="text-[11px] font-semibold text-slate-500">
+                                                    {language === 'gu' ? 'કુલ કિંમત અથવા પ્રતિ એકમ ભાવ પસંદ કરો' : 'Choose Total Asking Price or Rate per Unit'}
+                                                </p>
+                                            </div>
+
+                                            {/* Segmented Pricing Mode Toggle */}
+                                            <div className="flex items-center p-1 bg-slate-200/80 rounded-xl border border-slate-300/80 self-start sm:self-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePriceModeSwitch('total')}
+                                                    className={`px-3 py-1.5 text-xs font-extrabold rounded-lg transition-all flex items-center gap-1.5 ${priceMode === 'total'
+                                                        ? 'bg-blue-600 text-white shadow-xs'
+                                                        : 'text-slate-700 hover:text-slate-900'
+                                                        }`}
+                                                >
+                                                    <IndianRupee size={12} className={priceMode === 'total' ? 'text-white' : 'text-slate-600'} />
+                                                    <span>{language === 'gu' ? 'કુલ કિંમત' : 'Total Price'}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePriceModeSwitch('rate')}
+                                                    className={`px-3 py-1.5 text-xs font-extrabold rounded-lg transition-all flex items-center gap-1.5 ${priceMode === 'rate'
+                                                        ? 'bg-blue-600 text-white shadow-xs'
+                                                        : 'text-slate-700 hover:text-slate-900'
+                                                        }`}
+                                                >
+                                                    <Tag size={12} className={priceMode === 'rate' ? 'text-white' : 'text-slate-600'} />
+                                                    <span>
+                                                        {language === 'gu'
+                                                            ? `ભાવ / ${shortUnitLabels.gu[areaUnit] || 'એકમ'}`
+                                                            : `Rate / ${shortUnitLabels.en[areaUnit] || 'Unit'}`
+                                                        }
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {priceMode === 'total' ? (
+                                            /* Mode A: Total Asking Price */
+                                            <div className="space-y-2">
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        name="price"
+                                                        required
+                                                        min="1000"
+                                                        value={formData.price}
+                                                        onChange={handleTotalPriceChange}
+                                                        className={inputCls + ' pl-9 bg-white font-black text-slate-900'}
+                                                        placeholder="e.g. 2500000"
+                                                    />
+                                                </div>
+
+                                                {/* Price Badges & Unit Breakdown */}
+                                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                                    {formatIndianPricePreview(formData.price) && (
+                                                        <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                                            {formatIndianPricePreview(formData.price)}
+                                                        </span>
+                                                    )}
+
+                                                    {getPricingAnalytics().ratePerSelectedUnit && (
+                                                        <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                                                            @ ₹{getPricingAnalytics().ratePerSelectedUnit.toLocaleString('en-IN')} / {getPricingAnalytics().unitShort}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* Mode B: Rate per Unit */
+                                            <div className="space-y-3">
+                                                <div className="space-y-1">
+                                                    <div className="relative">
+                                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            required
+                                                            min="1"
+                                                            value={unitRateInput}
+                                                            onChange={handleUnitRateChange}
+                                                            className={inputCls + ' pl-9 bg-white font-black text-slate-900'}
+                                                            placeholder={`e.g. 500000 per ${getPricingAnalytics().unitShort}`}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Total Price Auto-calculation Card */}
+                                                {getPricingAnalytics().hasValidPriceAndArea ? (
+                                                    <div className="p-3 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-transparent rounded-xl border border-emerald-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                        <div>
+                                                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                                                <Sparkles size={12} className="text-emerald-600" />
+                                                                <span>{language === 'gu' ? 'ગણતરી કરેલ કુલ કિંમત' : 'Calculated Total Asking Price'}</span>
+                                                            </div>
+                                                            <div className="text-base sm:text-lg font-black text-emerald-800">
+                                                                ₹ {getPricingAnalytics().totalPrice.toLocaleString('en-IN')}{' '}
+                                                                <span className="text-xs font-extrabold text-emerald-600">
+                                                                    ({formatIndianPricePreview(getPricingAnalytics().totalPrice)})
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-xs font-extrabold text-blue-700 bg-white/90 px-3 py-1.5 rounded-lg border border-blue-200 shrink-0">
+                                                            {areaValue} {getPricingAnalytics().unitShort} × ₹{Number(unitRateInput).toLocaleString('en-IN')}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                                                        <Lightbulb size={14} className="shrink-0 text-amber-600" />
+                                                        <span>{language === 'gu' ? 'ઉપર એરિયા અને અહીં પ્રતિ એકમ ભાવ દાખલ કરો જેથી કુલ કિંમત આપમેળે ગણાશે.' : 'Enter both Area and Rate per Unit to automatically calculate the Total Price.'}</span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Description */}
@@ -701,7 +1002,7 @@ const CreateListing = () => {
                                 icon={<MapPin size={18} />}
                                 title={t('create_listing.location_title')}
                                 subtitle={t('create_listing.location_subtitle')}
-                                badge="Step 2 of 4"
+                                badge={`Step 2 of ${totalSteps}`}
                             >
                                 <div className="space-y-6">
 
@@ -806,8 +1107,8 @@ const CreateListing = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
-                                                            toast.success(`Map pin centered to ${formData.areaName || formData.city || 'address'}!`);
+                                                             setFormData(prev => ({ ...prev, mapCoordinates: geocodedAddressCoords }));
+                                                             toast.success(`Map pin centered to ${formData.areaName || formData.city || 'address'}!`);
                                                         }}
                                                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border border-slate-300"
                                                     >
@@ -828,9 +1129,9 @@ const CreateListing = () => {
                                         {isLocationMisaligned && (
                                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between gap-3 text-xs font-bold text-amber-900">
                                                 <div className="flex items-start gap-2">
-                                                    <span className="text-sm mt-0.5">⚠️</span>
+                                                    <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
                                                     <div>
-                                                        <span className="block font-extrabold text-amber-900">Map Marker Misalignment Warning!</span>
+                                                        <span className="block font-extrabold text-amber-900">Map Marker Misalignment Warning</span>
                                                         <span className="font-normal text-amber-800 text-[11px] block mt-0.5">
                                                             Your map pin is placed <strong>~{Math.round(distanceKm)} km away</strong> from <strong>{formData.city || formData.areaName}</strong>. If this is accidental, click Sync Pin to fix it.
                                                         </span>
@@ -884,13 +1185,20 @@ const CreateListing = () => {
                             </SectionCard>
 
                             {/* Section 3: Property Media (Unified Photos & Video Dropzone) */}
-                            <SectionCard
-                                icon={<UploadCloud size={18} />}
-                                title={t('create_listing.visual_portfolio_title')}
-                                subtitle={t('create_listing.visual_portfolio_subtitle')}
-                                badge="Step 3 of 4"
-                            >
-                                <div className="space-y-5 font-['Nunito_Sans',sans-serif]">
+                            <div id="media-upload-section">
+                                <SectionCard
+                                    icon={<UploadCloud size={18} />}
+                                    title={t('create_listing.visual_portfolio_title')}
+                                    subtitle={t('create_listing.visual_portfolio_subtitle')}
+                                    badge={`Step 3 of ${totalSteps}`}
+                                >
+                                    <div className="space-y-5 font-['Nunito_Sans',sans-serif]">
+                                        {imagePreviews.length === 0 && (
+                                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs font-bold text-amber-900">
+                                                <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                                                <span>At least 1 property photo is mandatory to publish this listing.</span>
+                                            </div>
+                                        )}
 
                                     {/* Single Unified Drag & Drop Dropzone */}
                                     <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-50/80 hover:bg-blue-50/40 transition-all cursor-pointer relative group">
@@ -972,16 +1280,17 @@ const CreateListing = () => {
 
                                 </div>
                             </SectionCard>
+                        </div>
 
 
 
                             {/* Section 4: Instant Token Reservation */}
-                            {systemSettings?.isInstantBookingEnabled !== false && (
+                            {isTokenBookingEnabled && (
                                 <SectionCard
                                     icon={<CreditCard size={18} />}
                                     title={t('create_listing.instant_booking_title')}
                                     subtitle={t('create_listing.instant_booking_subtitle')}
-                                    badge="Step 4 of 4"
+                                    badge={`Step 4 of ${totalSteps}`}
                                 >
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
- 
+
 import { AnimatePresence, motion } from 'framer-motion';
 import ScrollToTopOnRouteChange from './components/ScrollToTopOnRouteChange';
 
@@ -13,17 +13,17 @@ const trackedPaths = new Set();
 
 function AnalyticsTracker() {
   const location = useLocation();
-  
+
   useEffect(() => {
     // Only send hit if user stays on page for 5 seconds AND hasn't tracked this path yet
     if (trackedPaths.has(location.pathname)) return;
 
     const timer = setTimeout(() => {
-        axios.post('/api/analytics/hit', { path: location.pathname })
-          .then(() => {
-            trackedPaths.add(location.pathname);
-          })
-          .catch(() => {});
+      axios.post('/api/analytics/hit', { path: location.pathname })
+        .then(() => {
+          trackedPaths.add(location.pathname);
+        })
+        .catch(() => { });
     }, 50000); // 50 seconds to avoid 429 during dev
 
     return () => clearTimeout(timer);
@@ -57,29 +57,93 @@ import Calculator from './pages/Calculator';
 import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DeleteAccount from './pages/DeleteAccount';
+import RewardsWallet from './pages/RewardsWallet';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import AppUpdateChecker from './components/AppUpdateChecker';
 import FirstTimeAppModal from './components/FirstTimeAppModal';
-
+import NetworkStatusBanner from './components/NetworkStatusBanner';
+import { triggerInstallBonus } from './utils/rewards';
 
 import { AuthContext } from './context/AuthContext';
 import socket from './utils/socket';
 
+import { initNotificationService, scheduleSmartRetentionNotifications, clearRetentionReminders } from './services/notificationService';
+import { App as CapacitorApp } from '@capacitor/app';
+
+function NotificationManager() {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
+  useEffect(() => {
+    initNotificationService(navigate);
+
+    // Listen for app state changes (active vs background)
+    let listenerHandle;
+    try {
+      listenerHandle = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          // App went to background -> schedule smart retention alerts (Zepto/Zomato style)
+          scheduleSmartRetentionNotifications();
+        } else {
+          // App returned to foreground -> clear reminders
+          clearRetentionReminders();
+        }
+      });
+    } catch (err) {
+      // Non-Capacitor environment
+    }
+
+    return () => {
+      listenerHandle?.then(h => h.remove?.()).catch(() => { });
+    };
+  }, [navigate]);
+
+  return null;
+}
+
 function SocketManager() {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    triggerInstallBonus();
+  }, []);
 
   useEffect(() => {
     if (user) {
       socket.connect();
       socket.emit('join', user.id || user._id);
     } else {
-      socket.disconnect();
+      socket.connect(); // Connect as guest for public broadcast alerts
     }
 
+    const handleBroadcastPush = (notif) => {
+      if (!notif) return;
+      toast.info(
+        <div
+          onClick={() => {
+            const targetRoute = notif.data?.route || '/search';
+            if (targetRoute) navigate(targetRoute);
+          }}
+          className="cursor-pointer"
+        >
+          <div className="font-extrabold text-slate-900 text-sm">{notif.title}</div>
+          <div className="text-xs text-slate-600 font-medium mt-0.5">{notif.body}</div>
+        </div>,
+        {
+          autoClose: 6000,
+          icon: '🔔'
+        }
+      );
+    };
+
+    socket.on('broadcast_push_notification', handleBroadcastPush);
+
     return () => {
+      socket.off('broadcast_push_notification', handleBroadcastPush);
       socket.disconnect();
     };
-  }, [user]);
+  }, [user, navigate]);
 
   return null;
 }
@@ -124,6 +188,26 @@ function ProtectedRoute({ children, requireAdmin = false }) {
   return children;
 }
 
+function GuestRoute({ children }) {
+  const { user, loading, isAuthenticated } = useContext(AuthContext);
+  const location = useLocation();
+
+  if (loading) return null;
+  if (isAuthenticated && user) {
+    const searchParams = new URLSearchParams(location.search);
+    const redirectPath = searchParams.get('redirect');
+    if (redirectPath && redirectPath.startsWith('/')) {
+      return <Navigate to={redirectPath} replace />;
+    }
+    if (user.role === 'Admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function GlobalProfileCompletionGate() {
   const { user, loading, isAuthenticated, completeProfile } = useContext(AuthContext);
   const location = useLocation();
@@ -164,7 +248,7 @@ const LayoutWrapper = ({ children }) => {
   const shouldHide = hidePaths.some(path => location.pathname.startsWith(path));
 
   return (
-    <div className="app-wrapper">
+    <div className={`app-wrapper ${!shouldHide ? 'pb-16 sm:pb-0' : ''}`}>
       {!shouldHide && <Navbar />}
       <main>
         {children}
@@ -172,8 +256,6 @@ const LayoutWrapper = ({ children }) => {
     </div>
   );
 };
-
-import { App as CapacitorApp } from '@capacitor/app';
 
 function AppContent() {
   const location = useLocation();
@@ -210,6 +292,19 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate]);
 
+  // Global Referral Code URL listener (e.g. ?ref=KP1W4NES)
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(location.search);
+      const ref = searchParams.get('ref');
+      if (ref) {
+        localStorage.setItem('pending_referral_code', ref.trim().toUpperCase());
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }, [location.search]);
+
   return (
     <LayoutWrapper>
       <AnimatePresence mode="wait">
@@ -224,10 +319,11 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/brokers" element={<Brokers />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+            <Route path="/verify-otp" element={<GuestRoute><VerifyOTP /></GuestRoute>} />
             <Route path="/listings/:id" element={<PropertyDetails />} />
+            <Route path="/listing/:id" element={<PropertyDetails />} />
             <Route path="/land/:location/:id" element={<PropertyDetails />} />
             <Route path="/dashboard" element={<Navigate to="/my-listings" replace />} />
             <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
@@ -244,9 +340,11 @@ function AppContent() {
             <Route path="/seller/:id" element={<SellerProfile />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
+            <Route path="/wallet" element={<RewardsWallet />} />
+            <Route path="/rewards" element={<RewardsWallet />} />
             <Route path="/saved-maps" element={<ProtectedRoute><SavedMaps /></ProtectedRoute>} />
             <Route path="/m/:shareId" element={<SharedMap />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
             <Route path="/about" element={<About />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -265,27 +363,26 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <NetworkStatusBanner />
         <AppUpdateChecker />
         <FirstTimeAppModal />
+        <NotificationManager />
         <SocketManager />
 
         <AnalyticsTracker />
         <ScrollToTopOnRouteChange />
         <ToastContainer
-
           position="top-center"
-          autoClose={4000}
-          hideProgressBar={false}
+          autoClose={3000}
+          hideProgressBar={true}
           newestOnTop
           closeOnClick
           rtl={false}
-          pauseOnFocusLoss
+          pauseOnFocusLoss={false}
           draggable
           pauseOnHover
-          theme="light"
-          limit={5}
-          toastClassName="!rounded-2xl !shadow-lg !font-medium"
-          bodyClassName="!text-sm"
+          theme="dark"
+          limit={3}
         />
         <AppContent />
       </Router>

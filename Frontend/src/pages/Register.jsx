@@ -1,23 +1,42 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { Eye, EyeOff, ArrowLeft, Mail, User, Phone, LandPlot, Ruler, BadgeCheck, UserCheck, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, User, Phone, LandPlot, Ruler, BadgeCheck, UserCheck, Briefcase, Gift, Check, AlertCircle } from 'lucide-react';
 import CompleteProfileModal from '../components/CompleteProfileModal';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../context/LanguageContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Register = () => {
     const { language, t } = useLanguage();
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        role: 'Buyer',
-        phone: ''
+    const { settings } = useSettings();
+    const [searchParams] = useSearchParams();
+    const [formData, setFormData] = useState(() => {
+        const urlRef = searchParams.get('ref');
+        const savedRef = localStorage.getItem('pending_referral_code');
+        const initialRef = (urlRef || savedRef || '').toUpperCase().trim();
+        return {
+            name: '',
+            email: '',
+            password: '',
+            role: 'Buyer',
+            phone: '',
+            referralCode: initialRef
+        };
     });
+
+    useEffect(() => {
+        const urlRef = searchParams.get('ref');
+        const savedRef = localStorage.getItem('pending_referral_code');
+        const cleanRef = (urlRef || savedRef || '').toUpperCase().trim();
+        if (cleanRef) {
+            localStorage.setItem('pending_referral_code', cleanRef);
+            setFormData(prev => ({ ...prev, referralCode: cleanRef }));
+        }
+    }, [searchParams]);
     const { register, googleLogin, completeProfile, user } = useContext(AuthContext);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -526,7 +545,39 @@ const Register = () => {
                                 <h1 className="reg-title">{t('auth.register_title')}</h1>
                                 <p className="reg-subtitle">{t('auth.register_subtitle')}</p>
 
-                                {error && <div className="reg-error">⚠ {error}</div>}
+                                {error && <div className="reg-error"><AlertCircle size={14} /> <span>{error}</span></div>}
+
+                                {/* Active Referral Code Banner */}
+                                {settings.enableRewardsSystem !== false && formData.referralCode && (
+                                    <div style={{
+                                        marginBottom: '16px',
+                                        padding: '12px 14px',
+                                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06))',
+                                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                                        borderRadius: '16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '10px'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Gift size={18} />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>
+                                                    Referral Code: <span style={{ color: '#d97706', fontFamily: 'monospace', fontSize: '13px' }}>{formData.referralCode}</span>
+                                                </div>
+                                                <div style={{ fontSize: '10px', fontWeight: '600', color: '#64748b' }}>
+                                                    +100 Bonus Coins (₹5.00) will be added!
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', background: '#10b981', color: '#fff', padding: '4px 8px', borderRadius: '8px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Check size={12} /> Applied
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Google Sign-Up at the Top */}
                                 <div className="reg-google-container" style={{ marginBottom: '24px' }}>
@@ -607,7 +658,7 @@ const Register = () => {
                                 <h1 className="reg-title">{language === 'en' ? 'Register Manually' : 'જાતે રજીસ્ટર કરો'}</h1>
                                 <p className="reg-subtitle">{language === 'en' ? 'Enter your profile and contact information' : 'તમારી પ્રોફાઇલ અને સંપર્ક માહિતી દાખલ કરો'}</p>
 
-                                {error && <div className="reg-error">⚠ {error}</div>}
+                                {error && <div className="reg-error"><AlertCircle size={14} /> <span>{error}</span></div>}
 
                                 <form onSubmit={handleSubmit}>
                                     {/* Name + Phone */}
@@ -694,6 +745,39 @@ const Register = () => {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {/* Referral Code (Optional) */}
+                                    {settings.enableRewardsSystem !== false && (
+                                        <div className="reg-field">
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                <label htmlFor="referralCode" className="reg-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                                                    <Gift size={14} className="text-amber-500" />
+                                                    <span>{language === 'en' ? 'Referral Code (Optional)' : 'રેફરલ કોડ (વૈકલ્પિક)'}</span>
+                                                </label>
+                                                {formData.referralCode && (
+                                                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#10b981', background: '#d1fae5', padding: '2px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <Check size={11} /> Bonus Applied
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <input
+                                                id="referralCode"
+                                                type="text"
+                                                name="referralCode"
+                                                className="reg-input"
+                                                value={formData.referralCode}
+                                                onChange={handleChange}
+                                                placeholder={language === 'en' ? 'e.g. KP9823AB (Bonus ₹5 Coins)' : 'દા.ત. KP9823AB'}
+                                                style={{
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '1px',
+                                                    fontWeight: 'bold',
+                                                    borderColor: formData.referralCode ? '#f59e0b' : undefined,
+                                                    background: formData.referralCode ? '#fffbeb' : undefined
+                                                }}
+                                            />
+                                        </div>
+                                    )}
 
                                     <button type="submit" className="reg-btn" disabled={loading}>
                                         {loading ? (language === 'en' ? 'Creating Account...' : 'એકાઉન્ટ બની રહ્યું છે...') : (language === 'en' ? 'Create My Account →' : 'નવું એકાઉન્ટ બનાવો →')}

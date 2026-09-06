@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Search,
   Award,
-  Filter
+  Filter,
+  ArrowLeft
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "../context/LanguageContext";
@@ -106,8 +107,7 @@ const MyListings = () => {
       l.location?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "All" ||
-      (statusFilter === "Active" && l.status === "Active") ||
-      (statusFilter === "Hidden" && l.status !== "Active");
+      (l.status || "Active") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -120,66 +120,73 @@ const MyListings = () => {
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen text-slate-800 antialiased pb-20">
+    <div className="bg-[#f8fafc] min-h-screen text-slate-800 antialiased pb-28 sm:pb-16 font-['Nunito_Sans',sans-serif]">
       
-      {/* Header Banner */}
-      <div className="bg-slate-900 text-white border-b border-slate-800 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 text-white font-extrabold text-lg sm:text-xl rounded-2xl flex items-center justify-center shadow-lg shrink-0 border-2 border-slate-700">
-              {user.name?.[0]?.toUpperCase() || "U"}
-            </div>
+      {/* ── Sleek Header Banner ── */}
+      <div className="bg-slate-900 text-white border-b border-slate-800 py-3.5 sm:py-5 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer shrink-0"
+              title="Go Back"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            {/* <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 text-white font-black text-sm sm:text-base rounded-xl flex items-center justify-center shadow-md shrink-0 border border-slate-700 overflow-hidden">
+              {user?.profileImage ? (
+                <img src={getImageUrl(user.profileImage)} alt={user?.name} className="w-full h-full object-cover" />
+              ) : (
+                user.name?.[0]?.toUpperCase() || "U"
+              )}
+            </div> */}
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{t('my_listings.title')}</h1>
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  {formatRoleLabel(user.role)}
-                </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-base sm:text-xl font-black text-white tracking-tight">{t('my_listings.title')}</h1>
               </div>
-              <p className="text-slate-400 text-xs font-medium mt-0.5">
-                {t('my_listings.subtitle')}
+              <p className="text-slate-400 text-[11px] sm:text-xs font-bold mt-0.5">
+                {listings.length} total properties listed
               </p>
             </div>
           </div>
 
           <Link
             to="/create-listing"
-            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl transition-all uppercase tracking-wider shadow-md active:scale-95 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition-all uppercase tracking-wider shadow-sm active:scale-95 shrink-0"
           >
-            <Plus size={16} /> {t('my_listings.add_new')}
+            <Plus size={15} /> <span>{t('my_listings.add_new')}</span>
           </Link>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      {/* ── Main Content ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
-        {/* Filter Controls Bar */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* ── Unified Search & Filter Controls Bar (Zero Scrollbars) ── */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-2.5 sm:p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5">
           <div className="relative w-full sm:w-72">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search my properties..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-xs font-semibold outline-none transition-all"
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/15 focus:border-blue-600 text-xs font-bold outline-none transition-all"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-            <Filter size={14} className="text-slate-400 shrink-0 hidden sm:inline" />
-            {["All", "Active", "Hidden"].map((st) => (
+          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden py-0.5">
+            {["All", "Active", "Inactive", "Sold"].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   statusFilter === st
                     ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
-                {st} ({st === "All" ? listings.length : st === "Active" ? listings.filter((l) => l.status === "Active").length : listings.filter((l) => l.status !== "Active").length})
+                {st} ({st === "All" ? listings.length : listings.filter((l) => (l.status || "Active") === st).length})
               </button>
             ))}
           </div>
@@ -201,65 +208,77 @@ const MyListings = () => {
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredListings.map((l) => (
-              <div key={l._id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col group">
-                <div className="h-48 bg-slate-100 relative overflow-hidden">
-                  {l.images?.[0] ? (
-                    <img src={getImageUrl(l.images[0])} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">NO PHOTO</div>
-                  )}
-
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs ${
-                      l.status === 'Active' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300'
-                    }`}>
-                      {l.status === 'Active' ? 'Active' : 'Hidden'}
-                    </span>
-                    {l.listingType === 'Verified' && (
-                      <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1">
-                        <ShieldCheck size={10} /> Verified
-                      </span>
+            {filteredListings.map((l) => {
+              const status = l.status || 'Active';
+              return (
+                <div key={l._id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col group">
+                  <div className="h-48 bg-slate-100 relative overflow-hidden">
+                    {l.images?.[0] ? (
+                      <img src={getImageUrl(l.images[0])} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">NO PHOTO</div>
                     )}
-                  </div>
-                </div>
 
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base line-clamp-1 group-hover:text-blue-600 transition-colors">{l.title}</h3>
-                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-1 truncate">
-                      <MapPin size={13} className="text-blue-600 shrink-0" /> {l.location}
-                    </p>
-                    <div className="text-lg font-black text-slate-900 mt-3">₹{l.price?.toLocaleString('en-IN')}</div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => !pendingIds.has(l._id) && toggleStatus(l._id, l.status === "Active" ? "Inactive" : "Active")}
-                        disabled={pendingIds.has(l._id)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all cursor-pointer ${l.status === "Active" ? 'bg-emerald-600' : 'bg-slate-300'}`}
-                      >
-                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-all ${l.status === "Active" ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                      </button>
-                      <span className="text-[11px] font-bold text-slate-500">{l.status === 'Active' ? 'Visible' : 'Hidden'}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer" title="View Details">
-                        <Eye size={16} />
-                      </button>
-                      <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer" title="Edit Property">
-                        <Edit size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(l._id, l.title)} disabled={deletingId === l._id} className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Delete Property">
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs ${
+                        status === 'Active' ? 'bg-emerald-600 text-white' :
+                        status === 'Sold' ? 'bg-amber-500 text-slate-950 font-black' :
+                        'bg-slate-800 text-slate-300'
+                      }`}>
+                        {status === 'Active' ? 'Active' : status === 'Sold' ? 'Sold' : 'Inactive'}
+                      </span>
+                      {l.listingType === 'Verified' && (
+                        <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1">
+                          <ShieldCheck size={10} /> Verified
+                        </span>
+                      )}
                     </div>
                   </div>
+
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900 text-base line-clamp-1 group-hover:text-blue-600 transition-colors">{l.title}</h3>
+                      <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-1 min-w-0 w-full overflow-hidden">
+                        <MapPin size={13} className="text-blue-600 shrink-0" />
+                        <span className="truncate flex-1 min-w-0">{l.location}</span>
+                      </p>
+                      <div className="text-lg font-black text-slate-900 mt-3">₹{l.price?.toLocaleString('en-IN')}</div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={status}
+                          disabled={pendingIds.has(l._id)}
+                          onChange={(e) => toggleStatus(l._id, e.target.value)}
+                          className={`text-[11px] font-extrabold px-2.5 py-1 rounded-xl border outline-none cursor-pointer transition-all ${
+                            status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            status === 'Sold' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                          <option value="Sold">Sold</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => navigate(`/listings/${l._id}`)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer" title="View Details">
+                          <Eye size={16} />
+                        </button>
+                        <button onClick={() => navigate(`/edit-listing/${l._id}`)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer" title="Edit Property">
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(l._id, l.title)} disabled={deletingId === l._id} className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Delete Property">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

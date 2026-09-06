@@ -7,7 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
   MapPin, Search, Phone, Eye, Users, User, ChevronLeft, ChevronRight, ChevronDown,
   Heart, MessageCircle, Mail, Globe, Shield, ShieldCheck, Award, Target, Calculator, Layers,
-  Building2, Navigation, Mic, SlidersHorizontal, CheckCircle2, ArrowUpRight, Plus, FileText, Calendar,
+  Building2, Navigation, Mic, SlidersHorizontal, CheckCircle2, ArrowUpRight, ArrowRight, Plus, FileText, Calendar,
   TrendingUp, Compass, Sparkles, CheckCircle, ExternalLink
 } from 'lucide-react';
 
@@ -19,6 +19,7 @@ import { getImageUrl } from '../utils/imageUrl';
 import { useLanguage } from '../context/LanguageContext';
 import AppDownloadBanner from '../components/AppDownloadBanner';
 import k4Logo from '../assets/K4.png';
+import { formatDisplayArea } from '../utils/formatters';
 
 
 /* ─── Kharsan Properties Brand Logo ───────────────────────────────────────── */
@@ -160,7 +161,94 @@ const HeroCarousel = () => {
   );
 };
 
-/* ─── Floating Search Bar (Plots & Land focused) ─────────────────────────── */
+/* ─── Mobile Quick 4-Action Hub (Clean 2x2 Style) ────────────────────────── */
+const MobileQuickActions = () => {
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+
+  const actions = [
+    {
+      id: 'boundary_map',
+      title: language === 'gu' ? 'જમીન માપણી (Map)' : 'Land Measure (Map)',
+      sub: language === 'gu' ? 'GPS લાઈવ જમીન માપો' : 'Draw & verify GPS map',
+      icon: Layers,
+      iconBg: 'bg-blue-50 text-blue-600 border border-blue-100',
+      hoverBorder: 'hover:border-blue-300',
+      arrowHover: 'group-hover:text-blue-600',
+      link: '/boundary-map'
+    },
+    {
+      id: 'area_converter',
+      title: language === 'gu' ? 'એરિયા કન્વર્ટર' : 'Area Converter',
+      sub: language === 'gu' ? 'વીઘા, એકર અને વાર' : 'Convert Bigha, Acre & Sq Ft',
+      icon: Calculator,
+      iconBg: 'bg-amber-50 text-amber-600 border border-amber-100',
+      hoverBorder: 'hover:border-amber-300',
+      arrowHover: 'group-hover:text-amber-600',
+      link: '/area-converter'
+    },
+    {
+      id: 'sell',
+      title: language === 'gu' ? 'જમીન વેચો' : 'Sell Property',
+      sub: language === 'gu' ? 'મફત જાહેરાત • 0% કમિશન' : 'Post Free • 0% Commission',
+      icon: TrendingUp,
+      iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      hoverBorder: 'hover:border-emerald-300',
+      arrowHover: 'group-hover:text-emerald-600',
+      link: '/create-listing'
+    },
+    {
+      id: 'purchase',
+      title: language === 'gu' ? 'જમીન ખરીદો' : 'Buy / Purchase',
+      sub: language === 'gu' ? 'ચકાસાયેલ પ્લોટ્સ જુઓ' : 'Explore Verified Lands',
+      icon: Search,
+      iconBg: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
+      hoverBorder: 'hover:border-indigo-300',
+      arrowHover: 'group-hover:text-indigo-600',
+      link: '/search'
+    }
+  ];
+
+  return (
+    <div className="md:hidden relative px-4 -mt-14 z-30 font-['Nunito_Sans',sans-serif]">
+      <div className="bg-white rounded-3xl p-4 shadow-xl border border-slate-100">
+        <div className="grid grid-cols-2 gap-2.5">
+          {actions.map((act) => {
+            const IconComp = act.icon;
+            return (
+              <motion.div
+                key={act.id}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate(act.link)}
+                className={`bg-[#f8fafc] hover:bg-white border border-slate-200/70 ${act.hoverBorder} rounded-2xl p-3.5 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between group active:scale-95`}
+              >
+                {/* Top Row: Soft Icon Box + Arrow */}
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className={`w-10 h-10 rounded-xl ${act.iconBg} flex items-center justify-center`}>
+                    <IconComp size={20} className="stroke-[2.2]" />
+                  </div>
+                  <ArrowRight size={16} className={`text-slate-400 ${act.arrowHover} group-hover:translate-x-1 transition-all duration-200`} />
+                </div>
+
+                {/* Content Details */}
+                <div>
+                  <h4 className="text-[13.5px] font-black text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+                    {act.title}
+                  </h4>
+                  <p className="text-[10.5px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-1">
+                    {act.sub}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Floating Search Bar (Desktop Only) ─────────────────────────────────── */
 const FloatingSearchBox = () => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
@@ -206,7 +294,7 @@ const FloatingSearchBox = () => {
   };
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 -mt-16 sm:-mt-16 z-30 font-['Nunito_Sans',sans-serif]">
+    <div className="hidden md:block relative max-w-5xl mx-auto px-4 -mt-16 sm:-mt-16 z-30 font-['Nunito_Sans',sans-serif]">
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200/80">
 
         {/* Land Category Tabs */}
@@ -739,7 +827,10 @@ const Home = () => {
       {/* Hero Banner Slider */}
       <HeroCarousel />
 
-      {/* Floating Land Search Box */}
+      {/* Mobile 4 Quick Actions (Area Converter, Boundary Map, Sell, Purchase) */}
+      <MobileQuickActions />
+
+      {/* Floating Land Search Box (Desktop Only) */}
       <FloatingSearchBox />
 
       {/* Main Content Area */}
@@ -863,7 +954,7 @@ const Home = () => {
 
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
                           <span>Posted by {listing.user?.role || 'Owner'}</span>
-                          <span className="text-slate-700 font-extrabold">{listing.area || 'N/A'}</span>
+                          <span className="text-slate-700 font-extrabold">{formatDisplayArea(listing.area, language)}</span>
                         </div>
                       </div>
                     </motion.div>
@@ -1069,7 +1160,7 @@ const Home = () => {
       <AppDownloadBanner />
 
       {/* Production-Ready Responsive Footer */}
-      <footer className="bg-white text-slate-800 pt-10 sm:pt-14 pb-8 px-4 sm:px-6 border-t-4 border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
+      <footer className="bg-white text-slate-800 pt-10 sm:pt-14 pb-28 sm:pb-8 px-4 sm:px-6 border-t-4 border-[#c9a84c] font-['Nunito_Sans',sans-serif]">
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 mb-10">
 

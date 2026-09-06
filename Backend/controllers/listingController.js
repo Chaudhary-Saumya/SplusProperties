@@ -108,9 +108,13 @@ exports.getNearbyListings = asyncHandler(async (req, res, next) => {
     }
 
     const radiusInKm = radius || 25; // Default 25km bounds
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
     const listings = await Listing.find({
-        status: { $ne: 'Inactive' },
+        $or: [
+            { status: 'Active' },
+            { status: 'Sold', soldAt: { $gte: twoDaysAgo } }
+        ],
         geoSpatialLocation: {
             $near: {
                 $geometry: {
@@ -120,7 +124,7 @@ exports.getNearbyListings = asyncHandler(async (req, res, next) => {
                 $maxDistance: radiusInKm * 1000 // MongoDB near requires meters
             }
         }
-    }).populate('createdBy', 'name role');
+    }).populate('createdBy', 'name role profileImage');
 
     res.status(200).json({
         success: true,
@@ -140,7 +144,7 @@ exports.getListing = asyncHandler(async (req, res, next) => {
         : Listing.findOne({ slug: req.params.id }))
         .populate({
             path: 'createdBy',
-            select: 'name email phone role'
+            select: 'name email phone role profileImage'
         });
 
     if (!listing) {
@@ -148,13 +152,17 @@ exports.getListing = asyncHandler(async (req, res, next) => {
     }
 
     const owner = listing.createdBy;
-    const ownerInactive =
-        listing.status !== 'Active' ||
-        !owner ||
-        (owner.accountStatus && owner.accountStatus !== 'Active');
+    const isOwner = req.user && owner && (owner._id ? owner._id.toString() === req.user.id.toString() : owner.toString() === req.user.id.toString());
+    const isAdmin = req.user?.role === 'Admin';
 
-    if (ownerInactive && req.user?.role !== 'Admin') {
-        return res.status(404).json({ success: false, error: 'Listing not found' });
+    // Inactive listings are private to the owner and admin only
+    if (listing.status === 'Inactive' && !isOwner && !isAdmin) {
+        return res.status(404).json({ success: false, error: 'Listing is inactive or has been hidden.' });
+    }
+
+    // If owner account is suspended/disabled, hide unless admin or owner
+    if (owner && owner.accountStatus && owner.accountStatus !== 'Active' && !isOwner && !isAdmin) {
+        return res.status(404).json({ success: false, error: 'Listing unavailable' });
     }
 
     // Check for associated Boundary Map
@@ -180,7 +188,7 @@ exports.getListing = asyncHandler(async (req, res, next) => {
 exports.getMyListings = asyncHandler(async (req, res, next) => {
     const listings = await Listing.find({ createdBy: req.user.id })
         .sort('-createdAt')
-        .populate('createdBy', 'name email phone role')
+        .populate('createdBy', 'name email phone role profileImage')
         .lean();
 
     res.status(200).json({
@@ -362,9 +370,43 @@ exports.createListing = asyncHandler(async (req, res, next) => {
 
     const listing = await Listing.create(req.body);
 
+    // ─── First Property Listing Coin Reward ───
+    let firstPropertyBonus = 0;
+    try {
+        const userListingCount = await Listing.countDocuments({ createdBy: req.user.id });
+        if (userListingCount === 1) {
+            const userDoc = await User.findById(req.user.id);
+            const alreadyAwarded = userDoc?.completedTasks?.some(t => t.taskId === 'FIRST_PROPERTY_LISTED');
+            if (userDoc && !alreadyAwarded) {
+                const Setting = require('../models/Setting');
+                const bonusSetting = await Setting.findOne({ key: 'firstPropertyCoins' });
+                const rewardAmount = bonusSetting ? Number(bonusSetting.value) : 500;
+
+                if (rewardAmount > 0) {
+                    userDoc.coinsBalance = (userDoc.coinsBalance || 0) + rewardAmount;
+                    userDoc.totalCoinsEarned = (userDoc.totalCoinsEarned || 0) + rewardAmount;
+                    if (!userDoc.completedTasks) userDoc.completedTasks = [];
+                    userDoc.completedTasks.push({
+                        taskId: 'FIRST_PROPERTY_LISTED',
+                        date: new Date().toISOString(),
+                        coins: rewardAmount
+                    });
+                    await userDoc.save();
+                    firstPropertyBonus = rewardAmount;
+                }
+            }
+        }
+    } catch (rewardErr) {
+        console.error('Error awarding first property coin reward:', rewardErr.message);
+    }
+
     res.status(201).json({
         success: true,
-        data: listing
+        message: firstPropertyBonus > 0 
+            ? `Congratulations! Property listed successfully and you earned ${firstPropertyBonus} bonus coins!`
+            : 'Property listed successfully',
+        data: listing,
+        firstPropertyBonus
     });
 });
 
@@ -384,10 +426,20 @@ exports.updateListing = asyncHandler(async (req, res, next) => {
         return res.status(401).json({ success: false, error: 'Not authorized to update this listing' });
     }
 
-    // Strip verification-related fields from updates
-    delete req.body.listingType;
-    delete req.body.verifiedBy;
-    delete req.body.verifiedAt;
+    // Strip verification-related fields from non-admin updates
+    if (req.user.role !== 'Admin') {
+        delete req.body.listingType;
+        delete req.body.verifiedBy;
+        delete req.body.verifiedAt;
+    } else {
+        if (req.body.listingType === 'Verified' && !listing.verifiedBy) {
+            listing.verifiedBy = req.user.id;
+            listing.verifiedAt = Date.now();
+            listing.verificationStatus = 'Approved';
+        } else if (req.body.listingType === 'NonVerified') {
+            listing.verificationStatus = 'Rejected';
+        }
+    }
 
     // Enforce 2% Token Price Cap
     if (req.body.isBookingEnabled && req.body.tokenAmount && (req.body.price || listing.price)) {
@@ -411,9 +463,25 @@ exports.updateListing = asyncHandler(async (req, res, next) => {
         };
     }
 
+    // Ensure at least 1 image is preserved/provided on update
+    if (req.body.images !== undefined) {
+        if (!Array.isArray(req.body.images) || req.body.images.length === 0) {
+            return res.status(400).json({ success: false, error: 'At least 1 property photo is mandatory. You cannot delete all photos without uploading a replacement.' });
+        }
+    }
+
     // Prevent modifying core fields
     delete req.body._id;
     delete req.body.createdBy;
+
+    // Handle Sold status & soldAt timestamp
+    if (req.body.status === 'Sold') {
+        if (!listing.soldAt) {
+            listing.soldAt = new Date();
+        }
+    } else if (req.body.status && req.body.status !== 'Sold') {
+        listing.soldAt = null;
+    }
 
     // Update listing fields
     Object.assign(listing, req.body);

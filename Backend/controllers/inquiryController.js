@@ -87,11 +87,9 @@ exports.getInquiries = asyncHandler(async (req, res, next) => {
         // 1. Get inquiries they SENT
         // 2. If they are Seller/Broker, also get inquiries RECEIVED on their own listings
         
-        let listingIds = [];
-        if (req.user.role === 'Seller' || req.user.role === 'Broker') {
-            const myListings = await Listing.find({ createdBy: req.user.id }).select('_id');
-            listingIds = myListings.map(l => l._id);
-        }
+        // Fetch all listings created by this user to capture received inquiries
+        const myListings = await Listing.find({ createdBy: req.user.id }).select('_id');
+        const listingIds = myListings.map(l => l._id);
 
         query = Inquiry.find({
             $or: [

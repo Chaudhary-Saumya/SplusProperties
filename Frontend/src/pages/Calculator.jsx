@@ -126,7 +126,7 @@ const Calculator = () => {
   ];
 
   return (
-    <div className="w-full bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-12 antialiased">
+    <div className="w-full bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-28 sm:pb-16 antialiased">
       <SEO
         title="Land Price & Valuation Calculator"
         description="Calculate land rates, total valuation, registry fees, and token booking payments instantly."

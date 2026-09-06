@@ -43,6 +43,7 @@ router.route('/')
         check('price', 'Price must be a number').isNumeric(),
         check('area', 'Area is required').not().isEmpty(),
         check('location', 'Location is required').not().isEmpty(),
+        check('images', 'At least 1 property photo is required').isArray({ min: 1 }),
         validate
     ], createListing);
 

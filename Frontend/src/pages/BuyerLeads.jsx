@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -11,13 +11,15 @@ import {
   MessageSquare,
   Building2,
   Search,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import EmptyState from "../components/EmptyState";
 
 const BuyerLeads = () => {
+  const navigate = useNavigate();
   const { user, loading } = useContext(AuthContext);
   const { t } = useLanguage();
   const queryClient = useQueryClient();
@@ -108,14 +110,21 @@ const BuyerLeads = () => {
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen text-slate-800 antialiased pb-20">
+    <div style={{ fontFamily: "'Inter', 'Nunito Sans', sans-serif" }} className="bg-[#f8fafc] min-h-screen text-slate-800 antialiased pb-28 sm:pb-16">
       
       {/* Header Banner */}
       <div className="bg-slate-900 text-white border-b border-slate-800 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-600 text-white font-extrabold text-lg sm:text-xl rounded-2xl flex items-center justify-center shadow-lg shrink-0 border-2 border-slate-700">
-              <Users size={24} />
+            <button
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')}
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer shrink-0"
+              title="Go Back"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-600 text-white font-extrabold text-lg sm:text-xl rounded-2xl flex items-center justify-center shadow-lg shrink-0 border-2 border-slate-700">
+              <Users size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -195,7 +204,10 @@ const BuyerLeads = () => {
                         {inq.status === 'Contacted' ? 'Connected' : 'Pending'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-medium mt-1">📞 Phone: +91 {inq.userId?.phone || 'N/A'}</p>
+                    <p className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1.5">
+                      <Phone size={13} className="text-slate-400" />
+                      <span>Phone: +91 {inq.userId?.phone || 'N/A'}</span>
+                    </p>
                     {inq.listingId && (
                       <Link to={`/listings/${inq.listingId._id}`} className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 mt-1">
                         <span>Property: {inq.listingId.title}</span>

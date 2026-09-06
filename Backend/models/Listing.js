@@ -59,7 +59,12 @@ const listingSchema = new mongoose.Schema({
     },
     images: {
         type: [String],
-        validate: [v => v.length <= 10, 'Cannot upload more than 10 images']
+        validate: [
+            {
+                validator: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 10,
+                message: 'Property listing requires at least 1 photo and at most 10 photos'
+            }
+        ]
     },
     documents: {
         type: [String], 
@@ -74,8 +79,11 @@ const listingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Active', 'Inactive'],
+        enum: ['Active', 'Inactive', 'Sold', 'Reserved'],
         default: 'Active'
+    },
+    soldAt: {
+        type: Date
     },
     isBookingEnabled: {
         type: Boolean,

@@ -95,14 +95,15 @@ const ReceivedInquiries = () => {
     );
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-28 sm:pb-16 animate-fade-in min-h-screen">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                 <div className="flex items-center gap-4">
                     <button 
-                        onClick={() => navigate('/dashboard')} 
-                        className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 hover:scale-110 active:scale-95"
+                        onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')} 
+                        className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 hover:scale-105 active:scale-95 cursor-pointer"
+                        title="Go Back"
                     >
-                        <ArrowLeft size={24} />
+                        <ArrowLeft size={20} />
                     </button>
                     <div className="flex flex-col">
                         <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 font-['Outfit'] tracking-tight">{t('received_inquiries.title')}</h1>

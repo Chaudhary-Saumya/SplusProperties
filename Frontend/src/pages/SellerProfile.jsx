@@ -297,7 +297,7 @@ const SellerProfile = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50/80 font-['Nunito_Sans',sans-serif] text-slate-800 pb-16">
+        <div className="min-h-screen bg-slate-50/80 font-['Nunito_Sans',sans-serif] text-slate-800 pb-28 sm:pb-16">
 
             {/* Back Nav */}
             <div className="bg-white border-b border-slate-200 sticky z-20 shadow-2xs" style={{ top: 'var(--navbar-height)' }}>

@@ -4,12 +4,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Map as MapIcon, Plus, Trash2, ExternalLink, Calendar,
   Layers, Ruler, LayoutGrid, List, Search,
-  ArrowRight, Loader2, X, MapPin, Sparkles, PenLine, LandPlot
+  ArrowRight, ArrowLeft, Loader2, X, MapPin, Sparkles, PenLine, LandPlot
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import SEO from '../components/SEO';
+import ConfirmModal from '../components/ConfirmModal';
 
 const SavedMaps = () => {
   const { user, loading: authLoading, isAuthenticated } = React.useContext(AuthContext);
@@ -17,6 +18,7 @@ const SavedMaps = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmModal, setConfirmModal] = useState(null);
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -46,17 +48,27 @@ const SavedMaps = () => {
     }
   };
 
-  const deleteMap = async (shareId) => {
-    if (!window.confirm('Are you sure you want to delete this map?')) return;
-    try {
-      const res = await axios.delete(`/api/maps/${shareId}`);
-      if (res.data.success) {
-        toast.success('Map deleted');
-        setMaps(maps.filter(m => m.shareId !== shareId));
-      }
-    } catch {
-      toast.error('Failed to delete map');
-    }
+  const deleteMap = (shareId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Saved Map',
+      message: 'Are you sure you want to permanently delete this saved land boundary map?',
+      confirmText: 'Delete Map',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await axios.delete(`/api/maps/${shareId}`);
+          if (res.data.success) {
+            toast.success('Map deleted');
+            setMaps(maps.filter(m => m.shareId !== shareId));
+          }
+        } catch {
+          toast.error('Failed to delete map');
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   const handleRename = async () => {
@@ -108,74 +120,74 @@ const SavedMaps = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-20 antialiased">
+    <div className="min-h-screen bg-slate-100/70 font-['Nunito_Sans',sans-serif] pb-24 antialiased">
       <SEO title="My Saved Boundary Maps" description="View and manage your saved land boundary maps." />
 
-      {/* Top Accent Line */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600" />
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
 
-      {/* Hero Section */}
-      <div className="bg-[#1a2340] py-12 sm:py-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-blue-500/15 border border-blue-400/30 rounded-full">
-              <Sparkles size={13} className="text-blue-400" />
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Property Intelligence</span>
+        {/* ── Top Header Row ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')}
+              className="w-10 h-10 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-700 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+              title="Go Back"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-wider">
+                <MapPin size={12} className="text-blue-600" />
+                <span>GPS Boundary Intelligence</span>
+              </div>
+              <h1 className="text-lg sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mt-1">
+                My Saved Boundary Maps
+              </h1>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              My Saved Boundary Maps
-            </h1>
-            <p className="text-slate-300 max-w-lg font-semibold text-sm sm:text-base leading-relaxed">
-              Manage your saved property boundaries, view shared links, and edit land plot dimensions.
-            </p>
           </div>
 
           <Link
             to="/boundary-map"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
           >
-            <Plus size={18} />
-            <span>Create New Map</span>
-            <ArrowRight size={16} />
+            <Plus size={16} />
+            <span>New Map</span>
           </Link>
         </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-6">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-2 sm:p-3 flex flex-col sm:flex-row items-center gap-3">
-          <div className="flex-1 w-full relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        {/* ── Search & Filter Pill Bar ── */}
+        <div className="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-2 sm:p-2.5 flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Search by property name or Map ID..."
+              placeholder="Search by property label or Map ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:border-blue-600 text-slate-900 font-extrabold placeholder:text-slate-400 text-xs sm:text-sm"
+              className="w-full pl-10 pr-3 py-2 bg-slate-50/80 rounded-xl border border-slate-200 outline-none focus:border-blue-600 text-slate-900 font-extrabold placeholder:text-slate-400 text-xs sm:text-sm"
             />
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+          <div className="hidden sm:flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2.5 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'}`}
+              className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-900'}`}
               title="Grid View"
             >
-              <LayoutGrid size={18} />
+              <LayoutGrid size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2.5 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'}`}
+              className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-900'}`}
               title="List View"
             >
-              <List size={18} />
+              <List size={16} />
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
+        {/* Content Container */}
+        <div>
         {filteredMaps.length === 0 ? (
           <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border border-slate-200 shadow-sm space-y-4 max-w-lg mx-auto">
             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
@@ -349,6 +361,7 @@ const SavedMaps = () => {
             </table>
           </div>
         )}
+        </div>
       </div>
 
       {/* Rename Modal */}
@@ -393,6 +406,9 @@ const SavedMaps = () => {
           </div>
         </div>
       )}
+
+      {/* CONFIRMATION MODAL */}
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   );
 };

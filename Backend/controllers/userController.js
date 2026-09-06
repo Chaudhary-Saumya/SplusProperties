@@ -56,52 +56,190 @@ exports.getBrokers = asyncHandler(async (req, res, next) => {
 // @route   GET /api/users
 // @access  Private/Admin
 exports.getUsers = asyncHandler(async (req, res, next) => {
-    const users = await User.find();
-    res.status(200).json({ success: true, count: users.length, data: users });
+    const users = await User.find().select('+password').sort('-createdAt');
+    const transformed = users.map(u => {
+        const uObj = u.toObject();
+        uObj.hasPassword = Boolean(u.password);
+        uObj.authProvider = (u.googleId && u.password) ? 'Both' : u.googleId ? 'Google' : 'Manual';
+        delete uObj.password;
+        delete uObj.otp;
+        return uObj;
+    });
+    res.status(200).json({ success: true, count: transformed.length, data: transformed });
 });
 
 // @desc    Get single user
 // @route   GET /api/users/:id
 // @access  Private/Admin
 exports.getUser = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).select('+password');
     if (!user) {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
-    res.status(200).json({ success: true, data: user });
+    const uObj = user.toObject();
+    uObj.hasPassword = Boolean(user.password);
+    uObj.authProvider = (user.googleId && user.password) ? 'Both' : user.googleId ? 'Google' : 'Manual';
+    delete uObj.password;
+    delete uObj.otp;
+    res.status(200).json({ success: true, data: uObj });
 });
 
-// @desc    Update user
+// @desc    Update user (Admin)
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 exports.updateUser = asyncHandler(async (req, res, next) => {
-    const allowedFields = ['name', 'email', 'phone', 'role', 'accountStatus', 'isVerified'];
-    const fieldsToUpdate = {};
-    allowedFields.forEach((field) => {
-        if (typeof req.body[field] !== 'undefined') {
-            fieldsToUpdate[field] = req.body[field];
-        }
-    });
-
-    const existingUser = await User.findById(req.params.id);
-    if (!existingUser) {
+    const user = await User.findById(req.params.id).select('+password');
+    if (!user) {
         return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, fieldsToUpdate, {
-        new: true,
-        runValidators: true
-    });
+    const {
+        name,
+        email,
+        phone,
+        role,
+        accountStatus,
+        coinsBalance,
+        isVerified,
+        identityVerified,
+        documentVerified,
+        password
+    } = req.body;
 
-    if (fieldsToUpdate.accountStatus) {
-        const isActive = fieldsToUpdate.accountStatus === 'Active';
+    // Check unique email if modified
+    if (email && email.toLowerCase().trim() !== user.email) {
+        const existingEmail = await User.findOne({ 
+            email: email.toLowerCase().trim(), 
+            _id: { $ne: user._id } 
+        });
+        if (existingEmail) {
+            return res.status(400).json({ success: false, error: 'Email address is already in use by another account' });
+        }
+        user.email = email.toLowerCase().trim();
+    }
+
+    // Check unique phone if modified
+    if (typeof phone !== 'undefined' && phone !== user.phone) {
+        if (phone && phone.trim()) {
+            const existingPhone = await User.findOne({ 
+                phone: phone.trim(), 
+                _id: { $ne: user._id } 
+            });
+            if (existingPhone) {
+                return res.status(400).json({ success: false, error: 'Phone number is already in use by another account' });
+            }
+            user.phone = phone.trim();
+        } else {
+            user.phone = undefined;
+        }
+    }
+
+    if (name) user.name = name.trim();
+    if (role && ['User', 'Buyer', 'Seller', 'Broker', 'Admin'].includes(role)) user.role = role;
+    
+    let statusChanged = false;
+    if (accountStatus && ['Active', 'Disabled', 'Suspended'].includes(accountStatus)) {
+        if (user.accountStatus !== accountStatus) {
+            statusChanged = true;
+            user.accountStatus = accountStatus;
+        }
+    }
+
+    if (typeof coinsBalance !== 'undefined' && !isNaN(Number(coinsBalance))) {
+        user.coinsBalance = Math.max(0, Number(coinsBalance));
+    }
+
+    if (typeof isVerified !== 'undefined') user.isVerified = Boolean(isVerified);
+    if (typeof identityVerified !== 'undefined') user.identityVerified = Boolean(identityVerified);
+    if (typeof documentVerified !== 'undefined') user.documentVerified = Boolean(documentVerified);
+
+    let passwordChanged = false;
+    if (password && typeof password === 'string' && password.trim()) {
+        if (password.trim().length < 6) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+        }
+        user.password = password.trim();
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+        passwordChanged = true;
+    }
+
+    // Save with Mongoose pre('save') hooks for password encryption
+    await user.save();
+
+    if (statusChanged) {
+        const isActive = user.accountStatus === 'Active';
         await setUserListingsVisibility(user._id, isActive);
         if (!isActive) {
             await revokeUserSessions(user._id);
         }
     }
 
-    res.status(200).json({ success: true, data: user });
+    if (passwordChanged) {
+        await revokeUserSessions(user._id);
+    }
+
+    const uObj = user.toObject();
+    uObj.hasPassword = Boolean(user.password);
+    uObj.authProvider = (user.googleId && user.password) ? 'Both' : user.googleId ? 'Google' : 'Manual';
+    delete uObj.password;
+    delete uObj.otp;
+
+    res.status(200).json({ 
+        success: true, 
+        message: passwordChanged ? 'User profile and password updated successfully' : 'User profile updated successfully',
+        data: uObj 
+    });
+});
+
+// @desc    Reset user password (Admin direct action with Master PIN)
+// @route   PUT /api/users/:id/reset-password
+// @access  Private/Admin
+exports.resetUserPassword = asyncHandler(async (req, res, next) => {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.trim().length < 6) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Please provide a valid new password (minimum 6 characters)' 
+        });
+    }
+
+    const user = await User.findById(req.params.id).select('+password');
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Security Defense: Admins cannot reset passwords for other Admin accounts
+    if (user.role === 'Admin' && req.user._id.toString() !== user._id.toString()) {
+        const logger = require('../utils/logger');
+        logger.warn(`[SECURITY ALERT] Admin ${req.user.email} attempted unauthorized password reset on Admin account ${user.email}`);
+        return res.status(403).json({
+            success: false,
+            error: 'ACCESS DENIED: Administrator accounts cannot be reset via user management for security protection.'
+        });
+    }
+
+    user.password = newPassword.trim();
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
+    // Revoke any active JWT sessions for security
+    await revokeUserSessions(user._id);
+
+    const logger = require('../utils/logger');
+    logger.warn(`[SECURITY AUDIT] Admin ${req.user.email} (ID: ${req.user._id}) reset password for user ${user.email} (ID: ${user._id}) from IP: ${req.ip}`);
+
+    const uObj = user.toObject();
+    uObj.hasPassword = true;
+    uObj.authProvider = user.googleId ? 'Both' : 'Manual';
+    delete uObj.password;
+    delete uObj.otp;
+
+    res.status(200).json({
+        success: true,
+        message: `Password successfully updated for user ${user.name || user.email}`,
+        data: uObj
+    });
 });
 
 // @desc    Delete user

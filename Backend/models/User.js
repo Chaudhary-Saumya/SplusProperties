@@ -130,8 +130,62 @@ const userSchema = new mongoose.Schema({
         default: 0
     },
     otp: String,        // stores hashed OTP
-    otpExpire: Date
+    otpExpire: Date,
+    // ─── Coin Rewards & Referral System ───
+    coinsBalance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    totalCoinsEarned: {
+        type: Number,
+        default: 0
+    },
+    referralCode: {
+        type: String,
+        unique: true,
+        sparse: true,
+        uppercase: true,
+        trim: true
+    },
+    referredBy: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+        index: true
+    },
+    deviceTokensAwarded: [{
+        type: String
+    }],
+    lastDailyCheckin: {
+        type: Date
+    },
+    completedTasks: [{
+        taskId: String,
+        date: String,
+        coins: Number
+    }],
+    // ─── Push Notification & FCM Tokens ───
+    fcmTokens: [{
+        token: { type: String, required: true },
+        platform: { type: String, enum: ['android', 'ios', 'web'], default: 'android' },
+        deviceModel: String,
+        lastActive: { type: Date, default: Date.now }
+    }],
+    notificationPreferences: {
+        newListingAlerts: { type: Boolean, default: true },
+        priceDropAlerts: { type: Boolean, default: true },
+        inactivityReminders: { type: Boolean, default: true },
+        marketingPromos: { type: Boolean, default: true }
+    }
 }, { timestamps: true });
+
+// Auto-generate referral code if missing
+userSchema.pre('save', function() {
+    if (!this.referralCode) {
+        const randStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+        this.referralCode = `KP${randStr}`;
+    }
+});
 
 
 // Encrypt password before save

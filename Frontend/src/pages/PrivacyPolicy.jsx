@@ -50,7 +50,7 @@ const PrivacyPolicy = () => {
       </div>
 
       {/* Content Section */}
-      <div className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+      <div className="max-w-4xl mx-auto px-6 py-12 md:py-16 pb-28 sm:pb-16">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -111,7 +111,7 @@ const PrivacyPolicy = () => {
                 In strict compliance with Google Play Store and Apple App Store user data control guidelines, we provide a complete self-service account deletion channel inside the application dashboard:
               </p>
               <div className="bg-red-50 border border-red-100 rounded-2xl p-5 text-red-950 text-xs font-semibold">
-                ⚠️ <strong className="text-red-900">Danger Zone Action:</strong> When you execute "Delete My Account" in the Dashboard Settings, the system immediately triggers a full wipe of your data records. All user credentials, listed properties, mapped configurations, token transaction receipts, and received inquiry lists will be permanently and irreversibly purged from our live database servers within 24 hours.
+                <strong className="text-red-900">Danger Zone Action:</strong> When you execute "Delete My Account" in the Dashboard Settings, the system immediately triggers a full wipe of your data records. All user credentials, listed properties, mapped configurations, token transaction receipts, and received inquiry lists will be permanently and irreversibly purged from our live database servers within 24 hours.
               </div>
               <p>
                 If you are unable to log in and wish to request account deletion manually, you can submit a written request to <a href="mailto:support@kharsan.com" className="text-[#c9a84c] underline font-bold">support@kharsan.com</a>. We will process your identity verification and purge all associated records within 7 business days.
@@ -137,9 +137,9 @@ const PrivacyPolicy = () => {
             <div className="space-y-3 text-slate-600 font-semibold text-sm leading-relaxed">
               <p>If you have any inquiries, security reviews, or requests regarding this Privacy Policy, please contact our support desk:</p>
               <div className="bg-[#fdfaf5] border border-[#e2d9c5] rounded-2xl p-5 space-y-2">
-                <p>💡 <strong className="text-[#1a2340]">Company:</strong> Kharsan Properties (A Unit of Kharsan IT Solution)</p>
-                <p>📧 <strong className="text-[#1a2340]">Email Desk:</strong> <a href="mailto:support@kharsan.com" className="text-[#c9a84c] underline font-bold">support@kharsan.com</a></p>
-                <p>🌐 <strong className="text-[#1a2340]">Support URL:</strong> <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="text-[#c9a84c] underline font-bold">properties.kharsan.com</a></p>
+                <p><strong className="text-[#1a2340]">Company:</strong> Kharsan Properties (A Unit of Kharsan IT Solution)</p>
+                <p><strong className="text-[#1a2340]">Email Desk:</strong> <a href="mailto:support@kharsan.com" className="text-[#c9a84c] underline font-bold">support@kharsan.com</a></p>
+                <p><strong className="text-[#1a2340]">Support URL:</strong> <a href="https://properties.kharsan.com" target="_blank" rel="noopener noreferrer" className="text-[#c9a84c] underline font-bold">properties.kharsan.com</a></p>
               </div>
             </div>
           </div>

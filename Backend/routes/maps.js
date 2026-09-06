@@ -5,6 +5,7 @@ const { protect, optionalProtect } = require('../middlewares/auth');
 const router = express.Router();
 
 router.route('/')
+    .get(protect, getMyMaps)
     .post(optionalProtect, saveMap);
 
 router.get('/my-maps', protect, getMyMaps);

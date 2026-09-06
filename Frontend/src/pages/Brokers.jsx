@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-    Search, Phone, MessageCircle, ArrowRight, Building2,
+    Search, Phone, MessageCircle, ArrowRight, ArrowLeft, Building2,
     MapPin, LandPlot, Sparkles, Grid, List, Users, User
 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
@@ -286,27 +286,41 @@ const Brokers = () => {
     });
 
     return (
-        <div className="min-h-screen bg-slate-50/80 font-['Nunito_Sans',sans-serif] pb-20">
+        <div className="min-h-screen bg-slate-50/80 font-['Nunito_Sans',sans-serif] pb-28 sm:pb-16">
             <SEO
                 title={`${t('brokers.title')} | Kharsan Properties`}
                 description={t('brokers.desc')}
             />
 
             {/* Seamless Hero Header with Search Integrated */}
-            <div className="bg-slate-900 text-white pt-10 pb-10 relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-300 text-xs font-bold uppercase tracking-wider mb-3 border border-blue-400/20">
-                        <Sparkles size={14} className="text-blue-400" />
-                        <span>Partner Network</span>
+            <div className="bg-slate-900 text-white pt-6 pb-10 relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    
+                    {/* Top Zepto/Zomato style Back Button */}
+                    <div className="flex items-center justify-between mb-4">
+                        <button
+                            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
+                            className="inline-flex items-center gap-2 text-white bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-slate-700 cursor-pointer shadow-sm active:scale-95"
+                        >
+                            <ArrowLeft size={16} />
+                            <span>Back</span>
+                        </button>
+
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-300 text-xs font-bold uppercase tracking-wider border border-blue-400/20">
+                            <Sparkles size={14} className="text-blue-400" />
+                            <span>Partner Network</span>
+                        </div>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                        Real Estate Brokers & Agents in Gujarat
-                    </h1>
+                    <div className="text-center max-w-3xl mx-auto">
+                        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                            Real Estate Brokers & Agents in Gujarat
+                        </h1>
 
-                    <p className="text-xs sm:text-base font-semibold text-slate-300 mt-2.5 max-w-2xl mx-auto leading-relaxed mb-6">
-                        Connect directly with property consultants and land partners across Gujarat.
-                    </p>
+                        <p className="text-xs sm:text-base font-semibold text-slate-300 mt-2.5 max-w-2xl mx-auto leading-relaxed">
+                            Connect directly with property consultants and land partners across Gujarat.
+                        </p>
+                    </div>
                 </div>
             </div>
 

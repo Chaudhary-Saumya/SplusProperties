@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { MapContainer, TileLayer, Marker, Polygon, Popup, useMapEvents, Tooltip } from 'react-leaflet';
@@ -17,8 +17,10 @@ import {
 import 'leaflet/dist/leaflet.css';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { AuthContext } from '../context/AuthContext';
 import { getWebsiteBaseUrl } from '../utils/url';
 import { savePdfCrossPlatform } from '../utils/pdfDownloader';
+import ConfirmModal from '../components/ConfirmModal';
 
 // Leaflet marker default icon fix
 delete L.Icon.Default.prototype._getIconUrl;
@@ -58,6 +60,22 @@ const BoundaryMap = () => {
   const editId = searchParams.get('edit');
 
   const { t, language, toggleLanguage } = useLanguage();
+  const { user, updateUserCoins } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (user) {
+      axios.post('/api/rewards/claim-task', { taskId: 'LAND_MAP_USED' })
+        .then(res => {
+          if (res.data?.success) {
+            toast.success('+20 Coins (₹1.00) added to your Rewards Wallet for using Land Measure Map!');
+            if (updateUserCoins && res.data.newBalance !== undefined) {
+              updateUserCoins(res.data.newBalance);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   const [center, setCenter] = useState([28.6139, 77.2090]);
   const [polygons, setPolygons] = useState([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
@@ -72,6 +90,7 @@ const BoundaryMap = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const [sheetState, setSheetState] = useState('peek');
   const [activeTab, setActiveTab] = useState('plots');
@@ -277,7 +296,7 @@ const BoundaryMap = () => {
           interactive={false}
           icon={L.divIcon({
             className: 'edge-label-icon',
-            html: `<div style="background:rgba(255,255,255,0.95);color:#0f172a;border:1.5px solid ${poly.color};padding:2px 7px;border-radius:8px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:translate(-50%, -50%);">${labelText}</div>`,
+            html: `<div style="background:rgba(15,23,42,0.88);backdrop-filter:blur(8px);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:900;letter-spacing:0.02em;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.3);transform:translate(-50%, -50%);font-family:monospace;">${labelText}</div>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0]
           })}
@@ -345,12 +364,21 @@ const BoundaryMap = () => {
   };
 
   const resetAll = () => {
-    if (window.confirm(t('boundary_map.clear_confirm'))) {
-      setPolygons([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
-      setActiveIndex(0);
-      setIsDrawing(false);
-      localStorage.removeItem('boundary_map_draft');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: t('boundary_map.clear_map') || 'Clear Map Measurements',
+      message: t('boundary_map.clear_confirm') || 'Are you sure you want to clear all marked boundary points and polygons?',
+      confirmText: 'Clear Map',
+      type: 'warning',
+      onConfirm: () => {
+        setConfirmModal(null);
+        setPolygons([{ points: [], color: '#2563eb', label: 'Plot 1', area: null }]);
+        setActiveIndex(0);
+        setIsDrawing(false);
+        localStorage.removeItem('boundary_map_draft');
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   const undoLastPoint = () => {
@@ -447,8 +475,8 @@ const BoundaryMap = () => {
 
   const exportPDF = async () => {
     const mapEl = document.querySelector('.leaflet-container');
-    if (!mapEl) return toast.error('Map not found');
-    const toastId = toast.loading('Generating Report...');
+    if (!mapEl || !mapRef.current) return toast.error('Map not found');
+    const toastId = toast.loading('Generating Executive Survey Report...');
 
     const originalGetComputedStyle = window.getComputedStyle;
     window.getComputedStyle = function (el, pseudoEl) {
@@ -470,150 +498,312 @@ const BoundaryMap = () => {
     };
 
     try {
-      await new Promise(r => setTimeout(r, 800));
+      // 1. Auto Fit Map to Boundary Polygons with generous padding
+      const allPoints = [];
+      polygons.forEach(p => {
+        if (p.points && p.points.length > 0) {
+          p.points.forEach(pt => allPoints.push([pt.lat, pt.lng || pt.lon]));
+        }
+      });
 
+      if (allPoints.length > 0) {
+        const bounds = L.latLngBounds(allPoints);
+        mapRef.current.fitBounds(bounds, {
+          paddingTopLeft: [50, 50],
+          paddingBottomRight: [50, isDesktop ? 50 : 260],
+          animate: false,
+          maxZoom: 18
+        });
+      }
+
+      // Allow satellite tiles and markers to render at the fitted zoom
+      await new Promise(r => setTimeout(r, 900));
+
+      // 2. Capture Complete Live Leaflet Map (Including Polygon, Markers, and Labels)
       const canvas = await html2canvas(mapEl, {
         useCORS: true,
         allowTaint: false,
-        scale: 1.5,
+        scale: 2,
         logging: false,
-        backgroundColor: '#1a2340',
+        backgroundColor: '#0f172a',
         imageTimeout: 20000,
         ignoreElements: (element) => {
           return (
-            element.classList.contains('leaflet-control') ||
-            element.classList.contains('leaflet-popup') ||
-            element.classList.contains('leaflet-tooltip') ||
-            element.classList.contains('custom-tooltip') ||
-            element.classList.contains('drawing-handle') ||
-            element.classList.contains('edge-label-icon')
+            element.classList.contains('leaflet-control-container') ||
+            element.classList.contains('leaflet-popup')
           );
         }
       });
 
-      const cropCanvasToAspectRatio = (sourceCanvas, targetRatio = 1.8) => {
-        const sw = sourceCanvas.width;
-        const sh = sourceCanvas.height;
-        let dw, dh;
-        if (sw / sh > targetRatio) {
-          dh = sh;
-          dw = sh * targetRatio;
-        } else {
-          dw = sw;
-          dh = sw / targetRatio;
-        }
-        const sx = (sw - dw) / 2;
-        const sy = (sh - dh) / 2;
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = dw;
-        croppedCanvas.height = dh;
-        const ctx = croppedCanvas.getContext('2d');
-        ctx.drawImage(sourceCanvas, sx, sy, dw, dh, 0, 0, dw, dh);
-        return croppedCanvas;
-      };
+      // 3. Precision Bounding Box Crop around all Demarcated Corners
+      const scale = canvas.width / mapEl.clientWidth;
+      let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+      let hasValidCoords = false;
 
-      const croppedCanvas = cropCanvasToAspectRatio(canvas, 1.8);
-      let imgData = null;
-      try {
-        imgData = croppedCanvas.toDataURL('image/jpeg', 0.8);
-      } catch (e) {
-        console.error("Map capture failed", e);
+      polygons.forEach(poly => {
+        if (poly.points && poly.points.length > 0) {
+          poly.points.forEach(pt => {
+            const cp = mapRef.current.latLngToContainerPoint(L.latLng(pt.lat, pt.lng || pt.lon));
+            const px = cp.x * scale;
+            const py = cp.y * scale;
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+            hasValidCoords = true;
+          });
+        }
+      });
+
+      let croppedCanvas;
+      if (hasValidCoords && maxX > minX && maxY > minY) {
+        const pad = 50 * scale;
+        minX = Math.max(0, minX - pad);
+        minY = Math.max(0, minY - pad);
+        maxX = Math.min(canvas.width, maxX + pad);
+        maxY = Math.min(canvas.height, maxY + pad);
+
+        let plotW = maxX - minX;
+        let plotH = maxY - minY;
+        const targetRatio = 1.85;
+        let cropW, cropH;
+
+        if (plotW / plotH > targetRatio) {
+          cropW = plotW;
+          cropH = plotW / targetRatio;
+        } else {
+          cropH = plotH;
+          cropW = plotH * targetRatio;
+        }
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        let sx = Math.max(0, Math.min(canvas.width - cropW, centerX - cropW / 2));
+        let sy = Math.max(0, Math.min(canvas.height - cropH, centerY - cropH / 2));
+        cropW = Math.min(cropW, canvas.width - sx);
+        cropH = Math.min(cropH, canvas.height - sy);
+
+        croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = cropW;
+        croppedCanvas.height = cropH;
+        const cctx = croppedCanvas.getContext('2d');
+        cctx.drawImage(canvas, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+      } else {
+        croppedCanvas = canvas;
       }
 
-      const doc = new jsPDF();
+      const imgData = croppedCanvas.toDataURL('image/jpeg', 0.92);
+
+      // 4. Build Comprehensive Survey PDF (A4 Page: 210mm x 297mm)
+      const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+      const surveyRef = `KP-SRV-${Date.now().toString(36).toUpperCase()}`;
 
-      doc.setFillColor(26, 35, 64); doc.rect(0, 0, pageWidth, 45, 'F');
-      doc.setTextColor(201, 168, 76); doc.setFontSize(26); doc.setFont('helvetica', 'bold');
-      doc.text('Kharsan Properties', pageWidth / 2, 22, { align: 'center' });
-      doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'normal');
-      doc.text('PREMIUM LAND MAPPING SOLUTIONS', pageWidth / 2, 30, { align: 'center' });
-      doc.setFontSize(14); doc.text('Multi-Plot Boundary Report', pageWidth / 2, 38, { align: 'center' });
+      // ── A. Header Banner ──────────────────────────────────────────
+      doc.setFillColor(15, 23, 42); // Deep Obsidian Navy
+      doc.rect(0, 0, pageWidth, 36, 'F');
 
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      const poweredLabel = 'Powered by ';
-      const companyLabel = 'Kharsan Properties';
-      const pWidth = doc.getTextWidth(poweredLabel);
-      const cWidth = doc.getTextWidth(companyLabel);
-      const totalPWidth = pWidth + cWidth;
-      const poweredX = pageWidth - 15 - totalPWidth;
-      const poweredY = 10;
+      // Top Gold Line
+      doc.setFillColor(201, 168, 76);
+      doc.rect(0, 0, pageWidth, 2.5, 'F');
 
-      doc.setTextColor(200, 200, 200);
-      doc.text(poweredLabel, poweredX, poweredY);
-
-      doc.setFont('helvetica', 'bold');
+      // Title & Branding
       doc.setTextColor(201, 168, 76);
-      doc.text(companyLabel, poweredX + pWidth, poweredY);
-
-      doc.link(poweredX, poweredY - 3, totalPWidth, 5, { url: 'https://properties.kharsan.com' });
-
-      if (imgData) {
-        doc.setDrawColor(201, 168, 76); doc.setLineWidth(1.2);
-        doc.rect((pageWidth - 182) / 2, 54, 182, 102, 'D');
-        doc.addImage(imgData, 'JPEG', (pageWidth - 180) / 2, 55, 180, 100);
-      }
-
-      doc.setTextColor(26, 35, 64); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-      doc.text('Property Breakdown', 20, 175);
-      doc.setDrawColor(26, 35, 64); doc.setLineWidth(0.5); doc.line(20, 178, 80, 178);
-
-      let y = 188;
-      doc.setFillColor(248, 245, 238); doc.rect(20, y - 5, 170, 8, 'F');
-      doc.setFontSize(9); doc.setTextColor(26, 35, 64);
-      doc.text('PLOT NAME', 25, y); doc.text('ACRES', 80, y); doc.text('SQ FT', 120, y); doc.text('SQ YARDS', 160, y);
-      y += 10;
-
-      polygons.forEach(p => {
-        if (!p.area) return;
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.setTextColor(26, 35, 64); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.text(p.label, 25, y);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-        doc.text(`${p.area.acres} ac`, 80, y); doc.text(`${p.area.sqft}`, 120, y); doc.text(`${p.area.sqyd}`, 160, y);
-        doc.setFillColor(p.color); doc.circle(22, y - 1, 1, 'F');
-        y += 8;
-      });
-
-      const total = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0).toFixed(3);
-      y += 5; doc.setDrawColor(230); doc.line(20, y - 5, 190, y - 5);
-      doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text(`TOTAL: ${total} ACRES`, pageWidth / 2, y + 5, { align: 'center' });
-
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.3);
-      doc.line(20, pageHeight - 18, pageWidth - 20, pageHeight - 18);
+      doc.setFontSize(19);
+      doc.setFont('helvetica', 'bold');
+      doc.text('KHARSAN PROPERTIES', pageWidth / 2, 13, { align: 'center' });
 
       doc.setFontSize(8.5);
-      doc.setTextColor(156, 163, 175);
+      doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      const playText = 'Kharsan Properties App is available on Google Play Store';
-      const playWidth = doc.getTextWidth(playText);
-      doc.text(playText, pageWidth / 2, pageHeight - 11, { align: 'center' });
-      doc.link(pageWidth / 2 - playWidth / 2, pageHeight - 14, playWidth, 4, { url: 'https://play.google.com/store/apps/details?id=com.kharsan.properties' });
+      doc.text('OFFICIAL LAND BOUNDARY & SURVEY DEMARCATION CERTIFICATE', pageWidth / 2, 20, { align: 'center' });
 
       doc.setFontSize(7.5);
-      doc.setTextColor(156, 163, 175);
+      doc.setTextColor(148, 163, 184);
       doc.setFont('helvetica', 'normal');
-      doc.text(`© ${new Date().getFullYear()} Kharsan Properties · Boundary visualization only · Generated: ${date}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+      doc.text(`REF: ${surveyRef}  |  GPS SURVEY ENGINE  |  SURVEY DATE: ${date}`, pageWidth / 2, 27, { align: 'center' });
 
-      const today = new Date();
-      const dd = String(today.getDate()).padStart(2, '0');
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const yyyy = today.getFullYear();
-      const dateStr = `${dd}_${mm}_${yyyy}`;
-      const filename = `Kharsan_Properties_Report_${dateStr}.pdf`;
+      // ── B. Framed Satellite Map Photo ─────────────────────────────
+      let yPos = 41;
+      const imgWidth = 178;
+      const imgHeight = 88;
+      const imgX = (pageWidth - imgWidth) / 2;
+
+      // Outer Gold Frame
+      doc.setDrawColor(201, 168, 76);
+      doc.setLineWidth(0.8);
+      doc.rect(imgX - 1, yPos - 1, imgWidth + 2, imgHeight + 2);
+
+      doc.addImage(imgData, 'JPEG', imgX, yPos, imgWidth, imgHeight);
+      yPos += imgHeight + 3.5;
+
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Figure 1: High-Resolution Satellite Demarcation with Calibrated Corner Identifiers', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 6;
+
+      // ── C. Section 1: Area Measurement Dashboard ──────────────────
+      const primaryPoly = polygons[0] || {};
+      const acresNum = parseFloat(primaryPoly.area?.acres?.replace(/,/g, '') || 0);
+      const totalAcres = polygons.reduce((a, p) => a + (parseFloat(p.area?.acres?.replace(/,/g, '')) || 0), 0).toFixed(3);
+      const totalSqft = polygons.reduce((a, p) => a + (parseFloat(p.area?.sqft?.replace(/,/g, '')) || 0), 0);
+      const totalSqyd = Math.round(totalSqft / 9);
+      const totalGuntha = (parseFloat(totalAcres) * 40).toFixed(2);
+      const totalBigha = (parseFloat(totalAcres) * 40 / 23.78).toFixed(2);
+      const totalSqm = Math.round(totalSqft * 0.092903);
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('1. Area Measurement & Multi-Unit Land Valuation Matrix', 16, yPos);
+      doc.setDrawColor(201, 168, 76);
+      doc.setLineWidth(0.4);
+      doc.line(16, yPos + 1.5, 98, yPos + 1.5);
+      yPos += 4.5;
+
+      // 6-Box Metric Dashboard (3 columns x 2 rows)
+      const cardW = 56.6;
+      const cardH = 11;
+      const metrics = [
+        { label: 'ACRES', val: `${totalAcres} ac`, color: [37, 99, 235] },
+        { label: 'GUNTHA (GUTHA)', val: `${totalGuntha} Guntha`, color: [15, 23, 42] },
+        { label: 'BIGHA (23.78 GUTHA)', val: `${totalBigha} Bigha`, color: [15, 23, 42] },
+        { label: 'SQUARE YARDS (GAJ)', val: `${totalSqyd.toLocaleString('en-IN')} sq.yd`, color: [15, 23, 42] },
+        { label: 'SQUARE FEET', val: `${totalSqft.toLocaleString('en-IN')} sq.ft`, color: [15, 23, 42] },
+        { label: 'SQUARE METERS', val: `${totalSqm.toLocaleString('en-IN')} sq.m`, color: [15, 23, 42] },
+      ];
+
+      metrics.forEach((m, idx) => {
+        const col = idx % 3;
+        const row = Math.floor(idx / 3);
+        const cx = 16 + col * (cardW + 4);
+        const cy = yPos + row * (cardH + 3);
+
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.rect(cx, cy, cardW, cardH, 'FD');
+
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(100, 116, 139);
+        doc.text(m.label, cx + 3.5, cy + 3.8);
+
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(m.color[0], m.color[1], m.color[2]);
+        doc.text(m.val, cx + 3.5, cy + 8.5);
+      });
+
+      yPos += (cardH * 2) + 8;
+
+      // ── D. Section 2: Boundary Perimeter & Dimensions Table ───────
+      const activeP = polygons[activeIndex] || polygons[0];
+      if (activeP && activeP.points && activeP.points.length >= 2) {
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text('2. Boundary Perimeter & Edge Dimensions Ledger', 16, yPos);
+        doc.setDrawColor(201, 168, 76);
+        doc.setLineWidth(0.4);
+        doc.line(16, yPos + 1.5, 90, yPos + 1.5);
+        yPos += 4.5;
+
+        const segs = getSegmentLengths(activeP.points);
+        const totalPerimeterM = segs.reduce((a, s) => a + s.meters, 0);
+        const totalPerimeterFt = segs.reduce((a, s) => a + s.feet, 0);
+
+        // Table Header
+        const tWidth = pageWidth - 32;
+        doc.setFillColor(30, 41, 59); // Slate 800
+        doc.rect(16, yPos, tWidth, 6, 'F');
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('SEGMENT', 20, yPos + 4.2);
+        doc.text('FROM / TO CORNER', 58, yPos + 4.2);
+        doc.text('LENGTH (METERS)', 115, yPos + 4.2);
+        doc.text('LENGTH (FEET)', 155, yPos + 4.2);
+        yPos += 6;
+
+        // Table Rows
+        const sideLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        segs.forEach((seg, sIdx) => {
+          const isEven = sIdx % 2 === 0;
+          doc.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.2);
+          doc.rect(16, yPos, tWidth, 5.2, 'FD');
+
+          doc.setFontSize(7.5);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(15, 23, 42);
+          doc.text(`Side ${sideLetters[sIdx % sideLetters.length] || sIdx + 1}`, 20, yPos + 3.8);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(71, 85, 105);
+          doc.text(`Corner ${seg.from} to Corner ${seg.to}`, 58, yPos + 3.8);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(37, 99, 235);
+          doc.text(`${seg.meters}.0 m`, 115, yPos + 3.8);
+          doc.text(`${seg.feet.toLocaleString('en-IN')} ft`, 155, yPos + 3.8);
+
+          yPos += 5.2;
+        });
+
+        // Total Summary Row
+        doc.setFillColor(238, 242, 255);
+        doc.setDrawColor(199, 210, 254);
+        doc.setLineWidth(0.3);
+        doc.rect(16, yPos, tWidth, 5.8, 'FD');
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('TOTAL PERIMETER', 20, yPos + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`${segs.length} Corners Demarcated`, 58, yPos + 4);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(37, 99, 235);
+        doc.text(`${totalPerimeterM}.0 m`, 115, yPos + 4);
+        doc.text(`${totalPerimeterFt.toLocaleString('en-IN')} ft`, 155, yPos + 4);
+
+        yPos += 10;
+      }
+
+      // ── E. Footer & Play Store Stamp ──────────────────────────────
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(16, pageHeight - 14, pageWidth - 16, pageHeight - 14);
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Kharsan Properties App is available on Google Play Store', pageWidth / 2, pageHeight - 9, { align: 'center' });
+
+      doc.setFontSize(6.5);
+      doc.setTextColor(148, 163, 184);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`© ${new Date().getFullYear()} Kharsan Properties  |  Certified GPS Boundary Survey Engine  |  Generated: ${date}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+      const filename = `Kharsan_Survey_${surveyRef}.pdf`;
 
       await savePdfCrossPlatform(doc, filename, {
-        shareTitle: 'Share Property Report',
-        shareText: 'Here is your Land Plot Boundary Report',
+        shareTitle: 'Share Property Survey Report',
+        shareText: `Certified Land Survey Report: ${totalAcres} Acres - Kharsan Properties`,
       });
-      toast.update(toastId, { render: t('boundary_map.report_downloaded'), type: 'success', isLoading: false, autoClose: 3000 });
+
+      toast.update(toastId, { render: 'Survey Report downloaded successfully!', type: 'success', isLoading: false, autoClose: 3000 });
     } catch (err) {
       console.error('PDF export error:', err);
-      toast.update(toastId, { render: t('boundary_map.report_failed'), type: 'error', isLoading: false, autoClose: 3000 });
+      toast.update(toastId, { render: 'PDF export failed', type: 'error', isLoading: false, autoClose: 3000 });
     } finally {
       window.getComputedStyle = originalGetComputedStyle;
     }
@@ -722,91 +912,106 @@ const BoundaryMap = () => {
 
               {showEdgeLabels && renderEdgeLabels(poly)}
 
-              {activeIndex === pIdx && poly.points.map((pt, ptIdx) => (
-                <Marker
-                  key={`${pIdx}-${ptIdx}`}
-                  position={pt}
-                  draggable
-                  eventHandlers={{ dragend: (e) => updatePoint(pIdx, ptIdx, e.target.getLatLng()) }}
-                  icon={L.divIcon({
-                    className: 'drawing-handle',
-                    html: `<div style="background:${poly.color};width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.3);"></div>`,
-                    iconSize: [14, 14], iconAnchor: [7, 7]
-                  })}
-                />
-              ))}
+              {activeIndex === pIdx && poly.points.map((pt, ptIdx) => {
+                const isLast = ptIdx === poly.points.length - 1;
+                return (
+                  <Marker
+                    key={`${pIdx}-${ptIdx}`}
+                    position={pt}
+                    draggable
+                    eventHandlers={{ dragend: (e) => updatePoint(pIdx, ptIdx, e.target.getLatLng()) }}
+                    icon={L.divIcon({
+                      className: 'drawing-handle',
+                      html: `<div style="background:${isLast ? '#10b981' : (poly.color || '#2563eb')};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 2px ${isLast ? 'rgba(16,185,129,0.6)' : 'rgba(37,99,235,0.4)'}, 0 4px 12px rgba(0,0,0,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:900;font-family:monospace;">${ptIdx + 1}</div>`,
+                      iconSize: [20, 20], iconAnchor: [10, 10]
+                    })}
+                  />
+                );
+              })}
             </React.Fragment>
           );
         })}
       </MapContainer>
 
-      {/* Target Crosshair HUD Overlay (Clean + Sign Only) */}
-      {isDrawing && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000] flex items-center justify-center">
-          <div className="w-9 h-1 bg-blue-600 rounded-full shadow-md" />
-          <div className="absolute h-9 w-1 bg-blue-600 rounded-full shadow-md" />
-        </div>
-      )}
+      {/* Top Mobile Bar */}
+      <div className="absolute top-3 left-3 right-3 md:top-4 md:left-6 md:right-6 z-[1001] flex items-center justify-between gap-2">
+        {isDrawing ? (
+          <div className="w-full flex items-center justify-between gap-2 bg-slate-950/90 backdrop-blur-xl border border-white/15 rounded-2xl p-1.5 shadow-2xl text-white">
+            <button
+              onClick={stopDrawing}
+              className="h-9 px-3 bg-white/10 hover:bg-white/20 text-slate-200 rounded-xl flex items-center gap-1.5 text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shrink-0"
+              title="Done Drawing"
+            >
+              <ArrowLeft size={14} />
+              <span>Done</span>
+            </button>
 
-      {/* Top Mobile Bar (Single Compact Row) */}
-      <div className="absolute top-3 left-3 right-3 md:top-4 md:left-6 md:right-auto z-[1001] flex items-center justify-between gap-2">
-        <button
-          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
-          className="h-10 px-3.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0 font-black text-xs uppercase"
-        >
-          <ArrowLeft size={15} className="text-blue-600" />
-          <span>{t('boundary_map.back')}</span>
-        </button>
+            <div className="flex-1 text-center min-w-0 px-2">
+              <div className="flex items-center justify-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-xs font-black tracking-tight text-white truncate">
+                  {activePoly?.points?.length ? `${activePoly.points.length} Corners Placed` : 'Tap Map with Thumb'}
+                </span>
+                {activePoly?.area && (
+                  <span className="text-xs font-black text-amber-400 font-mono shrink-0">
+                    · {formatPolyArea(activePoly.area, unit)}
+                  </span>
+                )}
+              </div>
+            </div>
 
-        <div className="h-10 px-4 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl items-center gap-2 text-slate-900 shadow-md shrink-0 hidden sm:flex">
-          <LandPlot size={16} className="text-blue-600" />
-          <span className="text-xs font-black tracking-tight">Smart Boundary Mapping Tool</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/saved-maps')}
-            className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
-            title="My Saved Maps"
-          >
-            <MapPin size={14} className="text-blue-600" />
-            <span className="hidden sm:inline">Saved Maps</span>
-          </button>
-
-          <button
-            onClick={toggleLanguage}
-            className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
-          >
-            <Globe size={14} className="text-blue-600" />
-            {language === 'en' ? 'ગુજરાતી' : 'English'}
-          </button>
-
-          <button
-            onClick={() => { setShowTutorial(true); setTutorialSlide(0); }}
-            className="h-10 w-10 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center justify-center text-slate-700 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
-            title="Map Guide & Tutorial"
-          >
-            <Info size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* Floating Drawing Status Banner */}
-      {(isDrawing || (activePoly?.points?.length > 0)) && (
-        <div className="absolute top-16 left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/95 border border-slate-200/90 rounded-full shadow-lg text-slate-900 text-xs font-bold backdrop-blur-xl">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-            <span className="font-black text-[11px] uppercase tracking-wider text-slate-800">
-              {isDrawing ? `Drawing Plot (${activePoly?.points?.length || 0} Points)` : `Plot Mapped`}
-            </span>
-            {activePoly?.area && (
-              <span className="font-black text-blue-700 font-mono">
-                · {formatPolyArea(activePoly.area, unit)}
-              </span>
-            )}
+            <button
+              onClick={() => setUnit(u => u === 'acres' ? 'sqft' : u === 'sqft' ? 'sqyd' : 'acres')}
+              className="h-9 px-2.5 bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/30 text-amber-300 rounded-xl flex items-center justify-center font-black text-[10px] uppercase transition-all active:scale-95 cursor-pointer shrink-0"
+              title="Change Measurement Unit"
+            >
+              {unit === 'acres' ? 'AC' : unit === 'sqft' ? 'FT²' : 'YD²'}
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <button
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
+              className="h-10 px-3.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0 font-black text-xs uppercase"
+            >
+              <ArrowLeft size={15} className="text-blue-600" />
+              <span>{t('boundary_map.back')}</span>
+            </button>
+
+            <div className="h-10 px-4 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl items-center gap-2 text-slate-900 shadow-md shrink-0 hidden sm:flex">
+              <LandPlot size={16} className="text-blue-600" />
+              <span className="text-xs font-black tracking-tight">Smart Boundary Mapping Tool</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/saved-maps')}
+                className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
+                title="My Saved Maps"
+              >
+                <MapPin size={14} className="text-blue-600" />
+                <span className="hidden sm:inline">Saved Maps</span>
+              </button>
+
+              <button
+                onClick={toggleLanguage}
+                className="h-10 px-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center gap-1.5 text-slate-800 hover:text-blue-600 shadow-md active:scale-95 transition-all font-black text-xs uppercase cursor-pointer shrink-0"
+              >
+                <Globe size={14} className="text-blue-600" />
+                {language === 'en' ? 'ગુજરાતી' : 'English'}
+              </button>
+
+              <button
+                onClick={() => { setShowTutorial(true); setTutorialSlide(0); }}
+                className="h-10 w-10 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center justify-center text-slate-700 hover:text-blue-600 shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+                title="Map Guide & Tutorial"
+              >
+                <Info size={16} />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Search Overlay */}
       {searchOpen && (
@@ -885,31 +1090,39 @@ const BoundaryMap = () => {
       {/* Mobile Floating Drawing Control Bar */}
       {isDrawing && (
         <div className="absolute bottom-5 left-3 right-3 z-[1001] flex justify-center pointer-events-auto">
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-2.5 flex items-center gap-2 justify-between">
+          <div className="w-full max-w-md bg-slate-950/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl p-2 sm:p-2.5 flex items-center gap-2 justify-between text-white">
             <button
               onClick={undoLastPoint}
               disabled={!activePoly?.points?.length}
               title={t('boundary_map.undo_point')}
-              className="w-11 h-11 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all shrink-0 cursor-pointer"
+              className="h-11 px-3.5 bg-white/10 border border-white/10 rounded-xl flex items-center gap-1.5 text-slate-300 hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all shrink-0 cursor-pointer font-bold text-xs"
             >
-              <RotateCcw size={16} />
+              <RotateCcw size={15} />
+              <span>Undo</span>
             </button>
 
-            <button
-              onClick={addPointAtCenter}
-              title={t('boundary_map.add_corner_hint')}
-              className="flex-1 h-11 bg-[#1a2340] hover:bg-slate-900 text-white rounded-xl shadow-md font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus size={16} className="text-amber-400" />
-              <span>{t('boundary_map.add_corner')}</span>
-            </button>
+            <div className="flex-1 text-center py-1 px-2 min-w-0">
+              <div className="text-[11px] sm:text-xs font-black text-white truncate">
+                {activePoly?.points?.length ? (
+                  <span className="text-emerald-400 font-mono">
+                    {activePoly.area ? formatPolyArea(activePoly.area, unit) : `${activePoly.points.length} points placed`}
+                  </span>
+                ) : (
+                  <span className="text-slate-300">Tap satellite map</span>
+                )}
+              </div>
+              <div className="text-[10px] font-bold text-slate-400 truncate">
+                {activePoly?.points?.length ? `${activePoly.points.length} corners mapped` : 'Direct thumb tap'}
+              </div>
+            </div>
 
             <button
               onClick={stopDrawing}
               title={t('boundary_map.stop_drawing')}
-              className="w-11 h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all shrink-0 cursor-pointer"
+              className="h-11 px-5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 rounded-xl flex items-center gap-1.5 active:scale-90 transition-all shrink-0 cursor-pointer font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 border border-emerald-400/30"
             >
-              <Check size={18} />
+              <Check size={16} className="stroke-[3]" />
+              <span>Done</span>
             </button>
           </div>
         </div>
@@ -1421,6 +1634,9 @@ const BoundaryMap = () => {
           </div>
         </div>
       )}
+
+      {/* REUSABLE CONFIRMATION MODAL */}
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   );
 };

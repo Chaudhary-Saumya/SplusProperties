@@ -10,6 +10,7 @@ import {
 import 'leaflet/dist/leaflet.css';
 import SEO from '../components/SEO';
 import { useLanguage } from '../context/LanguageContext';
+import { toast } from 'react-toastify';
 
 // Leaflet marker default icon fix
 delete L.Icon.Default.prototype._getIconUrl;
@@ -89,7 +90,7 @@ const SharedMap = () => {
         }
         setLocating(false);
       },
-      () => { setLocating(false); alert('Location access denied.'); },
+      () => { setLocating(false); toast.error('Location access denied. Please enable GPS permissions.'); },
       { enableHighAccuracy: true }
     );
   };

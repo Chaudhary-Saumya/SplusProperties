@@ -140,14 +140,21 @@ const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: function(origin, callback) {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
         methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
         credentials: true
     }
 });
 
-// Attach io to app for use in controllers
+// Attach io to app and global for use in controllers and services
 app.set('io', io);
+global.io = io;
 
 io.on('connection', (socket) => {
     logger.info(`Socket connected: ${socket.id}`);
@@ -178,6 +185,7 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/rewards', require('./routes/rewards'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/recommendations', require('./routes/recommendations'));
 app.use('/api/maps', require('./routes/maps'));
@@ -212,4 +220,8 @@ server.listen(PORT, () => {
         console.log(`[${new Date().toISOString()}] Running scheduled ranking calculation...`);
         updateAllScores().catch(err => console.error('Error in periodic ranking calculation:', err));
     }, 30 * 60 * 1000);
+
+    // Initialize Smart Re-Engagement Notification Cron Engine
+    const { initNotificationCron } = require('./services/notificationCron');
+    initNotificationCron();
 });

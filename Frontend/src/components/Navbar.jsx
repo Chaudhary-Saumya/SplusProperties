@@ -4,15 +4,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard, List, Settings, Plus, MapPin, Layers, Calculator, ShieldCheck, Globe, User, Heart, Building2, Calendar, FileText, Search, Users, Phone, Mail, ExternalLink, ArrowRight, Sparkles, Camera, Loader2 } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
+import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard, List, Settings, Plus, MapPin, Layers, Calculator, ShieldCheck, Globe, User, Heart, Building2, Calendar, FileText, Search, Users, Phone, Mail, ExternalLink, ArrowRight, Sparkles, Camera, Loader2, Coins, Gift } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getImageUrl } from '../utils/imageUrl';
+import { triggerHaptic } from '../utils/haptics';
 import k4Logo from '../assets/K4.png';
+import { GoldCoin, CoinBadge } from './GoldCoin';
 
 /* ─── Ultra-Modern Right Slide Drawer Component with React Portal & Framer Motion ─── */
 const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout }) => {
   const { updateProfileDetails } = useContext(AuthContext);
   const { language, setLanguage, t } = useLanguage();
+  const { settings } = useSettings();
   const drawerFileInputRef = useRef(null);
   const [uploadingDrawerAvatar, setUploadingDrawerAvatar] = useState(false);
 
@@ -162,8 +166,8 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
                   <button
                     onClick={() => setLanguage('en')}
                     className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${language === 'en'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     English
@@ -171,8 +175,8 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
                   <button
                     onClick={() => setLanguage('gu')}
                     className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${language === 'gu'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     ગુજરાતી
@@ -264,6 +268,25 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
                       </div>
                       <span>{t('navbar.buyer_leads')}</span>
                     </Link>
+
+                    {settings.enableRewardsSystem !== false && (
+                      <Link
+                        to="/wallet"
+                        onClick={onClose}
+                        className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-amber-50/90 hover:bg-amber-100/90 text-amber-900 border border-amber-200/80 transition-all font-black text-xs group shadow-2xs"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                          <Coins size={16} />
+                        </div>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{language === 'gu' ? 'સિક્કા અને રિવોર્ડ્સ' : 'Coins & Cashout'}</span>
+                          <span className="bg-amber-200 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <GoldCoin size={12} animated />
+                            <span>{(user?.coinsBalance || 0).toLocaleString()}</span>
+                          </span>
+                        </div>
+                      </Link>
+                    )}
                   </>
                 )}
 
@@ -377,6 +400,7 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
   const { language, toggleLanguage, t } = useLanguage();
+  const { settings } = useSettings();
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
@@ -442,9 +466,9 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Direct Live Search Input in Navbar (SHOWN ON SEARCH PAGE) */}
+          {/* Direct Live Search Input in Navbar (SHOWN ON SEARCH PAGE ON DESKTOP) */}
           {isSearchPage ? (
-            <div className="flex-1 max-w-xl">
+            <div className="hidden md:block flex-1 max-w-xl mx-4">
               <form onSubmit={handleNavSearchSubmit} className="w-full flex items-center bg-slate-100/90 hover:bg-slate-100 border border-slate-200/90 rounded-full px-4 py-2 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all flex shadow-inner">
                 <Search size={16} className="text-slate-400 shrink-0 mr-2" />
                 <input
@@ -576,33 +600,53 @@ const Navbar = () => {
           )}
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right Actions Container */}
+          <div className="flex items-center gap-1.5 sm:gap-3">
 
-            {/* Post Property FREE Button */}
-            <Link
-              to={isAuthenticated ? '/create-listing' : '/login'}
-              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
-            >
-              <span>{t('navbar.post_property_free')}</span>
-            </Link>
+            {/* Post Property FREE Button (Desktop Only) */}
+            {settings.enablePostProperty !== false && (
+              <Link
+                to={isAuthenticated ? '/create-listing' : '/login'}
+                className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+              >
+                <span>{t('navbar.post_property_free')}</span>
+              </Link>
+            )}
+
+            {/* Coin Wallet Button */}
+            {settings.enableRewardsSystem !== false && (
+              <Link
+                to="/wallet"
+                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-2 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200 text-amber-900 rounded-full sm:rounded-xl font-black text-[11px] sm:text-xs transition-all shadow-2xs hover:scale-105 cursor-pointer active:scale-95"
+                title="Rewards & Cashout Wallet"
+              >
+                <GoldCoin size={16} animated glow />
+                <span className="font-black text-amber-950">{(user?.coinsBalance || 0).toLocaleString()}</span>
+                <span className="text-[10px] text-amber-800 hidden lg:inline font-bold">
+                  (₹{(((user?.coinsBalance || 0)) / (settings.coinToINRRate || 20)).toFixed(1)})
+                </span>
+              </Link>
+            )}
 
             {/* Language Switcher Button */}
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition-all border border-slate-200/90 cursor-pointer shadow-xs"
+              className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 sm:px-3.5 py-1 sm:py-2 rounded-full sm:rounded-xl transition-all border border-slate-200/90 cursor-pointer shadow-xs active:scale-95"
               title="Toggle Language (English / ગુજરાતી)"
             >
-              <Globe size={15} className="text-blue-600" />
-              <span className="font-black">{language === 'en' ? 'ગુજરાતી' : 'English'}</span>
+              <Globe size={14} className="text-blue-600 shrink-0" />
+              {/* Compact label on mobile, full label on desktop */}
+              <span className="sm:hidden">{language === 'en' ? 'GU' : 'EN'}</span>
+              <span className="hidden sm:inline font-black">{language === 'en' ? 'ગુજરાતી' : 'English'}</span>
             </button>
 
-            {/* Direct Shortlist / Favorites Button */}
+            {/* Shortlist / Favorites Button (Desktop Only) */}
             {(() => {
               const favCount = Array.isArray(user?.favorites) ? user.favorites.filter(f => f !== null && f !== undefined).length : 0;
               return (
                 <Link
                   to="/favorites"
-                  className="relative p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-rose-50 border border-slate-200 rounded-xl text-slate-700 hover:text-rose-600 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="hidden sm:flex relative p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-rose-50 border border-slate-200 rounded-xl text-slate-700 hover:text-rose-600 font-extrabold text-xs transition-all items-center gap-1.5 cursor-pointer"
                   title="Shortlisted Properties"
                 >
                   <Heart size={16} className={favCount > 0 ? "fill-rose-600 text-rose-600" : "text-slate-600"} />
@@ -616,9 +660,9 @@ const Navbar = () => {
               );
             })()}
 
-            {/* User Profile / Auth Action */}
+            {/* Desktop User Profile Dropdown */}
             {isAuthenticated ? (
-              <div className="relative">
+              <div className="hidden sm:block relative">
                 <button
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                   className="flex items-center gap-2 bg-[#1a2340] text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
@@ -633,15 +677,29 @@ const Navbar = () => {
                   <span className="text-xs font-bold max-w-[90px] truncate hidden md:inline-block">
                     {user?.name?.split(' ')[0]}
                   </span>
-                  <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
+                  <ChevronDown size={14} className="text-slate-400" />
                 </button>
 
                 {showUserDropdown && (
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-fade-in">
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-fade-in space-y-0.5">
                     <div className="px-3 py-2 border-b border-slate-100 mb-1">
                       <div className="text-xs font-extrabold text-slate-900 truncate">{user?.name}</div>
                       <div className="text-[10px] font-bold text-[#c9a84c] uppercase tracking-wider">{user?.role || 'User'}</div>
                     </div>
+                    {settings.enableRewardsSystem !== false && (
+                      <Link
+                        to="/wallet"
+                        onClick={() => setShowUserDropdown(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-black text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+                      >
+                        <Coins size={16} className="text-amber-600" />
+                        <span>Coins & Cashout</span>
+                        <span className="ml-auto text-[10px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <GoldCoin size={12} animated />
+                          <span>{(user?.coinsBalance || 0).toLocaleString()}</span>
+                        </span>
+                      </Link>
+                    )}
                     <Link
                       to="/my-listings"
                       onClick={() => setShowUserDropdown(false)}
@@ -701,15 +759,33 @@ const Navbar = () => {
               </div>
             )}
 
-
-            {/* Right-Side Hamburger Drawer Trigger (☰) */}
+            {/* Mobile-Only Clean Pill: Avatar + Menu Trigger (Tier-1 App Style) */}
             <button
               onClick={() => setShowRightDrawer(true)}
-              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="sm:hidden flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 shadow-2xs active:scale-95 transition-all cursor-pointer"
+              aria-label="Open Menu Drawer"
+              title="Open Navigation Menu"
+            >
+              <div className="w-6 h-6 rounded-full bg-[#1a2340] text-[#c9a84c] text-[10px] font-black flex items-center justify-center uppercase overflow-hidden shrink-0 shadow-2xs">
+                {isAuthenticated && user?.profileImage ? (
+                  <img src={getImageUrl(user.profileImage)} alt={user?.name} className="w-full h-full object-cover" />
+                ) : isAuthenticated ? (
+                  user?.name?.[0] || 'U'
+                ) : (
+                  <User size={13} className="text-slate-300" />
+                )}
+              </div>
+              <Menu size={16} className="text-slate-700" />
+            </button>
+
+            {/* Desktop-Only Hamburger Trigger */}
+            <button
+              onClick={() => setShowRightDrawer(true)}
+              className="hidden sm:block p-2 text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               aria-label="Open Menu Drawer"
               title="Open Options Menu"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
           </div>
         </div>
@@ -723,6 +799,112 @@ const Navbar = () => {
         isAuthenticated={isAuthenticated}
         handleLogout={handleLogout}
       />
+
+      {/* ─── Ultra-Sleek Mobile Bottom Navigation Bar (Zepto / Zomato Tier) ─── */}
+      <nav aria-label="Mobile Navigation" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom,6px)] pt-1 font-['Nunito_Sans',sans-serif]">
+        <div className="grid grid-cols-5 items-center max-w-md mx-auto px-1">
+          {/* 1. Home */}
+          <Link
+            to="/"
+            onClick={() => triggerHaptic('light')}
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all relative ${location.pathname === '/' ? 'text-blue-600 font-extrabold' : 'text-slate-500 font-semibold hover:text-slate-800'
+              }`}
+          >
+            <motion.div whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
+              <Home size={19} className={location.pathname === '/' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+            </motion.div>
+            <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] text-center">
+              {t('navbar.home') || 'Home'}
+            </span>
+            {location.pathname === '/' && (
+              <motion.div layoutId="bottomNavDot" className="w-1 h-1 rounded-full bg-blue-600 mt-0.5" />
+            )}
+          </Link>
+
+          {/* 2. Search Lands */}
+          <Link
+            to="/search"
+            onClick={() => triggerHaptic('light')}
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all relative ${location.pathname === '/search' ? 'text-blue-600 font-extrabold' : 'text-slate-500 font-semibold hover:text-slate-800'
+              }`}
+          >
+            <motion.div whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
+              <Search size={19} className={location.pathname === '/search' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+            </motion.div>
+            <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] text-center">
+              {t('navbar.search') || 'Search'}
+            </span>
+            {location.pathname === '/search' && (
+              <motion.div layoutId="bottomNavDot" className="w-1 h-1 rounded-full bg-blue-600 mt-0.5" />
+            )}
+          </Link>
+
+          {/* 3. Center: Post Property CTA Button */}
+          <Link
+            to="/create-listing"
+            onClick={() => triggerHaptic('medium')}
+            className="flex flex-col items-center justify-center -mt-4 group"
+          >
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#1a2340] via-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 border-2 border-white ring-2 ring-blue-500/10"
+            >
+              <Plus size={22} className="stroke-[3]" />
+            </motion.div>
+            <span className="text-[10px] font-black text-slate-900 tracking-tight mt-0.5 truncate max-w-[64px] text-center">
+              {t('navbar.post_land') || 'Post Land'}
+            </span>
+          </Link>
+
+          {/* 4. GPS Map Tool */}
+          <Link
+            to="/boundary-map"
+            onClick={() => triggerHaptic('light')}
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all relative ${location.pathname === '/boundary-map' ? 'text-blue-600 font-extrabold' : 'text-slate-500 font-semibold hover:text-slate-800'
+              }`}
+          >
+            <motion.div whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
+              <Layers size={19} className={location.pathname === '/boundary-map' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+            </motion.div>
+            <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] text-center">
+              {t('navbar.gps_map') || 'GPS Map'}
+            </span>
+            {location.pathname === '/boundary-map' && (
+              <motion.div layoutId="bottomNavDot" className="w-1 h-1 rounded-full bg-blue-600 mt-0.5" />
+            )}
+          </Link>
+
+          {/* 5. Profile / Dashboard */}
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/login"}
+            onClick={() => triggerHaptic('light')}
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all relative ${location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/login')
+                ? 'text-blue-600 font-extrabold'
+                : 'text-slate-500 font-semibold hover:text-slate-800'
+              }`}
+          >
+            <motion.div whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
+              {isAuthenticated && user?.profileImage ? (
+                <img
+                  src={getImageUrl(user.profileImage)}
+                  alt="Avatar"
+                  className="w-5 h-5 rounded-full object-cover border border-blue-500"
+                />
+              ) : (
+                <User size={19} className={location.pathname.startsWith('/dashboard') ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              )}
+            </motion.div>
+            <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] text-center">
+              {isAuthenticated ? (t('navbar.dashboard') || 'Account') : (t('navbar.login') || 'Login')}
+            </span>
+            {(location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/login')) && (
+              <motion.div layoutId="bottomNavDot" className="w-1 h-1 rounded-full bg-blue-600 mt-0.5" />
+            )}
+          </Link>
+        </div>
+      </nav>
     </>
   );
 };

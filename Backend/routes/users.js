@@ -1,6 +1,7 @@
 const express = require('express');
-const { getUsers, getUser, updateUser, deleteUser, getBrokers } = require('../controllers/userController');
+const { getUsers, getUser, updateUser, deleteUser, getBrokers, resetUserPassword } = require('../controllers/userController');
 const { protect, authorize } = require('../middlewares/auth');
+const { requireAdminSecurityPin } = require('../middlewares/adminSecurity');
 
 const router = express.Router();
 
@@ -18,4 +19,8 @@ router.route('/:id')
     .put(updateUser)
     .delete(deleteUser);
 
+router.put('/:id/reset-password', requireAdminSecurityPin, resetUserPassword);
+
 module.exports = router;
+
+

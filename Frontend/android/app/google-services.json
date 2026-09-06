@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "688850273096",
+    "project_id": "kharsan-properties",
+    "storage_bucket": "kharsan-properties.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:688850273096:android:80da23d57e81aadf66a97d",
+        "android_client_info": {
+          "package_name": "com.kharsan.properties"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "792864567125-qhfbo8i8vibnba1uq1p1tadti5ivvaib.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCd5r7S6bNeYSequqcrBQmxXwRZxl9rORk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

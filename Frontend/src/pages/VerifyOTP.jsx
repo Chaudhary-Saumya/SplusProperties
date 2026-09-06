@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
-import { ShieldCheck, RefreshCw, ArrowLeft, Building2, ChevronRight, Mail } from 'lucide-react';
+import { ShieldCheck, RefreshCw, ArrowLeft, Building2, ChevronRight, Mail, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const VerifyOTP = () => {
@@ -149,7 +149,8 @@ const VerifyOTP = () => {
                         {/* Error */}
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-xl font-bold text-sm flex items-center gap-2">
-                                <span className="shrink-0 text-base">⚠️</span> {error}
+                                <AlertCircle size={16} className="shrink-0 text-red-600" />
+                                <span>{error}</span>
                             </div>
                         )}
 

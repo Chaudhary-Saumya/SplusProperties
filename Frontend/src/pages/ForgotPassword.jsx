@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, KeyRound, Lock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, KeyRound, Lock, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const ForgotPassword = () => {
@@ -179,7 +179,7 @@ const ForgotPassword = () => {
                             <p className="forgot-subtitle">{t('forgot_password.forgot_subtitle')}</p>
                         </div>
 
-                        {error && <div className="forgot-error">⚠ {error}</div>}
+                        {error && <div className="forgot-error"><AlertCircle size={14} /> <span>{error}</span></div>}
 
                         <form onSubmit={handleSendOTP}>
                             <div className="forgot-field">
@@ -213,7 +213,7 @@ const ForgotPassword = () => {
                             <p className="forgot-subtitle">{t('forgot_password.enter_otp_subtitle')} <strong>{email}</strong></p>
                         </div>
 
-                        {error && <div className="forgot-error">⚠ {error}</div>}
+                        {error && <div className="forgot-error"><AlertCircle size={14} /> <span>{error}</span></div>}
 
                         <form onSubmit={handleVerifyOTP}>
                             <div className="forgot-field">
@@ -249,7 +249,7 @@ const ForgotPassword = () => {
                             <p className="forgot-subtitle">{t('forgot_password.reset_subtitle')}</p>
                         </div>
 
-                        {error && <div className="forgot-error">⚠ {error}</div>}
+                        {error && <div className="forgot-error"><AlertCircle size={14} /> <span>{error}</span></div>}
 
                         <form onSubmit={handleResetPassword}>
                             <div className="forgot-field">

@@ -343,7 +343,31 @@ const buildFallbackMatchQuery = (params) => {
 
     if (ownerType) query.ownerType = ownerType;
     if (listingType) query.listingType = listingType;
-    if (status) query.status = status;
+
+    // 2-Day (48-hour) public visibility window for Sold properties:
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    if (!status || status === 'Active') {
+        const statusCondition = {
+            $or: [
+                { status: 'Active' },
+                { status: 'Sold', soldAt: { $gte: twoDaysAgo } }
+            ]
+        };
+        if (query.$or) {
+            query.$and = [
+                { $or: query.$or },
+                statusCondition
+            ];
+            delete query.$or;
+        } else {
+            query.$or = statusCondition.$or;
+        }
+    } else if (status === 'Sold') {
+        query.status = 'Sold';
+        query.soldAt = { $gte: twoDaysAgo };
+    } else {
+        query.status = status;
+    }
 
     if (isFeatured !== undefined && isFeatured !== '') {
         query.isFeatured = isFeatured === 'true' || isFeatured === true;
@@ -425,7 +449,7 @@ exports.searchProperties = async (params) => {
         
         const total = await Listing.countDocuments(matchQuery);
         const listings = await Listing.find(matchQuery)
-            .populate('createdBy', 'name phone role')
+            .populate('createdBy', 'name phone role profileImage')
             .sort(sortStage)
             .skip(skip)
             .limit(limit)

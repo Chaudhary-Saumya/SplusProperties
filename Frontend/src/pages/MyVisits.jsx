@@ -78,8 +78,9 @@ const MyVisits = () => {
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => navigate('/dashboard')}
-                                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all shrink-0"
+                                onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/dashboard')}
+                                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all shrink-0 cursor-pointer active:scale-95"
+                                title="Go Back"
                             >
                                 <ArrowLeft size={18} />
                             </button>
@@ -104,7 +105,7 @@ const MyVisits = () => {
             </div>
 
             {/* ── Body ── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 sm:pb-16">
 
                 {inquiries.length === 0 ? (
                     /* Empty state */

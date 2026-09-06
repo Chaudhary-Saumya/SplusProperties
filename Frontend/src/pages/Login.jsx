@@ -471,7 +471,7 @@ const Login = () => {
                                 <h1 className="login-title">{t('auth.login_title')}</h1>
                                 <p className="login-subtitle">{t('auth.login_subtitle')}</p>
 
-                                {error && <div className="login-error">⚠ {error}</div>}
+                                {error && <div className="login-error"><AlertCircle size={14} /> <span>{error}</span></div>}
 
                                 {/* Google Sign-In at the Top */}
                                 <div className="login-google-container" style={{ marginBottom: '24px' }}>
