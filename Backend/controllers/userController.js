@@ -29,7 +29,7 @@ exports.getBrokers = asyncHandler(async (req, res, next) => {
         },
         {
             $addFields: {
-                listingsCount: { $ifNull: [{ $size: '$listingStats' }, 0] }
+                listingsCount: { $ifNull: [{ $arrayElemAt: ['$listingStats.count', 0] }, 0] }
             }
         },
         {

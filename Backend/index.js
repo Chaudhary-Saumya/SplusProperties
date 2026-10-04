@@ -189,6 +189,7 @@ app.use('/api/rewards', require('./routes/rewards'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/recommendations', require('./routes/recommendations'));
 app.use('/api/maps', require('./routes/maps'));
+app.use('/api/wallet', require('./routes/wallet'));
 
 app.get('/', (req, res) => {
     res.send('LandSelling API is running...');

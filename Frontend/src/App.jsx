@@ -58,6 +58,10 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DeleteAccount from './pages/DeleteAccount';
 import RewardsWallet from './pages/RewardsWallet';
+import PropertyWallet from './pages/PropertyWallet';
+import AddWalletProperty from './pages/AddWalletProperty';
+import EditWalletProperty from './pages/EditWalletProperty';
+import SharedProperty from './pages/SharedProperty';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import AppUpdateChecker from './components/AppUpdateChecker';
 import FirstTimeAppModal from './components/FirstTimeAppModal';
@@ -244,7 +248,7 @@ function GlobalProfileCompletionGate() {
 
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
-  const hidePaths = ['/boundary-map', '/m/'];
+  const hidePaths = ['/boundary-map', '/m/', '/p/share/', '/share/', '/shared-property/'];
   const shouldHide = hidePaths.some(path => location.pathname.startsWith(path));
 
   return (
@@ -338,6 +342,12 @@ function AppContent() {
             <Route path="/create-listing" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
             <Route path="/edit-listing/:id" element={<ProtectedRoute><EditListing /></ProtectedRoute>} />
             <Route path="/seller/:id" element={<SellerProfile />} />
+            <Route path="/property-wallet" element={<ProtectedRoute><PropertyWallet /></ProtectedRoute>} />
+            <Route path="/property-wallet/add" element={<ProtectedRoute><AddWalletProperty /></ProtectedRoute>} />
+            <Route path="/property-wallet/edit/:id" element={<ProtectedRoute><EditWalletProperty /></ProtectedRoute>} />
+            <Route path="/p/share/:token" element={<SharedProperty />} />
+            <Route path="/share/:token" element={<SharedProperty />} />
+            <Route path="/shared-property/:token" element={<SharedProperty />} />
             <Route path="/area-converter" element={<AreaConverter />} />
             <Route path="/boundary-map" element={<BoundaryMap />} />
             <Route path="/wallet" element={<RewardsWallet />} />

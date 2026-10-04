@@ -5,7 +5,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard, List, Settings, Plus, MapPin, Layers, Calculator, ShieldCheck, Globe, User, Heart, Building2, Calendar, FileText, Search, Users, Phone, Mail, ExternalLink, ArrowRight, Sparkles, Camera, Loader2, Coins, Gift } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, LogIn, LogOut, LayoutDashboard, List, Settings, Plus, MapPin, Layers, Calculator, ShieldCheck, Globe, User, Heart, Building2, Calendar, FileText, Search, Users, Phone, Mail, ExternalLink, ArrowRight, Sparkles, Camera, Loader2, Coins, Gift, Briefcase } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getImageUrl } from '../utils/imageUrl';
 import { triggerHaptic } from '../utils/haptics';
@@ -246,6 +246,24 @@ const RightSlideDrawer = ({ isOpen, onClose, user, isAuthenticated, handleLogout
                     <div className="pt-3 px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       {t('navbar.my_account')}
                     </div>
+
+                    {(user?.role === 'Broker' || user?.role === 'Admin') && (
+                      <Link
+                        to="/property-wallet"
+                        onClick={onClose}
+                        className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-950 border border-emerald-200/70 transition-all font-black text-xs group shadow-2xs"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                          <Briefcase size={16} />
+                        </div>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{language === 'gu' ? 'પ્રોપર્ટી વોલેટ (ડાયરી)' : 'Property Wallet (Diary)'}</span>
+                          <span className="bg-emerald-200 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {language === 'gu' ? 'બ્રોકર' : 'Broker'}
+                          </span>
+                        </div>
+                      </Link>
+                    )}
 
                     <Link
                       to="/my-listings"
@@ -506,20 +524,20 @@ const Navbar = () => {
               </form>
             </div>
           ) : (
-            /* Desktop Navigation Links (SHOWN ON ALL OTHER PAGES) */
-            <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+            <nav className="hidden lg:flex items-center gap-1">
               <Link
                 to="/search"
-                className="text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all"
+                className="text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-3.5 py-2 rounded-lg transition-all"
               >
                 {t('navbar.buy')}
               </Link>
 
               <Link
-                to="/brokers"
-                className="text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all"
+                to="/property-wallet"
+                className="text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5"
               >
-                {t('navbar.brokers')}
+                <Briefcase size={14} className="text-slate-600" />
+                <span>{language === 'gu' ? 'પ્રોપર્ટી વોલેટ' : 'Property Wallet'}</span>
               </Link>
 
               {/* Tools Hover Dropdown Menu */}
@@ -530,14 +548,28 @@ const Navbar = () => {
               >
                 <button
                   onClick={() => setShowToolsDropdown(!showToolsDropdown)}
-                  className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-800 hover:text-[#2563eb] hover:bg-slate-50 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
                 >
                   <span>{t('navbar.tools')}</span>
-                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showToolsDropdown ? 'rotate-180 text-blue-600' : ''}`} />
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showToolsDropdown ? 'rotate-180 text-slate-700' : ''}`} />
                 </button>
 
                 {showToolsDropdown && (
                   <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-fade-in space-y-1">
+                    <Link
+                      to="/brokers"
+                      onClick={() => setShowToolsDropdown(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50/80 transition-colors text-slate-800 hover:text-indigo-600 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black">{t('navbar.brokers')}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold">{language === 'gu' ? 'ચકાસાયેલ બ્રોકર્સની યાદી' : 'Verified local brokers directory'}</div>
+                      </div>
+                    </Link>
+
                     <Link
                       to="/boundary-map"
                       onClick={() => setShowToolsDropdown(false)}
@@ -697,6 +729,19 @@ const Navbar = () => {
                         <span className="ml-auto text-[10px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-md flex items-center gap-1">
                           <GoldCoin size={12} animated />
                           <span>{(user?.coinsBalance || 0).toLocaleString()}</span>
+                        </span>
+                      </Link>
+                    )}
+                    {(user?.role === 'Broker' || user?.role === 'Admin') && (
+                      <Link
+                        to="/property-wallet"
+                        onClick={() => setShowUserDropdown(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-black text-emerald-950 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors"
+                      >
+                        <Briefcase size={16} className="text-emerald-700" />
+                        <span>{language === 'gu' ? 'પ્રોપર્ટી વોલેટ' : 'Property Wallet'}</span>
+                        <span className="ml-auto text-[9px] font-black bg-emerald-200/90 text-emerald-950 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                          Broker
                         </span>
                       </Link>
                     )}

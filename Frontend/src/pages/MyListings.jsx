@@ -14,7 +14,9 @@ import {
   Search,
   Award,
   Filter,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase,
+  Sparkles
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "../context/LanguageContext";
@@ -161,6 +163,35 @@ const MyListings = () => {
 
       {/* ── Main Content ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+        {/* ── Broker Wallet Quick Banner ── */}
+        {(user?.role === 'Broker' || user?.role === 'Admin') && (
+          <div className="bg-slate-900 rounded-2xl p-4 sm:p-5 text-white border border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Briefcase size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black text-white">Property Wallet (Diary)</h3>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    Broker Exclusive
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 font-medium mt-0.5">
+                  Save confidential properties, owner phone numbers & generate 7-day private client links.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/property-wallet"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-sm active:scale-95 shrink-0 flex items-center gap-1.5"
+            >
+              <span>Open Wallet</span>
+              <Sparkles size={14} />
+            </Link>
+          </div>
+        )}
 
         {/* ── Unified Search & Filter Controls Bar (Zero Scrollbars) ── */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-2.5 sm:p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5">

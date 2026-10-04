@@ -30,18 +30,24 @@ const upload = multer({
 
 const fs = require('fs');
 
-// Helper function to upload to Cloudinary with local disk fallback
+// Helper function to upload to Cloudinary with fast local disk fallback
 const uploadToCloudinary = (buffer) => {
     return new Promise((resolve, reject) => {
         if (!process.env.CLOUDINARY_CLOUD_NAME) {
             return reject(new Error('Cloudinary environment variables not configured'));
         }
+
+        const timer = setTimeout(() => {
+            reject(new Error('Cloudinary upload timed out after 3500ms'));
+        }, 3500);
+
         const stream = cloudinary.uploader.upload_stream(
             {
                 folder: 'property_platform',
                 resource_type: 'auto'
             },
             (error, result) => {
+                clearTimeout(timer);
                 if (result) {
                     resolve(result);
                 } else {

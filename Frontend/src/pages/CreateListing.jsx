@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
@@ -374,6 +374,47 @@ const CreateListing = () => {
 
         return () => clearTimeout(timer);
     }, [formData.city, formData.areaName]);
+
+    // Prefill from Property Wallet
+    useEffect(() => {
+        try {
+            const rawPrefill = sessionStorage.getItem('walletPrefill');
+            if (rawPrefill) {
+                const data = JSON.parse(rawPrefill);
+                sessionStorage.removeItem('walletPrefill');
+                
+                setFormData(prev => ({
+                    ...prev,
+                    title: data.title || prev.title,
+                    description: data.description || prev.description,
+                    price: data.price ? String(data.price) : prev.price,
+                    location: data.location || prev.location,
+                    city: data.city || prev.city,
+                    locality: data.locality || prev.locality,
+                    propertyType: data.propertyType || prev.propertyType,
+                    landType: data.landType || prev.landType
+                }));
+
+                const areaVal = data.areaValue || data.area;
+                if (areaVal) {
+                    const match = String(areaVal).match(/^([\d.]+)/);
+                    setAreaValue(match ? match[1] : String(areaVal));
+                }
+
+                if (data.areaUnit) {
+                    setAreaUnit(data.areaUnit);
+                }
+
+                if (data.images && data.images.length > 0) {
+                    setImagePreviews(data.images);
+                }
+
+                toast.info('✨ Loaded property details from your Wallet. Complete any missing fields and submit!');
+            }
+        } catch (e) {
+            console.error('Failed to parse wallet prefill', e);
+        }
+    }, []);
 
     const distanceKm = (formData.mapCoordinates.lat && geocodedAddressCoords?.lat)
         ? getDistanceKm(formData.mapCoordinates.lat, formData.mapCoordinates.lng, geocodedAddressCoords.lat, geocodedAddressCoords.lng)

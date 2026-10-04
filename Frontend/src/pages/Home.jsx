@@ -418,105 +418,104 @@ const LandCategoriesSection = () => {
       type: 'Residential',
       title: 'Residential Land & Plots',
       count: getCount('Residential'),
-      desc: 'Housing plots, NA residential land & gated villa sites across Gujarat',
+      desc: 'NA residential plots, gated villa land & township parcels across Gujarat',
       icon: MapPin,
-      color: 'from-blue-600 to-indigo-600',
       link: '/search?landType=Residential'
     },
     {
       type: 'Commercial',
       title: 'Commercial Land',
       count: getCount('Commercial'),
-      desc: 'Commercial zones, retail plot corridors & business land parcels',
+      desc: 'Prime highway fronts, retail plot corridors & enterprise business land',
       icon: Building2,
-      color: 'from-purple-600 to-[#1a2340]',
       link: '/search?landType=Commercial'
     },
     {
       type: 'Industrial',
       title: 'Industrial Land',
       count: getCount('Industrial'),
-      desc: 'GIDC industrial plots, factory sites & logistics warehouse land',
+      desc: 'GIDC industrial plots, heavy factory sites & logistics warehouse parcels',
       icon: Layers,
-      color: 'from-[#1a2340] to-slate-900',
       link: '/search?landType=Industrial'
     },
     {
       type: 'Agricultural',
       title: 'Agricultural Farmland',
       count: getCount('Agricultural'),
-      desc: 'Fertile agricultural land, canal water access & clear ownership documents',
+      desc: 'Fertile agricultural land, canal water access & verified clean titles',
       icon: Sparkles,
-      color: 'from-emerald-600 to-teal-600',
       link: '/search?landType=Agricultural'
     },
     {
       type: 'Other',
       title: 'Other & Mixed Use Land',
       count: getCount('Other'),
-      desc: 'Farmhouse plots, open land parcels & special investment plots',
+      desc: 'Farmhouse plots, institutional land & special investment opportunities',
       icon: Compass,
-      color: 'from-amber-600 to-orange-600',
       link: '/search?landType=Other'
     }
   ];
 
   return (
-    <section className="py-10 sm:py-14 bg-slate-100/60 font-['Nunito_Sans',sans-serif]">
+    <section className="py-12 sm:py-14 bg-slate-50/70 border-y border-slate-200/80 font-['Nunito_Sans',sans-serif]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
-              Database Categories (landType)
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block mb-1">
+              Gujarat Land Portfolio
             </span>
-            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Land & Plot Categories in Gujarat
             </h2>
-            <p className="text-xs font-semibold text-slate-500 mt-1">
-              Select a category to view verified active backend listings
+            <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1">
+              Browse verified direct-from-owner and broker land parcels by property category
             </p>
           </div>
           <Link
             to="/search"
-            className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all self-start sm:self-auto group"
           >
-            <span>View All ({listings.length} Active Listings)</span>
-            <ArrowUpRight size={14} />
+            <span>View All ({listings.length} Listings)</span>
+            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
           {categories.map((cat, idx) => {
             const IconComp = cat.icon;
             return (
               <motion.div
                 key={cat.type}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                transition={{ duration: 0.25, delay: idx * 0.04 }}
                 onClick={() => navigate(cat.link)}
-                className="bg-white border border-slate-200 hover:border-blue-500 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                className="bg-white border border-slate-200/90 hover:border-slate-700 rounded-xl p-5 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
               >
                 <div>
-                  <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${cat.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform mb-3.5`}>
-                    <IconComp size={20} />
+                  <div className="flex items-center justify-between mb-3.5">
+                    <div className="w-11 h-11 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors duration-200">
+                      <IconComp size={20} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                      {cat.count > 0 ? `${cat.count} Active` : 'Available'}
+                    </span>
                   </div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-black transition-colors leading-snug">
                     {cat.title}
                   </h3>
-                  <p className="text-xs font-black text-blue-600 mt-1">
-                    {cat.count > 0 ? `${cat.count} Active Listings` : 'Verified Parcels'}
-                  </p>
-                  <p className="text-[11px] font-semibold text-slate-500 mt-2 leading-relaxed line-clamp-2 sm:line-clamp-none">
+
+                  <p className="text-xs font-normal text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
                     {cat.desc}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-blue-600 group-hover:translate-x-1 transition-transform">
-                  <span>View {cat.type}</span>
-                  <span>→</span>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-black transition-colors">
+                  <span>Explore {cat.type}</span>
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </div>
               </motion.div>
             );
@@ -581,40 +580,52 @@ const TopCorridorsSection = () => {
   });
 
   return (
-    <section className="py-12 bg-white font-['Nunito_Sans',sans-serif]">
+    <section className="py-12 sm:py-14 bg-white font-['Nunito_Sans',sans-serif]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
-              Live Market Demand
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block mb-1">
+              Market Demand & Growth
             </span>
-            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Top Land Investment Corridors in Gujarat
             </h2>
+            <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1">
+              Explore high-demand commercial, industrial and residential zones with rapid development
+            </p>
           </div>
-          <Link to="/search" className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline">
+          <Link
+            to="/search"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all self-start sm:self-auto group border border-slate-200"
+          >
             <span>Explore Map & Search</span>
-            <ArrowUpRight size={14} />
+            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {displayCorridors.map((c) => (
             <div
               key={c.name}
               onClick={() => navigate(`/search?query=${encodeURIComponent(c.query)}`)}
-              className="bg-slate-50 border border-slate-200 hover:border-blue-500 rounded-2xl p-5 cursor-pointer shadow-sm hover:shadow-md transition-all group"
+              className="bg-white border border-slate-200/90 hover:border-slate-700 rounded-xl p-5 cursor-pointer hover:shadow-md transition-all duration-200 group flex flex-col justify-between"
             >
-              <div className="inline-block px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase mb-2">
-                {c.tag}
+              <div>
+                <div className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider mb-2.5">
+                  {c.tag}
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-black transition-colors">
+                  {c.name}
+                </h3>
+                <p className="text-xs font-semibold text-slate-600 mt-1">{c.plots}</p>
               </div>
-              <h3 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">
-                {c.name}
-              </h3>
-              <p className="text-xs font-bold text-blue-600 mt-1">{c.plots}</p>
-              <div className="mt-3 text-[11px] font-extrabold text-emerald-600 flex items-center gap-1">
-                <TrendingUp size={13} />
-                <span>Live Listings & Market Demand</span>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <TrendingUp size={13} className="text-emerald-600" />
+                  <span>High Demand</span>
+                </span>
+                <span className="text-slate-400 group-hover:text-slate-900 group-hover:translate-x-1 transition-all">→</span>
               </div>
             </div>
           ))}
@@ -627,14 +638,6 @@ const TopCorridorsSection = () => {
 /* ─── Popular Brokers Section ─────────────────────────────────────────────── */
 const PopularBrokersSection = () => {
   const navigate = useNavigate();
-  const brokerScrollRef = useRef(null);
-
-  const scrollBrokerLeft = () => {
-    if (brokerScrollRef.current) brokerScrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
-  };
-  const scrollBrokerRight = () => {
-    if (brokerScrollRef.current) brokerScrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
-  };
 
   const { data: brokersData, isLoading, isError } = useQuery({
     queryKey: ['brokers'],
@@ -644,101 +647,100 @@ const PopularBrokersSection = () => {
     }
   });
 
-  const brokers = brokersData || [];
+  const allBrokers = brokersData || [];
+  // Sort by active listings and select top 5 leading brokers
+  const leadingBrokers = [...allBrokers]
+    .sort((a, b) => (b.listingsCount || 0) - (a.listingsCount || 0))
+    .slice(0, 5);
 
   return (
-    <section className="py-10 sm:py-14 bg-white font-['Nunito_Sans',sans-serif]">
+    <section className="py-12 sm:py-16 bg-gradient-to-b from-white via-slate-50/50 to-white border-t border-slate-200/60 font-['Nunito_Sans',sans-serif]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="flex items-end justify-between mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <span className="text-[10px] font-extrabold text-[#2563eb] uppercase tracking-widest">
-              Verified Regional Agents
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block mb-1">
+              Regional Property Advisors
             </span>
-            <h2 className="text-xl sm:text-3xl font-black text-[#1a2340] tracking-tight">
-              Popular Brokers & Agents
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Top Leading Brokers in Gujarat
             </h2>
-            <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5 sm:mt-1">
-              Connect with top verified authorized land brokers in Gujarat
+            <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1">
+              Connect with regional land consultants and authorized property advisors
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={scrollBrokerLeft}
-              className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
-              aria-label="Scroll Left"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={scrollBrokerRight}
-              className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
-              aria-label="Scroll Right"
-            >
-              <ChevronRight size={18} />
-            </button>
-            <Link
-              to="/brokers"
-              className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline ml-1 sm:ml-2 hidden sm:flex"
-            >
-              <span>View All</span>
-              <ArrowUpRight size={14} />
-            </Link>
-          </div>
+          <Link
+            to="/brokers"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all self-start sm:self-auto group"
+          >
+            <span>View All ({allBrokers.length || 0} Brokers)</span>
+            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </Link>
         </div>
 
         {isLoading ? (
-          <div className="flex gap-4 overflow-hidden">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="w-40 sm:w-52 h-44 bg-slate-100 rounded-2xl animate-pulse shrink-0" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-56 bg-slate-100 rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : isError || brokers.length === 0 ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-            <p className="text-xs font-bold text-slate-500">Authorized land brokers are available in our Brokers Directory.</p>
-            <Link to="/brokers" className="text-xs font-black text-blue-600 hover:underline mt-2 inline-block">
+        ) : isError || leadingBrokers.length === 0 ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
+            <p className="text-sm font-medium text-slate-600">Land brokers are available in our Brokers Directory.</p>
+            <Link to="/brokers" className="text-xs font-bold text-slate-900 hover:underline mt-2 inline-block">
               Explore Brokers Directory →
             </Link>
           </div>
         ) : (
-          <div
-            ref={brokerScrollRef}
-            className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 pt-1 px-1 scrollbar-none"
-          >
-            {brokers.map((b, idx) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+            {leadingBrokers.map((b, idx) => (
               <motion.div
                 key={b._id || idx}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                onClick={() => navigate('/brokers')}
-                className="shrink-0 w-40 sm:w-52 snap-start bg-white border border-slate-200/90 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 flex flex-col items-center text-center group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                transition={{ duration: 0.25, delay: idx * 0.04 }}
+                onClick={() => navigate(`/brokers?search=${encodeURIComponent(b.name || '')}`)}
+                className="bg-white border border-slate-200/90 hover:border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center group cursor-pointer hover:shadow-md transition-all duration-200 justify-between"
               >
-                {/* Avatar Ring */}
-                <div className="relative w-14 h-14 sm:w-18 sm:h-18 rounded-full bg-[#1a2340] text-[#c9a84c] flex items-center justify-center font-black text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform mb-2.5 ring-4 ring-slate-100 overflow-hidden shrink-0">
-                  {b.profileImage ? (
-                    <img src={getImageUrl(b.profileImage)} alt={b.name} className="w-full h-full object-cover" />
-                  ) : (
-                    b.name?.charAt(0)?.toUpperCase() || 'B'
-                  )}
-                  <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 text-white p-0.5 sm:p-1 rounded-full border-2 border-white shadow-sm z-10">
-                    <ShieldCheck size={11} />
+                <div className="flex flex-col items-center w-full">
+                  {/* Avatar */}
+                  <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-lg sm:text-xl shadow-xs mb-3 ring-2 ring-slate-100 overflow-hidden shrink-0">
+                    {b.profileImage ? (
+                      <img src={getImageUrl(b.profileImage)} alt={b.name} className="w-full h-full object-cover" />
+                    ) : (
+                      b.name?.charAt(0)?.toUpperCase() || 'B'
+                    )}
+                  </div>
+
+                  {/* Broker Name & City */}
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-black transition-colors line-clamp-1 w-full">
+                    {b.name}
+                  </h3>
+                  {b.city ? (
+                    <p className="text-[11px] font-medium text-slate-500 mt-0.5 line-clamp-1">
+                      {b.city}
+                    </p>
+                  ) : null}
+
+                  {/* Active Listings Pill */}
+                  <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
+                    <span>{b.listingsCount || 0} {b.listingsCount === 1 ? 'Listing' : 'Listings'}</span>
                   </div>
                 </div>
 
-                {/* Broker Info */}
-                <h3 className="text-xs sm:text-sm font-black text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                  {b.name}
-                </h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-0.5">
-                  {b.listingsCount ?? 0} Active Listings
-                </p>
-
-                <span className="mt-2 text-[10px] font-extrabold text-blue-600 bg-blue-50 group-hover:bg-blue-600 group-hover:text-white px-2.5 py-1 rounded-full transition-colors flex items-center gap-1">
-                  <Phone size={10} /> Contact Agent
-                </span>
+                {/* Connect Action Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/brokers?search=${encodeURIComponent(b.name || '')}`);
+                  }}
+                  className="w-full mt-4 py-2 px-3 rounded-lg bg-slate-100 group-hover:bg-slate-900 text-slate-800 group-hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Phone size={12} />
+                  <span>Contact Broker</span>
+                </button>
               </motion.div>
             ))}
           </div>
