@@ -12,7 +12,8 @@ import {
   LayoutGrid, List, SlidersHorizontal, Sparkles, ArrowUpRight, TrendingUp,
   FileText, FolderOpen, PackageOpen, RefreshCw, Check, Phone, User as UserIcon,
   MessageCircle, ShieldCheck, Database, Zap, ArrowRight, Share, CheckCircle,
-  ChevronLeft, ChevronRight, Calendar, Info
+  ChevronLeft, ChevronRight, Calendar, Info, Table, ArrowLeftRight, EyeOff,
+  ArrowUpDown
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import { getImageUrl } from '../utils/imageUrl';
@@ -60,64 +61,68 @@ const TagPill = ({ text }) => (
   </span>
 );
 
-// ── Stat Card (Executive Desktop Design) ──
+// ── Compact Stat Pill ──
 const StatCard = ({ icon: Icon, title, value, subtitle, color = 'emerald', active = false, onClick }) => {
   const styles = {
     emerald: {
-      bg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      activeRing: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/40',
+      icon: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      activeRing: 'ring-1.5 ring-emerald-500 border-emerald-500 bg-emerald-50/30',
       val: 'text-emerald-900',
-      badge: 'bg-emerald-100 text-emerald-800'
     },
     slate: {
-      bg: 'bg-slate-100 text-slate-700 border-slate-200',
-      activeRing: 'ring-2 ring-slate-800 border-slate-800 bg-slate-50',
+      icon: 'bg-slate-100 text-slate-600 border-slate-200',
+      activeRing: 'ring-1.5 ring-slate-700 border-slate-700 bg-slate-50/50',
       val: 'text-slate-900',
-      badge: 'bg-slate-200/80 text-slate-700'
     },
     indigo: {
-      bg: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-      activeRing: 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/40',
-      val: 'text-indigo-950',
-      badge: 'bg-indigo-100 text-indigo-800'
+      icon: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+      activeRing: 'ring-1.5 ring-indigo-500 border-indigo-500 bg-indigo-50/30',
+      val: 'text-indigo-900',
     },
     amber: {
-      bg: 'bg-amber-50 text-amber-700 border-amber-100',
-      activeRing: 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/40',
+      icon: 'bg-amber-50 text-amber-600 border-amber-200',
+      activeRing: 'ring-1.5 ring-amber-500 border-amber-500 bg-amber-50/30',
       val: 'text-amber-900',
-      badge: 'bg-amber-100 text-amber-800'
     }
   };
-  const current = styles[color] || styles.emerald;
+  const s = styles[color] || styles.emerald;
 
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border p-4 sm:p-5 shadow-xs transition-all duration-200 flex flex-col justify-between cursor-pointer group hover:shadow-md hover:-translate-y-0.5 ${
-        active ? current.activeRing : 'border-slate-200/90 hover:border-emerald-300'
+      className={`bg-white rounded-xl border px-3 py-2.5 shadow-2xs transition-all duration-150 flex items-center gap-2.5 cursor-pointer group hover:shadow-sm ${
+        active ? s.activeRing : 'border-slate-200 hover:border-slate-300'
       }`}
     >
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${current.bg} group-hover:scale-105 transition-transform shrink-0`}>
-          <Icon size={19} />
-        </div>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${current.badge}`}>
-          {title}
-        </span>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${s.icon}`}>
+        <Icon size={15} />
       </div>
-      <div>
-        <div className={`text-2xl sm:text-3xl font-black ${current.val} tracking-tight font-sans`}>
-          {value}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className={`text-lg font-black ${s.val} leading-none`}>{value}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{title}</span>
         </div>
-        <p className="text-[11px] sm:text-xs font-semibold text-slate-500 mt-1 line-clamp-1">
-          {subtitle}
-        </p>
+        <p className="text-[10px] font-medium text-slate-400 leading-tight mt-0.5 truncate">{subtitle}</p>
       </div>
     </div>
   );
 };
 
 // ── Custom Shimmer Skeletons ──
+const WalletExcelSkeleton = () => (
+  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs animate-pulse space-y-3">
+    <div className="h-8 bg-slate-100 rounded-lg w-full mb-2" />
+    {[1, 2, 3, 4, 5].map(i => (
+      <div key={i} className="h-12 bg-slate-50 border border-slate-100 rounded-lg w-full flex items-center px-3 justify-between">
+        <div className="h-4 bg-slate-200 rounded w-1/4" />
+        <div className="h-4 bg-slate-200 rounded w-1/6" />
+        <div className="h-4 bg-slate-200 rounded w-1/6" />
+        <div className="h-4 bg-slate-200 rounded w-1/8" />
+      </div>
+    ))}
+  </div>
+);
+
 const WalletGridSkeleton = () => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-6">
     {[1, 2, 3, 4, 5, 6].map(i => (
@@ -595,7 +600,763 @@ const ShareLinksModal = ({ isOpen, onClose, property, onGenerate, onRevoke }) =>
   );
 };
 
-// ── Property Card (Grid View - Desktop & Mobile Polish) ──
+// ── Column Definitions for Excel Sheet View ──
+const WALLET_COLUMNS = [
+  { id: 'title', label: 'Title & Property', width: 'min-w-[200px] w-64', filterType: 'title' },
+  { id: 'location', label: 'City & Location', width: 'w-44', filterType: 'city' },
+  { id: 'propertyType', label: 'Type (Land/Plot)', width: 'w-32', filterType: 'type' },
+  { id: 'area', label: 'Area / Size', width: 'w-32', filterType: 'area' },
+  { id: 'price', label: 'Price / Cost', width: 'w-36', filterType: 'price' },
+  { id: 'owner', label: 'Confidential Owner', width: 'w-44', filterType: 'owner' },
+  { id: 'share', label: 'Share', width: 'w-28 text-center', filterType: null }
+];
+
+// ── Interactive Excel Spreadsheet Table View Component ──
+const ExcelSpreadsheetView = ({ properties, onView, onEdit, onDelete, onShare, onPublish }) => {
+  const [activeFilterCol, setActiveFilterCol] = useState(null);
+  const [filters, setFilters] = useState({
+    titleSearch: '',
+    city: '',
+    type: '',
+    ownerSearch: '',
+    sortBy: 'default' // 'price_asc' | 'price_desc' | 'area_asc' | 'area_desc' | 'title_asc' | 'title_desc' | 'city_asc' | 'city_desc'
+  });
+
+  // Unique cities from properties
+  const uniqueCities = React.useMemo(() => {
+    const map = {};
+    (properties || []).forEach(p => {
+      const c = p.city || (p.location ? p.location.split(',')[0].trim() : null);
+      if (c) map[c] = (map[c] || 0) + 1;
+    });
+    return Object.entries(map).map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count);
+  }, [properties]);
+
+  // Unique types from properties
+  const uniqueTypes = React.useMemo(() => {
+    const set = new Set(['Land', 'Plot']);
+    (properties || []).forEach(p => {
+      if (p.propertyType) set.add(p.propertyType);
+      if (p.plotType && p.plotType !== 'None') set.add(p.plotType);
+      if (p.landType && p.landType !== 'Standard') set.add(p.landType);
+    });
+    return Array.from(set);
+  }, [properties]);
+
+  // Client-side instant filtering & sorting
+  const filteredProperties = React.useMemo(() => {
+    let list = [...(properties || [])];
+
+    if (filters.titleSearch.trim()) {
+      const q = filters.titleSearch.toLowerCase();
+      list = list.filter(p => (p.title || '').toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q));
+    }
+
+    if (filters.city) {
+      list = list.filter(p => {
+        const c = (p.city || '').toLowerCase();
+        const loc = (p.location || '').toLowerCase();
+        const target = filters.city.toLowerCase();
+        return c === target || loc.includes(target);
+      });
+    }
+
+    if (filters.type) {
+      list = list.filter(p => {
+        const pt = (p.propertyType || '').toLowerCase();
+        const plt = (p.plotType || '').toLowerCase();
+        const lt = (p.landType || '').toLowerCase();
+        const target = filters.type.toLowerCase();
+        return pt === target || plt === target || lt === target;
+      });
+    }
+
+    if (filters.ownerSearch.trim()) {
+      const q = filters.ownerSearch.toLowerCase();
+      list = list.filter(p => (p.ownerName || '').toLowerCase().includes(q) || (p.ownerPhone || '').includes(q));
+    }
+
+    // Sorting
+    if (filters.sortBy === 'price_asc') {
+      list.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+    } else if (filters.sortBy === 'price_desc') {
+      list.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+    } else if (filters.sortBy === 'area_asc') {
+      list.sort((a, b) => (parseFloat(a.area) || 0) - (parseFloat(b.area) || 0));
+    } else if (filters.sortBy === 'area_desc') {
+      list.sort((a, b) => (parseFloat(b.area) || 0) - (parseFloat(a.area) || 0));
+    } else if (filters.sortBy === 'title_asc') {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else if (filters.sortBy === 'title_desc') {
+      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    } else if (filters.sortBy === 'city_asc') {
+      list.sort((a, b) => (a.city || a.location || '').localeCompare(b.city || b.location || ''));
+    } else if (filters.sortBy === 'city_desc') {
+      list.sort((a, b) => (b.city || b.location || '').localeCompare(a.city || a.location || ''));
+    }
+
+    return list;
+  }, [properties, filters]);
+
+  const hasActiveFilters = Boolean(
+    filters.titleSearch ||
+    filters.city ||
+    filters.type ||
+    filters.ownerSearch ||
+    filters.sortBy !== 'default'
+  );
+
+  const resetAllFilters = () => {
+    setFilters({
+      titleSearch: '',
+      city: '',
+      type: '',
+      ownerSearch: '',
+      sortBy: 'default'
+    });
+    setActiveFilterCol(null);
+  };
+
+  if (!properties || properties.length === 0) return null;
+
+  // Helper to render cell data based on column ID
+  const renderCellContent = (colId, property) => {
+    const hasImages = property.images && property.images.length > 0;
+
+    switch (colId) {
+      case 'title':
+        return (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+              {hasImages ? (
+                <img src={getImageUrl(property.images[0])} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Building2 size={15} className="text-slate-400" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-slate-900 group-hover:text-emerald-700 truncate text-[13px] leading-tight">
+                {property.title || 'Untitled Property'}
+              </div>
+              {property.location && (
+                <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                  {property.location}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'location':
+        return (
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[12px]">
+              <MapPin size={12} className="text-emerald-600 shrink-0" />
+              <span className="truncate">{property.location || property.city || 'Unspecified'}</span>
+            </div>
+            {property.locality && (
+              <div className="text-[11px] text-slate-500 font-medium truncate pl-4.5 mt-0.5">
+                {property.locality}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'propertyType':
+        return (
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-bold border border-slate-200">
+              {property.propertyType || 'Land'}
+            </span>
+            {property.plotType && property.plotType !== 'None' && (
+              <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                {property.plotType}
+              </span>
+            )}
+          </div>
+        );
+
+      case 'area':
+        return (
+          <span className="font-mono font-bold text-slate-800 text-[12px]">
+            {property.area || '—'}
+          </span>
+        );
+
+      case 'price':
+        return (
+          <span className="font-mono font-black text-emerald-800 text-[13px]">
+            {property.price ? `₹${property.price.toLocaleString('en-IN')}` : (property.priceLabel || 'On Request')}
+          </span>
+        );
+
+      case 'owner':
+        return (
+          <div className="min-w-0">
+            <div className="font-bold text-slate-900 truncate text-[12px]">
+              {property.ownerName || 'Confidential'}
+            </div>
+            {property.ownerPhone ? (
+              <a
+                href={`tel:${property.ownerPhone.replace(/\s+/g, '')}`}
+                onClick={e => e.stopPropagation()}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 mt-0.5"
+              >
+                <Phone size={10} /> {property.ownerPhone}
+              </a>
+            ) : (
+              <div className="text-[10px] text-slate-400 font-medium">No phone</div>
+            )}
+          </div>
+        );
+
+      case 'share':
+        return (
+          <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onShare(property); }}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95"
+              title="Share property link"
+            >
+              <Share2 size={13} />
+              <span>Share</span>
+            </button>
+          </div>
+        );
+
+      default:
+        return <span className="text-slate-600 font-medium text-[12px]">{property[colId] || '—'}</span>;
+    }
+  };
+
+  const isColFiltered = (colId) => {
+    if (colId === 'title') return Boolean(filters.titleSearch || filters.sortBy.startsWith('title'));
+    if (colId === 'location') return Boolean(filters.city || filters.sortBy.startsWith('city'));
+    if (colId === 'propertyType') return Boolean(filters.type);
+    if (colId === 'price') return filters.sortBy.startsWith('price');
+    if (colId === 'area') return filters.sortBy.startsWith('area');
+    if (colId === 'owner') return Boolean(filters.ownerSearch);
+    return false;
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden font-sans space-y-0">
+      {/* Active Filter Bar (shown only if filters are applied) */}
+      {hasActiveFilters && (
+        <div className="bg-emerald-50/70 border-b border-emerald-100 px-4 py-2 flex items-center justify-between text-xs text-emerald-950 flex-wrap gap-2">
+          <div className="flex items-center gap-2 font-bold">
+            <Filter size={13} className="text-emerald-700" />
+            <span>Showing {filteredProperties.length} of {properties.length} records</span>
+            {filters.city && <span className="bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">City: {filters.city}</span>}
+            {filters.type && <span className="bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">Type: {filters.type}</span>}
+            {filters.titleSearch && <span className="bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">Title: "{filters.titleSearch}"</span>}
+            {filters.ownerSearch && <span className="bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">Owner: "{filters.ownerSearch}"</span>}
+          </div>
+          <button
+            type="button"
+            onClick={resetAllFilters}
+            className="text-emerald-800 hover:text-emerald-950 font-bold hover:underline cursor-pointer flex items-center gap-1"
+          >
+            <X size={13} /> Reset Filters
+          </button>
+        </div>
+      )}
+
+      {/* ── Mobile View: Production-Grade Mobile Cards List (for 90% Mobile Users) ── */}
+      <div className="sm:hidden space-y-2.5 p-2 bg-slate-100/60 rounded-2xl">
+        {/* Mobile Quick Filter & Sort Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 px-0.5">
+          <button
+            type="button"
+            onClick={() => setActiveFilterCol('location')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              filters.city ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200'
+            }`}
+          >
+            <MapPin size={11} className={filters.city ? 'text-emerald-200' : 'text-emerald-600'} />
+            <span>{filters.city ? `${filters.city}` : 'All Cities'}</span>
+            <ChevronDown size={11} className="opacity-70" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilterCol('propertyType')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              filters.type ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200'
+            }`}
+          >
+            <Tag size={11} className={filters.type ? 'text-emerald-200' : 'text-slate-500'} />
+            <span>{filters.type ? `${filters.type}` : 'All Types'}</span>
+            <ChevronDown size={11} className="opacity-70" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilterCol('price')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              filters.sortBy.startsWith('price') ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200'
+            }`}
+          >
+            <ArrowUpDown size={11} className={filters.sortBy.startsWith('price') ? 'text-emerald-200' : 'text-slate-500'} />
+            <span>Price Sort</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilterCol('title')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              filters.titleSearch ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200'
+            }`}
+          >
+            <Search size={11} className={filters.titleSearch ? 'text-emerald-200' : 'text-slate-500'} />
+            <span>Search</span>
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="px-2.5 py-1.5 rounded-full text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-200 shrink-0 cursor-pointer flex items-center gap-1"
+            >
+              <X size={11} /> Reset
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Property Cards List */}
+        {filteredProperties.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-slate-500 space-y-2">
+            <p className="text-xs font-bold text-slate-800">No properties match your filter</p>
+            <button
+              onClick={resetAllFilters}
+              className="text-xs font-bold text-emerald-700 underline cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          filteredProperties.map((property, idx) => {
+            const hasImages = property.images && property.images.length > 0;
+            return (
+              <div
+                key={property._id}
+                onClick={() => onView(property)}
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 space-y-3 active:scale-[0.99] transition-all cursor-pointer"
+              >
+                {/* Header: Thumbnail + Title + Location + Type Badge */}
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                    {hasImages ? (
+                      <img src={getImageUrl(property.images[0])} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 size={20} className="text-slate-400" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <h4 className="font-black text-slate-900 text-sm truncate leading-tight">
+                        {property.title || 'Untitled Property'}
+                      </h4>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                        {property.propertyType || 'Land'}
+                      </span>
+                    </div>
+
+                    {property.location && (
+                      <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-1 truncate">
+                        <MapPin size={11} className="text-emerald-600 shrink-0" />
+                        <span className="truncate">{property.location}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metrics Box: Price & Area */}
+                <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Asking Price</span>
+                    <span className="text-sm font-black text-emerald-800">
+                      {property.price ? `₹${property.price.toLocaleString('en-IN')}` : (property.priceLabel || 'On Request')}
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Area / Size</span>
+                    <span className="text-xs font-bold text-slate-800 font-mono">
+                      {property.area || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Confidential Owner Info & 1-Tap Actions */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">Owner Contact</span>
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {property.ownerName || 'Confidential'}
+                    </div>
+                  </div>
+
+                  {/* 1-Tap Direct Call */}
+                  {property.ownerPhone && (
+                    <a
+                      href={`tel:${property.ownerPhone.replace(/\s+/g, '')}`}
+                      onClick={e => e.stopPropagation()}
+                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                      title="Call Owner"
+                    >
+                      <Phone size={12} />
+                      <span>Call</span>
+                    </a>
+                  )}
+
+                  {/* 1-Tap Direct Share */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShare(property);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <Share2 size={13} />
+                    <span>Share</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop View: Spreadsheet Table with Column Header Filter Popovers (for Tablet & Desktop) ── */}
+      <div className="hidden sm:block overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse min-w-full">
+          {/* Table Headers */}
+          <thead>
+            <tr className="bg-slate-50 text-slate-700 text-[11px] font-black border-b border-slate-200 select-none uppercase tracking-wider">
+              <th className="w-12 py-3 px-3 text-center border-r border-slate-200 bg-slate-100/70 text-slate-500 font-mono">
+                #
+              </th>
+
+              {WALLET_COLUMNS.map((colDef) => {
+                const isFiltered = isColFiltered(colDef.id);
+                const hasFilter = Boolean(colDef.filterType);
+
+                return (
+                  <th
+                    key={colDef.id}
+                    className={`py-3 px-3.5 border-r border-slate-200 group transition-colors ${hasFilter ? 'cursor-pointer hover:bg-slate-100' : ''} ${colDef.width} ${isFiltered ? 'bg-emerald-50/70 text-emerald-900' : ''}`}
+                    onClick={() => {
+                      if (hasFilter) {
+                        setActiveFilterCol(activeFilterCol === colDef.id ? null : colDef.id);
+                      }
+                    }}
+                    title={hasFilter ? `Click to filter or sort by ${colDef.label}` : colDef.label}
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="truncate font-black text-[11px] tracking-wider">{colDef.label}</span>
+                      {hasFilter && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isFiltered ? (
+                            <Filter size={11} className="text-emerald-700 fill-emerald-700" />
+                          ) : (
+                            <ChevronDown size={12} className="text-slate-400 group-hover:text-slate-700 transition-transform opacity-60 group-hover:opacity-100" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+
+          {/* Spreadsheet Rows */}
+          <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
+            {filteredProperties.length === 0 ? (
+              <tr>
+                <td colSpan={WALLET_COLUMNS.length + 1} className="py-8 text-center text-slate-500">
+                  <p className="font-bold text-sm text-slate-700">No properties match your filter</p>
+                  <button
+                    onClick={resetAllFilters}
+                    className="mt-2 text-xs font-bold text-emerald-700 hover:underline"
+                  >
+                    Clear Filters
+                  </button>
+                </td>
+              </tr>
+            ) : (
+              filteredProperties.map((property, idx) => (
+                <tr
+                  key={property._id}
+                  onClick={() => onView(property)}
+                  className="hover:bg-emerald-50/40 transition-colors cursor-pointer group"
+                >
+                  {/* Row Number */}
+                  <td className="py-3 px-3 text-center border-r border-slate-200 bg-slate-50/60 text-slate-500 font-mono text-[11px] font-bold group-hover:bg-emerald-50 group-hover:text-emerald-900">
+                    {idx + 1}
+                  </td>
+
+                  {/* Columns */}
+                  {WALLET_COLUMNS.map((colDef) => (
+                    <td key={colDef.id} className="py-3 px-3.5 border-r border-slate-100">
+                      {renderCellContent(colDef.id, property)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Excel-Style Column Header Filter Popover Dialog ── */}
+      {activeFilterCol && (
+        <div
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setActiveFilterCol(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl border border-slate-200 space-y-3 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Popover Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <Filter size={14} />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  {activeFilterCol === 'location' && 'City & Location Filter'}
+                  {activeFilterCol === 'propertyType' && 'Property Type Filter'}
+                  {activeFilterCol === 'price' && 'Price Sorting & Filter'}
+                  {activeFilterCol === 'area' && 'Area / Size Sorting'}
+                  {activeFilterCol === 'title' && 'Title Search & Sort'}
+                  {activeFilterCol === 'owner' && 'Owner Search'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setActiveFilterCol(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Popover Body by Column Type */}
+            {activeFilterCol === 'location' && (
+              <div className="space-y-3">
+                {/* Sort options */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Sort Order</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'city_asc' ? 'default' : 'city_asc' })); }}
+                      className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all text-left ${filters.sortBy === 'city_asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      City: A → Z
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'city_desc' ? 'default' : 'city_desc' })); }}
+                      className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all text-left ${filters.sortBy === 'city_desc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      City: Z → A
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cities List */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Select City</label>
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setFilters(prev => ({ ...prev, city: '' }))}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-between ${!filters.city ? 'bg-emerald-50 text-emerald-900 font-black border border-emerald-200' : 'text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      <span>All Cities</span>
+                      <span className="text-[11px] text-slate-400">({properties.length})</span>
+                    </button>
+                    {uniqueCities.map(({ city, count }) => {
+                      const isSelected = filters.city.toLowerCase() === city.toLowerCase();
+                      return (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => setFilters(prev => ({ ...prev, city: isSelected ? '' : city }))}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-between ${isSelected ? 'bg-emerald-50 text-emerald-900 font-black border border-emerald-200' : 'text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <span className="truncate">{city}</span>
+                          <span className="text-[11px] text-slate-400">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFilterCol === 'propertyType' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Select Property Type</label>
+                <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, type: '' }))}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between ${!filters.type ? 'bg-emerald-50 text-emerald-900 font-black border border-emerald-200' : 'text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span>All Types</span>
+                    {!filters.type && <Check size={14} className="text-emerald-700" />}
+                  </button>
+                  {uniqueTypes.map(t => {
+                    const isSelected = filters.type.toLowerCase() === t.toLowerCase();
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setFilters(prev => ({ ...prev, type: isSelected ? '' : t }))}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between ${isSelected ? 'bg-emerald-50 text-emerald-900 font-black border border-emerald-200' : 'text-slate-700 hover:bg-slate-100'}`}
+                      >
+                        <span>{t}</span>
+                        {isSelected && <Check size={14} className="text-emerald-700" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeFilterCol === 'price' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Sort by Price</label>
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'price_asc' ? 'default' : 'price_asc' }))}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between ${filters.sortBy === 'price_asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span>Price: Low → High</span>
+                    {filters.sortBy === 'price_asc' && <Check size={14} className="text-emerald-700" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'price_desc' ? 'default' : 'price_desc' }))}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between ${filters.sortBy === 'price_desc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span>Price: High → Low</span>
+                    {filters.sortBy === 'price_desc' && <Check size={14} className="text-emerald-700" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeFilterCol === 'area' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Sort by Area / Size</label>
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'area_asc' ? 'default' : 'area_asc' }))}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between ${filters.sortBy === 'area_asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span>Area: Smallest → Largest</span>
+                    {filters.sortBy === 'area_asc' && <Check size={14} className="text-emerald-700" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'area_desc' ? 'default' : 'area_desc' }))}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between ${filters.sortBy === 'area_desc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span>Area: Largest → Smallest</span>
+                    {filters.sortBy === 'area_desc' && <Check size={14} className="text-emerald-700" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeFilterCol === 'title' && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Search Title</label>
+                  <input
+                    type="text"
+                    value={filters.titleSearch}
+                    onChange={e => setFilters(prev => ({ ...prev, titleSearch: e.target.value }))}
+                    placeholder="e.g. 5 vigha, plot, farmhouse..."
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'title_asc' ? 'default' : 'title_asc' }))}
+                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all text-left ${filters.sortBy === 'title_asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    Title: A → Z
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({ ...prev, sortBy: prev.sortBy === 'title_desc' ? 'default' : 'title_desc' }))}
+                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all text-left ${filters.sortBy === 'title_desc' ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    Title: Z → A
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeFilterCol === 'owner' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Search Confidential Owner</label>
+                <input
+                  type="text"
+                  value={filters.ownerSearch}
+                  onChange={e => setFilters(prev => ({ ...prev, ownerSearch: e.target.value }))}
+                  placeholder="e.g. Ramshbhai, 95096..."
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+            )}
+
+            {/* Popover Actions */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeFilterCol === 'location') setFilters(prev => ({ ...prev, city: '', sortBy: prev.sortBy.startsWith('city') ? 'default' : prev.sortBy }));
+                  if (activeFilterCol === 'propertyType') setFilters(prev => ({ ...prev, type: '' }));
+                  if (activeFilterCol === 'price') setFilters(prev => ({ ...prev, sortBy: prev.sortBy.startsWith('price') ? 'default' : prev.sortBy }));
+                  if (activeFilterCol === 'area') setFilters(prev => ({ ...prev, sortBy: prev.sortBy.startsWith('area') ? 'default' : prev.sortBy }));
+                  if (activeFilterCol === 'title') setFilters(prev => ({ ...prev, titleSearch: '', sortBy: prev.sortBy.startsWith('title') ? 'default' : prev.sortBy }));
+                  if (activeFilterCol === 'owner') setFilters(prev => ({ ...prev, ownerSearch: '' }));
+                  setActiveFilterCol(null);
+                }}
+                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+              >
+                Clear This Filter
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveFilterCol(null)}
+                className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Property Card (Grid View) ──
 const PropertyCard = ({ property, onView, onEdit, onDelete, onShare, onPublish }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -787,14 +1548,13 @@ const PropertyCard = ({ property, onView, onEdit, onDelete, onShare, onPublish }
   );
 };
 
-// ── Property Row (List View - Desktop & Mobile) ──
+// ── Property Row (List View) ──
 const PropertyRow = ({ property, onView, onEdit, onDelete, onShare, onPublish }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
   const hasImages = property.images && property.images.length > 0;
   const isPublished = property.isPublished;
-  const activeShares = (property.shareTokens || []).filter(t => new Date(t.expiresAt) > new Date()).length;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -811,7 +1571,6 @@ const PropertyRow = ({ property, onView, onEdit, onDelete, onShare, onPublish })
       onClick={() => onView(property)}
       className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-lg transition-all p-3 sm:p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 group cursor-pointer"
     >
-      {/* Left Thumbnail & Info */}
       <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1 w-full sm:w-auto">
         <div className="w-16 h-16 sm:w-28 sm:h-24 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative border border-slate-200/80">
           {hasImages ? (
@@ -867,26 +1626,9 @@ const PropertyRow = ({ property, onView, onEdit, onDelete, onShare, onPublish })
               </span>
             )}
           </div>
-
-          {property.ownerName && (
-            <div className="mt-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-500 flex items-center gap-1 flex-wrap">
-              <span className="text-slate-400 font-bold uppercase text-[8px]">Owner:</span>
-              <span className="text-slate-800 font-bold">{property.ownerName}</span>
-              {property.ownerPhone && (
-                <a
-                  href={`tel:${property.ownerPhone.replace(/\s+/g, '')}`}
-                  onClick={e => e.stopPropagation()}
-                  className="text-emerald-700 font-bold hover:underline flex items-center gap-0.5 ml-1"
-                >
-                  <Phone size={8} /> {property.ownerPhone}
-                </a>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Right Actions */}
       <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-end" onClick={e => e.stopPropagation()}>
         <button
           type="button"
@@ -907,76 +1649,6 @@ const PropertyRow = ({ property, onView, onEdit, onDelete, onShare, onPublish })
           <Edit size={12} />
           <span>Edit</span>
         </button>
-
-        <div className="relative" ref={menuRef} onClick={e => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-all border border-slate-200/60 active:scale-95"
-            title="More Options"
-          >
-            <MoreVertical size={13} />
-          </button>
-
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.92, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-10 bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 min-w-[170px] z-50 overflow-hidden"
-              >
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); onView(property); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
-                >
-                  <Eye size={13} className="text-emerald-600" /> View All Info
-                </button>
-
-                {!isPublished && (
-                  <button
-                    type="button"
-                    onClick={() => { setMenuOpen(false); onPublish(property); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 cursor-pointer transition-colors text-left"
-                  >
-                    <Globe size={13} className="text-emerald-600" /> Make Listing
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); onShare(property); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors text-left"
-                >
-                  <Share2 size={13} className="text-emerald-600" /> Share Link
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); onEdit(property); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
-                >
-                  <Edit size={13} className="text-slate-500" /> Edit Details
-                </button>
-
-                <div className="h-px bg-slate-100 my-1" />
-
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); onDelete(property); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors text-left"
-                >
-                  <Trash2 size={13} className="text-rose-500" /> Delete Property
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       </div>
     </div>
   );
@@ -992,7 +1664,7 @@ const PropertyWallet = () => {
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('excel'); // Default Excel Spreadsheet View!
   const [confirmModal, setConfirmModal] = useState(null);
   const [shareModal, setShareModal] = useState(null);
   const [detailModal, setDetailModal] = useState(null);
@@ -1025,7 +1697,7 @@ const PropertyWallet = () => {
   }, [searchQuery, activeFilter, cityFilter, typeFilter, sortBy]);
 
   // Fetch Properties
-  const { data: propertiesData, isLoading } = useQuery({
+  const { data: propertiesData, isLoading, refetch } = useQuery({
     queryKey: ['walletProperties', searchQuery, activeFilter, cityFilter, typeFilter, sortBy],
     enabled: !!user && (user.role === 'Broker' || user.role === 'Admin'),
     queryFn: async () => {
@@ -1033,8 +1705,9 @@ const PropertyWallet = () => {
       const res = await axios.get('/api/wallet', { params });
       return res.data;
     },
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    keepPreviousData: true
+    staleTime: 0
   });
 
   // Fetch Stats
@@ -1044,7 +1717,10 @@ const PropertyWallet = () => {
     queryFn: async () => {
       const res = await axios.get('/api/wallet/stats');
       return res.data.data;
-    }
+    },
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
 
   const properties = propertiesData?.data || [];
@@ -1177,7 +1853,7 @@ const PropertyWallet = () => {
   return (
     <div className="bg-[#f8fafc] min-h-screen text-slate-800 antialiased pb-32 sm:pb-24 font-['Nunito_Sans',sans-serif]">
 
-      {/* ── Mobile Compact Header (99acres / MagicBricks App Style - Under 50px) ── */}
+      {/* ── Mobile Compact Header ── */}
       <div className="sm:hidden bg-slate-950 text-white border-b border-slate-800 px-3 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
@@ -1204,7 +1880,7 @@ const PropertyWallet = () => {
         </Link>
       </div>
 
-      {/* ── Executive Desktop Hero Banner (Hidden on Mobile) ── */}
+      {/* ── Executive Desktop Hero Banner ── */}
       <div className="hidden sm:block bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white border-b border-emerald-900/30 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 shadow-sm relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -1227,7 +1903,7 @@ const PropertyWallet = () => {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
-                Your confidential broker portfolio — click any property to view full details & owner contact.
+                Your confidential broker portfolio — click any property to view full in-depth details & owner contact.
               </p>
             </div>
           </div>
@@ -1251,67 +1927,15 @@ const PropertyWallet = () => {
       {/* ── Main Container ── */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8 space-y-3 sm:space-y-6">
 
-        {/* ── Mobile Compact Stats Pill Bar (Single-Row, Fast Filter) ── */}
-        <div className="sm:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1 ${
-              activeFilter === 'all'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200/80 shadow-2xs'
-            }`}
-          >
-            <span>All</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${activeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 font-bold'}`}>
-              {stats.total}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveFilter('private')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1 ${
-              activeFilter === 'private'
-                ? 'bg-emerald-800 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200/80 shadow-2xs'
-            }`}
-          >
-            <Lock size={11} className={activeFilter === 'private' ? 'text-emerald-300' : 'text-slate-400'} />
-            <span>Private</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${activeFilter === 'private' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-800 font-bold'}`}>
-              {stats.unpublished}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveFilter('published')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1 ${
-              activeFilter === 'published'
-                ? 'bg-indigo-700 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200/80 shadow-2xs'
-            }`}
-          >
-            <Globe size={11} className={activeFilter === 'published' ? 'text-indigo-200' : 'text-slate-400'} />
-            <span>Live</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${activeFilter === 'published' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-800 font-bold'}`}>
-              {stats.published}
-            </span>
-          </button>
-
-          <div className="px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-[11px] font-black shrink-0 ml-auto">
-            {stats.remaining} Left
-          </div>
-        </div>
-
-        {/* ── Executive 4-Stat Metric Cards (Desktop Only) ── */}
-        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+        {/* ── Executive 4-Stat Metric Cards ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           <StatCard
             icon={Briefcase}
             title="Total Inventory"
             value={stats.total}
             subtitle="Properties in your diary"
             color="emerald"
-            active={activeFilter === 'all'}
-            onClick={() => setActiveFilter('all')}
+            active={false}
           />
           <StatCard
             icon={Lock}
@@ -1319,8 +1943,7 @@ const PropertyWallet = () => {
             value={stats.unpublished}
             subtitle="100% confidential to you"
             color="slate"
-            active={activeFilter === 'private'}
-            onClick={() => setActiveFilter('private')}
+            active={false}
           />
           <StatCard
             icon={Globe}
@@ -1328,8 +1951,7 @@ const PropertyWallet = () => {
             value={stats.published}
             subtitle="Published on Kharsan"
             color="indigo"
-            active={activeFilter === 'published'}
-            onClick={() => setActiveFilter('published')}
+            active={false}
           />
           <StatCard
             icon={PackageOpen}
@@ -1340,257 +1962,9 @@ const PropertyWallet = () => {
           />
         </div>
 
-        {/* ── Unified Search & Action Toolbar ── */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-2.5 sm:p-5 shadow-xs space-y-2.5 sm:space-y-4">
-          
-          {/* Top Row: Search Input + Quick Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search city, title, owner, tags..."
-                className="w-full pl-9 pr-8 py-2 sm:py-3 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-xs sm:text-sm font-bold outline-none transition-all placeholder:text-slate-400 placeholder:font-medium"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            {/* Desktop Quick Dropdowns */}
-            <div className="hidden md:flex items-center gap-2.5">
-              <select
-                value={cityFilter}
-                onChange={e => setCityFilter(e.target.value)}
-                className="px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="">All Cities</option>
-                {stats.topCities?.filter(c => c.city).map(c => (
-                  <option key={c.city} value={c.city}>{c.city} ({c.count})</option>
-                ))}
-              </select>
-
-              <select
-                value={typeFilter}
-                onChange={e => setTypeFilter(e.target.value)}
-                className="px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="">All Types</option>
-                <option value="Land">Land</option>
-                <option value="Plot">Plot</option>
-                <option value="Other">Other</option>
-              </select>
-
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="price_asc">Price: Low → High</option>
-                <option value="price_desc">Price: High → Low</option>
-                <option value="title">Title A → Z</option>
-              </select>
-            </div>
-
-            {/* Mobile Filter Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 rounded-xl border font-black text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                showFilters || cityFilter || typeFilter || sortBy !== 'newest'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
-              title="Filters"
-            >
-              <SlidersHorizontal size={15} />
-              {cityFilter || typeFilter ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> : null}
-            </button>
-
-            {/* View Switcher */}
-            <div className="flex items-center gap-0.5 bg-slate-100 rounded-xl p-0.5 sm:p-1 border border-slate-200/80 shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`w-7 h-7 sm:w-auto sm:px-3 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer text-xs font-black transition-all ${
-                  viewMode === 'grid' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-400 sm:text-slate-500'
-                }`}
-                title="Grid View"
-              >
-                <LayoutGrid size={14} />
-                <span className="hidden sm:inline">Grid</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`w-7 h-7 sm:w-auto sm:px-3 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer text-xs font-black transition-all ${
-                  viewMode === 'list' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-400 sm:text-slate-500'
-                }`}
-                title="List View"
-              >
-                <List size={14} />
-                <span className="hidden sm:inline">List</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop Tab Filter Bar (Hidden on Mobile) */}
-          <div className="hidden sm:flex items-center justify-between gap-3 pt-3 flex-wrap border-t border-slate-100">
-            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-              <button
-                onClick={() => setActiveFilter('all')}
-                className={`px-4 py-1.5 rounded-full text-xs font-black transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                  activeFilter === 'all'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                All ({stats.total})
-              </button>
-              <button
-                onClick={() => setActiveFilter('private')}
-                className={`px-4 py-1.5 rounded-full text-xs font-black transition-all whitespace-nowrap cursor-pointer shrink-0 flex items-center gap-1 ${
-                  activeFilter === 'private'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Lock size={11} className={activeFilter === 'private' ? 'text-emerald-400' : 'text-slate-500'} />
-                Private Diary ({stats.unpublished})
-              </button>
-              <button
-                onClick={() => setActiveFilter('published')}
-                className={`px-4 py-1.5 rounded-full text-xs font-black transition-all whitespace-nowrap cursor-pointer shrink-0 flex items-center gap-1 ${
-                  activeFilter === 'published'
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Globe size={11} />
-                Marketplace Live ({stats.published})
-              </button>
-            </div>
-
-            {/* Popular Cities tags on Desktop */}
-            {stats.topCities && stats.topCities.length > 0 && (
-              <div className="hidden lg:flex items-center gap-1.5">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Top Cities:</span>
-                {stats.topCities.filter(c => c.city).slice(0, 4).map(c => (
-                  <button
-                    key={c.city}
-                    onClick={() => setCityFilter(cityFilter === c.city ? '' : c.city)}
-                    className={`text-[11px] font-bold px-3 py-1 rounded-full transition-all cursor-pointer ${
-                      cityFilter === c.city
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {c.city} ({c.count})
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Filter Drawer */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden pt-2 border-t border-slate-100 md:hidden"
-              >
-                <div className="grid grid-cols-1 gap-2 pt-1">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">City Filter</label>
-                    <input
-                      type="text"
-                      value={cityFilter}
-                      onChange={e => setCityFilter(e.target.value)}
-                      placeholder="e.g. Palanpur, Deesa..."
-                      className={inputCls}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
-                      <select
-                        value={typeFilter}
-                        onChange={e => setTypeFilter(e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="">All Types</option>
-                        <option value="Land">Land</option>
-                        <option value="Plot">Plot</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sort</label>
-                      <select
-                        value={sortBy}
-                        onChange={e => setSortBy(e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="price_asc">Price: Low → High</option>
-                        <option value="price_desc">Price: High → Low</option>
-                        <option value="title">Title A → Z</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ── Active Filter Chips & Result Counter ── */}
-        <div className="flex items-center justify-between px-1 flex-wrap gap-2 text-xs">
-          <p className="font-bold text-slate-600">
-            {isLoading ? (
-              <span>Loading properties...</span>
-            ) : (
-              <span>
-                Showing <strong className="font-black text-slate-900">{properties.length}</strong> {properties.length === 1 ? 'property' : 'properties'}
-                {searchQuery && <span className="text-emerald-700 font-bold"> for "{searchQuery}"</span>}
-                {cityFilter && <span className="text-slate-500"> in {cityFilter}</span>}
-              </span>
-            )}
-          </p>
-
-          {(searchQuery || cityFilter || typeFilter || activeFilter !== 'all') && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setCityFilter('');
-                setTypeFilter('');
-                setActiveFilter('all');
-              }}
-              className="text-[11px] font-black text-rose-600 hover:text-rose-700 cursor-pointer flex items-center gap-1 hover:underline"
-            >
-              <X size={12} /> Reset
-            </button>
-          )}
-        </div>
-
-        {/* ── Properties Grid / List Display ── */}
+        {/* ── Properties Display (Excel / Grid / List) ── */}
         {isLoading ? (
-          viewMode === 'grid' ? <WalletGridSkeleton /> : <WalletListSkeleton />
+          viewMode === 'excel' ? <WalletExcelSkeleton /> : viewMode === 'grid' ? <WalletGridSkeleton /> : <WalletListSkeleton />
         ) : properties.length === 0 ? (
           
           /* ── Empty State ── */
@@ -1598,120 +1972,114 @@ const PropertyWallet = () => {
             {searchQuery || cityFilter ? (
               <div className="max-w-md mx-auto py-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3">
-                  <Search size={24} />
+                  <Search size={26} />
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">No Matching Properties</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1 mb-4">
-                  No properties matched your current filters.
-                </p>
+                <h3 className="text-base font-black text-slate-900">No properties found</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1 mb-4">No records matched your search filters.</p>
                 <button
-                  onClick={() => { setSearchQuery(''); setCityFilter(''); setTypeFilter(''); }}
-                  className="px-5 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer"
+                  onClick={() => { setSearchQuery(''); setCityFilter(''); setTypeFilter(''); setActiveFilter('all'); }}
+                  className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl"
                 >
-                  Clear Filters
+                  Clear Search
                 </button>
               </div>
             ) : (
-              <div className="max-w-xl mx-auto space-y-4 py-4">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto">
-                  <Briefcase size={28} />
+              <div className="max-w-md mx-auto py-6">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+                  <Briefcase size={32} />
                 </div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Your Property Wallet is Empty
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto">
-                  Add properties from your offline diary. Real owner details stay 100% confidential until you share or publish them.
+                <h3 className="text-lg font-black text-slate-900">Your Property Wallet is Empty</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1 mb-5">
+                  Save private land details, survey numbers, and confidential owner contact numbers directly to your diary.
                 </p>
-                <div className="pt-2">
-                  <Link
-                    to="/property-wallet/add"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-md active:scale-95"
-                  >
-                    <Plus size={16} />
-                    <span>Add First Property</span>
-                  </Link>
-                </div>
+                <Link
+                  to="/property-wallet/add"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  <span>Add First Property</span>
+                </Link>
               </div>
             )}
           </div>
         ) : (
-          <AnimatePresence mode="wait">
-            {viewMode === 'grid' ? (
-              <motion.div
-                key="grid"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-6"
-              >
-                {properties.map(p => (
-                  <PropertyCard
-                    key={p._id}
-                    property={p}
-                    onView={handleView}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onShare={handleShare}
-                    onPublish={handlePublish}
-                  />
-                ))}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="list"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18 }}
-                className="space-y-3"
-              >
-                {properties.map(p => (
-                  <PropertyRow
-                    key={p._id}
-                    property={p}
-                    onView={handleView}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onShare={handleShare}
-                    onPublish={handlePublish}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          viewMode === 'excel' ? (
+            <ExcelSpreadsheetView
+              properties={properties}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onShare={handleShare}
+              onPublish={handlePublish}
+            />
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-6">
+              {properties.map(property => (
+                <PropertyCard
+                  key={property._id}
+                  property={property}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onShare={handleShare}
+                  onPublish={handlePublish}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {properties.map(property => (
+                <PropertyRow
+                  key={property._id}
+                  property={property}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onShare={handleShare}
+                  onPublish={handlePublish}
+                />
+              ))}
+            </div>
+          )
         )}
+
       </div>
 
-      {/* ── Confirm Delete Modal ── */}
-      {confirmModal && <ConfirmModal {...confirmModal} />}
+      {/* ── Modals ── */}
+      {detailModal && (
+        <PropertyDetailModal
+          property={detailModal}
+          onClose={() => setDetailModal(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onShare={handleShare}
+          onPublish={handlePublish}
+        />
+      )}
 
-      {/* ── Share Modal ── */}
-      <AnimatePresence>
-        {shareModal && (
-          <ShareLinksModal
-            isOpen={!!shareModal}
-            property={shareModal}
-            onClose={() => setShareModal(null)}
-            onGenerate={handleGenerateShare}
-            onRevoke={handleRevokeShare}
-          />
-        )}
-      </AnimatePresence>
+      {shareModal && (
+        <ShareLinksModal
+          isOpen={!!shareModal}
+          onClose={() => setShareModal(null)}
+          property={shareModal}
+          onGenerate={handleGenerateShare}
+          onRevoke={handleRevokeShare}
+        />
+      )}
 
-      {/* ── Property Detail Inspector Modal ── */}
-      <AnimatePresence>
-        {detailModal && (
-          <PropertyDetailModal
-            property={detailModal}
-            onClose={() => setDetailModal(null)}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onShare={handleShare}
-            onPublish={handlePublish}
-          />
-        )}
-      </AnimatePresence>
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmText={confirmModal.confirmText}
+          cancelText={confirmModal.cancelText}
+          type={confirmModal.type}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={confirmModal.onCancel}
+        />
+      )}
+
     </div>
   );
 };

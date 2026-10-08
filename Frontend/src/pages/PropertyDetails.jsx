@@ -8,7 +8,7 @@ import {
     ShieldCheck, Download, MessageSquare, ExternalLink, Image, Clock,
     Check, X, Zap, ZapOff, Award, Star, UserRound, MessageCircle, Navigation, Layers,
     SlidersHorizontal, Sparkles, ChevronLeft, Building2, Info, PhoneCall, Send,
-    CheckCircle, Tag, Shield, Compass, Sparkle, ArrowUpRight
+    CheckCircle, Tag, Shield, Compass, Sparkle, ArrowUpRight, Copy
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
@@ -60,6 +60,9 @@ const PropertyDetails = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [showPhoneNumber, setShowPhoneNumber] = useState(false);
     const [expandDescription, setExpandDescription] = useState(false);
+    const [isAddressExpanded, setIsAddressExpanded] = useState(false);
+    const [showAddressModal, setShowAddressModal] = useState(false);
+    const [copiedAddress, setCopiedAddress] = useState(false);
     const { user, isAuthenticated, updateFavorites } = useContext(AuthContext);
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
@@ -285,6 +288,51 @@ const PropertyDetails = () => {
         }
 
         return items;
+    };
+
+    const getCleanFullAddress = () => {
+        if (!listing) return '';
+        const loc = (listing.location || '').trim();
+        const plot = (listing.plotNumber || '').trim();
+        const area = (listing.areaName || '').trim();
+
+        if (loc) {
+            // Check if loc already contains plot number or areaName
+            let hasPlot = plot && loc.toLowerCase().includes(plot.toLowerCase());
+            let hasArea = area && loc.toLowerCase().includes(area.toLowerCase());
+
+            const extraParts = [];
+            if (plot && !hasPlot) extraParts.push(`Plot ${plot}`);
+            if (area && !hasArea) extraParts.push(area);
+
+            return extraParts.length > 0 ? `${extraParts.join(', ')}, ${loc}` : loc;
+        }
+
+        return [
+            plot ? `Plot ${plot}` : '',
+            area,
+            listing.locality,
+            listing.city,
+            listing.state || 'Gujarat, India'
+        ].filter(Boolean).join(', ');
+    };
+
+    const handleCopyAddress = (e) => {
+        if (e) e.stopPropagation();
+        const fullAddr = getCleanFullAddress();
+        if (!fullAddr) return;
+        navigator.clipboard.writeText(fullAddr);
+        setCopiedAddress(true);
+        toast.success('📋 Address copied to clipboard!');
+        setTimeout(() => setCopiedAddress(false), 2500);
+    };
+
+    const getGoogleMapsUrl = () => {
+        if (listing?.mapCoordinates?.lat && listing?.mapCoordinates?.lng) {
+            return `https://www.google.com/maps/search/?api=1&query=${listing.mapCoordinates.lat},${listing.mapCoordinates.lng}`;
+        }
+        const fullAddr = getCleanFullAddress();
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
     };
 
     const handleFavorite = async () => {
@@ -609,13 +657,43 @@ const PropertyDetails = () => {
                             </h1>
 
                             {/* Address & Locality */}
-                            <div className="flex items-center gap-1.5 text-slate-600 text-xs sm:text-sm font-medium">
-                                <MapPin size={15} className="text-blue-600 shrink-0" />
-                                <span className="truncate">
-                                    {listing.plotNumber ? `Plot ${listing.plotNumber}, ` : ''}
-                                    {listing.areaName ? `${listing.areaName}, ` : ''}
-                                    <strong className="text-slate-800">{listing.location}</strong>
-                                </span>
+                            <div className="flex items-start gap-1.5 text-slate-600 text-xs sm:text-sm font-medium">
+                                <MapPin size={15} className="text-blue-600 shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0 leading-snug">
+                                    <span className="text-slate-700">
+                                        {isAddressExpanded || getCleanFullAddress().length <= 48 ? (
+                                            getCleanFullAddress()
+                                        ) : (
+                                            <>
+                                                <span>{getCleanFullAddress().slice(0, 45)}...</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsAddressExpanded(true)}
+                                                    className="text-blue-600 font-bold hover:text-blue-700 hover:underline cursor-pointer ml-1 inline"
+                                                >
+                                                    more
+                                                </button>
+                                            </>
+                                        )}
+                                        {isAddressExpanded && getCleanFullAddress().length > 48 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsAddressExpanded(false)}
+                                                className="text-blue-600 font-bold hover:text-blue-700 hover:underline cursor-pointer ml-1.5 inline"
+                                            >
+                                                less
+                                            </button>
+                                        )}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyAddress}
+                                        className="inline-flex items-center text-slate-400 hover:text-slate-700 ml-2 align-middle transition-colors cursor-pointer p-0.5 rounded hover:bg-slate-100"
+                                        title="Copy address"
+                                    >
+                                        {copiedAddress ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -880,14 +958,25 @@ const PropertyDetails = () => {
                                 </div>
 
                                 {/* Spec: Address */}
-                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
-                                        <span>Address</span>
-                                        <MapPin size={14} className="text-blue-600" />
+                                <div 
+                                    onClick={() => setShowAddressModal(true)}
+                                    className="p-3 bg-slate-50 hover:bg-blue-50/60 rounded-xl border border-slate-100 hover:border-blue-200 transition-all cursor-pointer group relative flex flex-col justify-between"
+                                    title="Click to view full address details"
+                                >
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                            <span>Address</span>
+                                            <MapPin size={14} className="text-blue-600 group-hover:scale-110 transition-transform" />
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-blue-700 transition-colors">
+                                            {listing.location || 'Location details'}
+                                        </div>
                                     </div>
-                                    <div className="text-xs font-bold text-slate-900 truncate">{listing.location}</div>
-                                    <div className="text-[10px] font-semibold text-slate-500 mt-1 truncate">
-                                        {listing.areaName ? `${listing.areaName}, ` : ''}{listing.city || 'Gujarat'}
+                                    <div className="text-[10px] font-semibold text-slate-500 mt-1.5 flex items-center justify-between pt-1 border-t border-slate-200/50">
+                                        <span className="truncate">{listing.areaName ? `${listing.areaName}, ` : ''}{listing.city || 'Gujarat'}</span>
+                                        <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-100/80 px-1.5 py-0.5 rounded shrink-0 ml-1 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            More
+                                        </span>
                                     </div>
                                 </div>
 
@@ -1531,6 +1620,94 @@ const PropertyDetails = () => {
 
             {/* Receipt Modal */}
             <ReceiptModal isOpen={showReceipt} onClose={() => setShowReceipt(false)} receiptData={receiptData} />
+
+            {/* Address Details Modal */}
+            {showAddressModal && (
+                <div 
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+                    onClick={() => setShowAddressModal(false)}
+                >
+                    <div 
+                        className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 space-y-4 relative"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                    <MapPin size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">Property Address</h3>
+                                    <p className="text-[11px] text-slate-500 font-medium">Verified Location Details</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowAddressModal(false)} 
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Full formatted address text */}
+                        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Complete Address</span>
+                            <p className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed select-all">
+                                {getCleanFullAddress()}
+                            </p>
+                        </div>
+
+                        {/* Grid Breakdown of Address Fields */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            {listing.plotNumber && (
+                                <div className="p-2.5 bg-slate-50/80 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 block">Plot / Survey No.</span>
+                                    <span className="font-extrabold text-slate-800">{listing.plotNumber}</span>
+                                </div>
+                            )}
+                            {listing.areaName && (
+                                <div className="p-2.5 bg-slate-50/80 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 block">Locality / Area</span>
+                                    <span className="font-extrabold text-slate-800">{listing.areaName}</span>
+                                </div>
+                            )}
+                            {listing.locality && (
+                                <div className="p-2.5 bg-slate-50/80 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 block">Taluka / Sub-region</span>
+                                    <span className="font-extrabold text-slate-800">{listing.locality}</span>
+                                </div>
+                            )}
+                            {listing.city && (
+                                <div className="p-2.5 bg-slate-50/80 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 block">City / District</span>
+                                    <span className="font-extrabold text-slate-800">{listing.city}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="flex items-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={handleCopyAddress}
+                                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                            >
+                                {copiedAddress ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                                <span>{copiedAddress ? 'Copied to Clipboard!' : 'Copy Address'}</span>
+                            </button>
+                            <a
+                                href={getGoogleMapsUrl()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm text-center cursor-pointer"
+                            >
+                                <Navigation size={14} />
+                                <span>Google Maps</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

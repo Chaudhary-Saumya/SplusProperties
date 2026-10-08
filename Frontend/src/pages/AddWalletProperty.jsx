@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Briefcase, MapPin, IndianRupee, Layers, Tag, FileText,
   User, Phone, Image as ImageIcon, Plus, X, Upload, Save, Sparkles,
@@ -96,6 +97,7 @@ const SectionCard = ({ icon: Icon, title, subtitle, children, color = 'emerald' 
 const AddWalletProperty = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -207,6 +209,10 @@ const AddWalletProperty = () => {
       else delete payload.areaValue;
 
       await axios.post('/api/wallet', payload);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['walletProperties'] }),
+        queryClient.invalidateQueries({ queryKey: ['walletStats'] })
+      ]);
       toast.success('Property added to your wallet! 🎉');
       navigate('/property-wallet');
     } catch (err) {

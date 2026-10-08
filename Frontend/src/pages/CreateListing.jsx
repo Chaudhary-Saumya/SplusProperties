@@ -12,7 +12,7 @@ import {
     AlertCircle, AlertTriangle, ArrowLeft, Lightbulb, Coins
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -195,6 +195,7 @@ const CreateListing = () => {
     const { user } = useContext(AuthContext);
     const { language, t } = useLanguage();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showSidebar, setShowSidebar] = useState(true);
@@ -643,6 +644,13 @@ const CreateListing = () => {
                 cornerPlot: formData.propertyType === 'Plot' ? formData.cornerPlot : false
             };
             await axios.post('/api/listings', listingPayload);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['walletProperties'] }),
+                queryClient.invalidateQueries({ queryKey: ['walletStats'] }),
+                queryClient.invalidateQueries({ queryKey: ['myListings'] }),
+                queryClient.invalidateQueries({ queryKey: ['dashboardListings'] }),
+                queryClient.invalidateQueries({ queryKey: ['listings'] })
+            ]);
 
             toast.success('Property listing successfully published!');
             navigate('/dashboard');

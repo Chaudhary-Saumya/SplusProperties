@@ -242,9 +242,12 @@ const EditWalletProperty = () => {
       else delete payload.areaValue;
 
       await axios.put(`/api/wallet/${id}`, payload);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['walletProperty', id] }),
+        queryClient.invalidateQueries({ queryKey: ['walletProperties'] }),
+        queryClient.invalidateQueries({ queryKey: ['walletStats'] })
+      ]);
       toast.success('Property updated successfully! 🎉');
-      queryClient.invalidateQueries({ queryKey: ['walletProperty', id] });
-      queryClient.invalidateQueries({ queryKey: ['walletProperties'] });
       navigate('/property-wallet');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update property');

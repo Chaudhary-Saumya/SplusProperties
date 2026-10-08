@@ -1043,7 +1043,7 @@ const EditListing = () => {
                             >
                                 <div className="space-y-6">
 
-                                    {/* City & Locality */}
+                                    {/* Row 1: City & Locality */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label className={labelCls}>
